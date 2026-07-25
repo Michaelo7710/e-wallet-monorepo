@@ -1,0 +1,8 @@
+{
+  "name": "Wallet",
+  "displayName": "Wallet",
+  "plugins": [
+    "expo-image",
+    "expo-status-bar"
+  ]
+}
