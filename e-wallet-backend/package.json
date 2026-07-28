@@ -11,8 +11,8 @@
     "test": "jest --runInBand --detectOpenHandles --forceExit"
   },
   "jest": {
-  "testEnvironment": "node",
-  "setupFilesAfterEnv": [
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
       "<rootDir>/tests/setup.js"
     ],
     "testTimeout": 30000
@@ -35,7 +35,9 @@
     "midtrans-client": "^1.4.3",
     "mongoose": "^9.6.2",
     "morgan": "^1.10.1",
-    "nodemailer": "^9.0.1"
+    "nodemailer": "^9.0.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "jest": "^30.4.2",

@@ -16,6 +16,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 
+const { swaggerUi, specs, swaggerUiOptions } = require('./src/config/swagger');
+
 const AppError = require('./src/utils/AppError');
 const globalErrorHandler = require('./src/middlewares/errorMiddleware');
 const authRoutes = require('./src/routes/authRoutes');
@@ -68,6 +70,9 @@ app.get('/', (req, res) => {
     status: 'Running'
   });
 });
+
+// 📖 Pendaftaran Interactive Swagger API Docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/payments', paymentRoutes);
