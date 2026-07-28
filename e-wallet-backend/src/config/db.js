@@ -3,12 +3,16 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     // [CLEAN CODE DYNAMIC OPTIONS] Opsi adaptif menyesuaikan beban environment
+    const dev = 'development' || 'production' ;
     const connectionOptions = {
       // Jika di local development, paksa matikan retryWrites agar database standalone tidak crash
-      ...(process.env.NODE_ENV === 'development' && { retryWrites: false })
+      ...(process.env.NODE_ENV === dev && { retryWrites: false })
     };
     // Mongoose 6+ tidak lagi memerlukan opsi useNewUrlParser & useUnifiedTopology
-    const conn = await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
+
+    // Dinamis: Ambil string database dari DATABASE_URL atau MONGO_URI
+    const dbUri = process.env.DATABASE_URL || process.env.MONGO_URI || process.env.MONGODB_URI;
+    const conn = await mongoose.connect(dbUri , connectionOptions);
     
     console.log(`✅ MongoDB Terhubung: ${conn.connection.host}`);
   } catch (error) {
