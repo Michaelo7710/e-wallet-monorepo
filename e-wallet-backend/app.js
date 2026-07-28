@@ -1,3 +1,10 @@
+const connectDB = require('./src/config/db');
+
+// Otomatis hubungkan ke MongoDB Atlas jika dijalankan di Vercel/Production
+if (process.env.NODE_ENV === 'production') {
+  connectDB();
+}
+
 // app.js
 const express = require('express');
 const morgan = require('morgan');
