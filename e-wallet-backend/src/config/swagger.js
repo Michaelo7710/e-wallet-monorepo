@@ -94,7 +94,12 @@ const options = {
       },
     ],
   },
-  apis: ['./src/routes/*.js'], // Otomatis membaca annotasi di seluruh file rute
+  // 💡 Gunakan path.join agar Vercel Serverless dapat menemukan file rute secara tepat
+  apis: [
+    path.join(__dirname, '../routes/*.js'),
+    path.join(process.cwd(), 'src/routes/*.js'),
+    path.join(process.cwd(), 'e-wallet-backend/src/routes/*.js'),
+  ], // Otomatis membaca annotasi di seluruh file rute
 };
 
 const specs = swaggerJsdoc(options);
