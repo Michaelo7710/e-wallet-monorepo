@@ -56,6 +56,7 @@
 // module.exports = { swaggerUi, specs, swaggerUiOptions };
 
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require('path');
 
 const options = {
   definition: {
