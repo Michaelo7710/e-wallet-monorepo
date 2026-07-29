@@ -18,7 +18,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error(`❌ Error Koneksi MongoDB: ${error.message}`);
     // Matikan proses Node.js jika database gagal terhubung (Fatal Error)
-    process.exit(1); 
+    throw error;
   }
 };
 
