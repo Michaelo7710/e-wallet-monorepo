@@ -1,5 +1,5 @@
 class AppError extends Error {
-  constructor(message, statusCode) {
+  constructor(message, statusCode, errorCode = 'OPERATIONAL_ERROR') {
     super(message); // Memanggil constructor dari class Error bawaan Node.js
 
     this.statusCode = statusCode;
