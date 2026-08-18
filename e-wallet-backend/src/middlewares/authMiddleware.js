@@ -19,7 +19,7 @@ exports.protect = catchAsync(async (req, res, next) => {
   // Jika tidak ada token, langsung tolak di pintu depan
   if (!token) {
     return next(
-      new AppError('Anda belum login. Silakan login untuk mendapatkan akses.', StatusCodes.UNAUTHORIZED)
+      new AppError('Anda belum login. Silakan login untuk mendapatkan akses.', StatusCodes.UNAUTHORIZED, 'INVALID_TOKEN')
     );
   }
 
@@ -31,7 +31,7 @@ exports.protect = catchAsync(async (req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       return next(new AppError('Access Token Anda telah kedaluwarsa. Silakan lakukan refresh token.', StatusCodes.UNAUTHORIZED));
     }
-    return next(new AppError('Token tidak valid.', StatusCodes.UNAUTHORIZED));
+    return next(new AppError('Token tidak valid.', StatusCodes.UNAUTHORIZED, 'INVALID_TOKEN'));
   }
 
   // 2. Cek apakah user pemilik token masih eksis di database

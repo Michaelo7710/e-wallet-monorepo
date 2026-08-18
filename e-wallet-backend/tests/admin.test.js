@@ -23,7 +23,7 @@ describe('🧪 [ADMIN ENGINE & RBAC INTEGRATION TEST]', () => {
       .send({
         bank_name: 'MANDIRI',
         account_number: '1230009988776',
-        account_holder_name: 'PT GreenPay Official',
+        account_name: 'PT GreenPay Official',
       });
 
     expect(res.statusCode).toEqual(201);

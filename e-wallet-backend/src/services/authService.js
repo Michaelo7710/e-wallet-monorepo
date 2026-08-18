@@ -212,6 +212,7 @@ const AppError = require('../utils/AppError');
 const sendEmail = require('../utils/email');
 const { StatusCodes } = require('http-status-codes');
 const { signAccessToken, signRefreshToken } = require('../utils/jwt');
+const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 
