@@ -6,7 +6,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Text, View } from 'react-native';
 
-import AppNavigator from '@navigation/AppNavigator';
+import AppNavigator from './src/app/navigation/AppNavigator';
 
 // 1. Inisialisasi Mesin Caching API
 const queryClient = new QueryClient();
