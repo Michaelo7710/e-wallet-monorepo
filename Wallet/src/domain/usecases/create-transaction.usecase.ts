@@ -1,8 +1,8 @@
 import { Transaction, TransactionType } from '../entities/transaction.entity';
 import { IUserRepository } from '../repositories/user.repository.interface';
 import { ITransactionRepository } from '../repositories/transaction.repository.interface';
+import { IIdGenerator } from '../adapters/id-generator.interface';
 import { EntityNotFoundError, InsufficientBalanceError } from '../errors/domain.error';
-
 
 interface CreateTransactionInput {
   userId: string;
@@ -14,7 +14,8 @@ interface CreateTransactionInput {
 export class CreateTransactionUseCase {
   constructor(
     private userRepository: IUserRepository,
-    private transactionRepository: ITransactionRepository
+    private transactionRepository: ITransactionRepository,
+    private idGenerator: IIdGenerator
   ) {}
 
   async execute(input: CreateTransactionInput): Promise<Transaction> {
@@ -33,13 +34,13 @@ export class CreateTransactionUseCase {
     }
 
     const transaction = new Transaction({
-      id: crypto.randomUUID(),
+      id: this.idGenerator.generate(),
       userId: input.userId,
       amount: input.amount,
       type: input.type,
       status: 'SUCCESS',
       description: input.description,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     await this.userRepository.updateBalance(user.id, user.balance);
