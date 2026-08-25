@@ -8,6 +8,7 @@ export interface User {
   role: 'user' | 'admin';
   isVerified: boolean;
   isSuspended: boolean;
+  twoFactorEnabled: boolean;
   avatar: string | null;
   nik: string | null;
   balance: number;

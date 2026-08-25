@@ -4,18 +4,19 @@ import { UserDTO } from '../models/userDTO';
 import { User } from '@domain/entities/user';
 
 export class UserMapper {
-  static toDomain(raw: UserDTO): User {
+  static toDomain(dto: UserDTO): User {
     return {
-      id: raw._id,
-      username: raw.username,
-      email: raw.email,
-      phoneNumber: raw.phone_number,
-      role: raw.role,
-      isVerified: raw.is_verified,
-      isSuspended: raw.is_suspended,
-      avatar: raw.avatar || null,
-      nik: raw.nik || null,
-      balance: raw.balance || 0,
+      id: dto._id,
+      username: dto.username,
+      email: dto.email,
+      phoneNumber: dto.phone_number,
+      role: dto.role,
+      isVerified: dto.is_verified,
+      isSuspended: dto.is_suspended,
+      twoFactorEnabled: dto.two_factor_enabled || false,
+      avatar: dto.avatar || null,
+      nik: dto.nik || null,
+      balance: dto.balance || 0,
     };
   }
 
@@ -28,6 +29,7 @@ export class UserMapper {
       role: domain.role,
       is_verified: domain.isVerified,
       is_suspended: domain.isSuspended,
+      two_factor_enabled: domain.twoFactorEnabled,
       avatar: domain.avatar,
       nik: domain.nik,
       balance: domain.balance,

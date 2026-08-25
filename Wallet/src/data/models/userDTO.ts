@@ -8,6 +8,7 @@ export interface UserDTO {
   role: 'user' | 'admin';
   is_verified: boolean;
   is_suspended: boolean;
+  two_factor_enabled: boolean;
   avatar?: string | null;
   nik?: string | null;
   balance: number;
