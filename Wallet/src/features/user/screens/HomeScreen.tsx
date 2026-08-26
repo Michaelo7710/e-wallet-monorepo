@@ -155,6 +155,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { UserLayout } from '@shared/layouts';
 import { WalletCard } from '@shared/components';
 import { getGreetingTime } from '@shared/utils';
@@ -163,7 +164,8 @@ import { useUserProfile } from '../hooks/useUserData';
 import defaultAvatar from '@assets/images/avatar-default.png';
 
 const HomeScreen = () => {
-  const { data: user, isLoading, refetch, isRefetching } = useUserProfile();
+  const navigation = useNavigation<any>();
+  const { data: user, refetch, isRefetching } = useUserProfile();
   const currentBalance = user?.balance ?? 0;
 
   return (
@@ -207,10 +209,30 @@ const HomeScreen = () => {
         <View style={styles.quickActionsContainer}>
           <Text style={styles.sectionTitle}>Aksi Cepat</Text>
           <View style={styles.actionGrid}>
-            <ActionMenu icon="arrow-up" label="Transfer" color={colors.info} />
-            <ActionMenu icon="add" label="Top Up" color={colors.success} />
-            <ActionMenu icon="card-outline" label="Tarik Tunai" color={colors.warning} />
-            <ActionMenu icon="grid-outline" label="Lainnya" color={colors.primary} />
+            <ActionMenu
+              icon="arrow-up"
+              label="Transfer"
+              color={colors.info}
+              onPress={() => navigation.navigate('Transfer')}
+            />
+            <ActionMenu
+              icon="add"
+              label="Top Up"
+              color={colors.success}
+              onPress={() => navigation.navigate('TopUp')}
+            />
+            <ActionMenu
+              icon="card-outline"
+              label="Tarik Tunai"
+              color={colors.warning}
+              onPress={() => navigation.navigate('Withdraw')}
+            />
+            <ActionMenu
+              icon="grid-outline"
+              label="Lainnya"
+              color={colors.primary}
+              onPress={() => navigation.navigate('Riwayat')}
+            />
           </View>
         </View>
       </ScrollView>
@@ -218,8 +240,18 @@ const HomeScreen = () => {
   );
 };
 
-const ActionMenu = ({ icon, label, color }: { icon: any; label: string; color: string }) => (
-  <TouchableOpacity style={styles.actionButton} activeOpacity={0.7}>
+const ActionMenu = ({
+  icon,
+  label,
+  color,
+  onPress,
+}: {
+  icon: any;
+  label: string;
+  color: string;
+  onPress: () => void;
+}) => (
+  <TouchableOpacity style={styles.actionButton} activeOpacity={0.7} onPress={onPress}>
     <View style={[styles.iconBox, { backgroundColor: `${color}15` }]}>
       <Ionicons name={icon} size={28} color={color} />
     </View>

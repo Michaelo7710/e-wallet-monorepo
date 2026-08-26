@@ -34,12 +34,44 @@
 
 // export default AppNavigator;
 
+// import React, { useEffect } from 'react';
+// import { NavigationContainer } from '@react-navigation/native';
+// import { View, ActivityIndicator } from 'react-native';
+// import { useAuthStore } from '@core/storage/useAuthStore';
+// import AuthStack from './AuthStack';
+// import UserTab from './UserTab';
+
+// const AppNavigator = () => {
+//   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
+
+//   useEffect(() => {
+//     hydrate();
+//   }, [hydrate]);
+
+//   if (isLoading) {
+//     return (
+//       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+//         <ActivityIndicator size="large" color="#047857" />
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <NavigationContainer>
+//       {isAuthenticated ? <UserTab /> : <AuthStack />}
+//     </NavigationContainer>
+//   );
+// };
+
+// export default AppNavigator;
+
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { colors } from '@core/theme';
 import AuthStack from './AuthStack';
-import UserTab from './UserTab';
+import UserStack from './UserStack';
 
 const AppNavigator = () => {
   const { isAuthenticated, isLoading, hydrate } = useAuthStore();
@@ -51,14 +83,14 @@ const AppNavigator = () => {
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#047857" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <UserTab /> : <AuthStack />}
+      {isAuthenticated ? <UserStack /> : <AuthStack />}
     </NavigationContainer>
   );
 };
