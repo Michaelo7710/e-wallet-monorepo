@@ -70,11 +70,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { colors } from '@core/theme';
+
 import AuthStack from './AuthStack';
 import UserStack from './UserStack';
+import AdminStack from './AdminStack';
 
 const AppNavigator = () => {
-  const { isAuthenticated, isLoading, hydrate } = useAuthStore();
+  const { isAuthenticated, isLoading, user, hydrate } = useAuthStore();
 
   useEffect(() => {
     hydrate();
@@ -90,7 +92,13 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <UserStack /> : <AuthStack />}
+      {!isAuthenticated ? (
+        <AuthStack />
+      ) : user?.role === 'admin' ? (
+        <AdminStack />
+      ) : (
+        <UserStack />
+      )}
     </NavigationContainer>
   );
 };
