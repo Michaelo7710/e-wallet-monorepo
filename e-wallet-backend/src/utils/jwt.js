@@ -11,9 +11,13 @@ exports.signAccessToken = (userId, role) => {
 
 // 2. PABRIK REFRESH TOKEN (Masa Aktif Panjang: 7 Hari)
 exports.signRefreshToken = (userId) => {
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error('JWT_REFRESH_SECRET tidak terdefinisi pada konfigurasi environment.');
+  }
+
   return jwt.sign(
     { id: userId },
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    process.env.JWT_REFRESH_SECRET,
     { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
   );
 };

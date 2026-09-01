@@ -825,7 +825,7 @@ exports.refreshAccessToken = async (incomingRefreshToken) => {
   // 2. Verifikasi Kriptografi Refresh Token
   let decoded;
   try {
-    decoded = jwt.verify(incomingRefreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    decoded = jwt.verify(incomingRefreshToken, process.env.JWT_REFRESH_SECRET);
   } catch (err) {
     // Jika token palsu/rusak, hapus dari DB
     await RefreshToken.deleteOne({ _id: storedToken._id });

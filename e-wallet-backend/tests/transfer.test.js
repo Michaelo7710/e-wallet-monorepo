@@ -74,4 +74,49 @@ describe('🧪 [P2P TRANSFER & AML INTEGRATION TEST]', () => {
     expect(updatedSender.balance).toBe(5000000); // 20 Juta - 15 Juta
     expect(updatedReceiver.balance).toBe(100000); // Masih tetap 100 Ribu
   });
+
+  it('3. Harus menolak transfer jika saldo pengirim tidak mencukupi (400)', async () => {
+    const res = await request(app)
+      .post('/api/v1/payments/transfer')
+      .set('Authorization', `Bearer ${senderToken}`)
+      .send({
+        receiver_phone_number: '082222222222',
+        amount: 25000000, // 25 Juta (lebih dari saldo 20 Juta)
+        pin: '123456'
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.status).toBe('fail');
+  });
+
+  it('4. Proteksi Double-Spending: Dua request transfer paralel hanya 1 yang lolos jika saldo terbatas', async () => {
+    // Set saldo sender ke 15 Juta
+    await Wallet.updateOne({ user_id: senderUser._id }, { balance: 15000000 });
+
+    // Request 2x transfer @ 10 Juta bersamaan (Total 20 Juta > Saldo 15 Juta)
+    const [res1, res2] = await Promise.all([
+      request(app)
+        .post('/api/v1/payments/transfer')
+        .set('Authorization', `Bearer ${senderToken}`)
+        .send({
+          receiver_phone_number: '082222222222',
+          amount: 10000000,
+          pin: '123456'
+        }),
+      request(app)
+        .post('/api/v1/payments/transfer')
+        .set('Authorization', `Bearer ${senderToken}`)
+        .send({
+          receiver_phone_number: '082222222222',
+          amount: 10000000,
+          pin: '123456'
+        })
+    ]);
+
+    const statuses = [res1.statusCode, res2.statusCode].sort();
+    expect(statuses).toEqual([200, 400]);
+
+    const updatedSender = await Wallet.findOne({ user_id: senderUser._id });
+    expect(updatedSender.balance).toBe(5000000); // 15 Juta - 10 Juta (hanya satu mutasi yang berhasil)
+  });
 });

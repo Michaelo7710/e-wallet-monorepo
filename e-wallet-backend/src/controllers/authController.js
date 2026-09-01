@@ -144,8 +144,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 // GENERATE MANIFEST SECRET 2FA
 // ==========================================
 exports.generate2FA = catchAsync(async (req, res, next) => {
-  // Pengujian Postman: Tarik userId dari body (Nanti diganti req.user.id saat Middleware Protect aktif)
-  const { userId } = req.body; 
+  const userId = req.user._id;
   const data = await authService.generate2FASecret(userId);
   
   res.status(StatusCodes.OK).json({
@@ -158,7 +157,8 @@ exports.generate2FA = catchAsync(async (req, res, next) => {
 // VALIDASI TOKEN TOTP 2FA
 // ==========================================
 exports.verify2FA = catchAsync(async (req, res, next) => {
-  const { userId, token } = req.body;
+  const userId = req.user._id;
+  const { token } = req.body;
   await authService.verify2FAToken(userId, token);
   
   res.status(StatusCodes.OK).json({

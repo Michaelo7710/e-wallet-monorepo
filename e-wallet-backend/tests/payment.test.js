@@ -49,4 +49,37 @@ describe('🧪 [PAYMENT & TRANSACTION INTEGRATION TEST]', () => {
     expect(res.statusCode).toEqual(400);
     expect(res.body.status).toBe('fail');
   });
+
+  it('4. Proteksi Double-Spending Withdrawal: Dua request penarikan paralel hanya 1 yang lolos jika saldo terbatas', async () => {
+    const { accessToken, user, wallet } = await createTestUser({ balance: 100000 }); // Saldo 100rb
+
+    // Dua request penarikan @ 75rb bersamaan (Total 150rb > Saldo 100rb)
+    const [res1, res2] = await Promise.all([
+      request(app)
+        .post('/api/v1/payments/withdrawal/request')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          bank_name: 'BCA',
+          account_number: '1234567890',
+          account_name: 'Tester Akun',
+          amount: 75000,
+        }),
+      request(app)
+        .post('/api/v1/payments/withdrawal/request')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          bank_name: 'BCA',
+          account_number: '1234567890',
+          account_name: 'Tester Akun',
+          amount: 75000,
+        }),
+    ]);
+
+    const statuses = [res1.statusCode, res2.statusCode].sort();
+    expect(statuses).toEqual([200, 400]);
+
+    const { Wallet } = require('../src/models');
+    const updatedWallet = await Wallet.findOne({ user_id: user._id });
+    expect(updatedWallet.balance).toBe(25000); // 100rb - 75rb
+  });
 });
