@@ -95,11 +95,58 @@ const ProfileScreen = () => {
           <View style={styles.profileInfo}>
             <Text style={styles.userName}>{user?.username || 'Pengguna'}</Text>
             <Text style={styles.userEmail}>{user?.email || 'email@domain.com'}</Text>
-            <View style={styles.badgeContainer}>
-              <Text style={styles.badgeText}>{user?.phoneNumber || '-'}</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>{user?.phoneNumber || '-'}</Text>
+              </View>
+              <View
+                style={[
+                  styles.kycBadge,
+                  user?.isVerified ? styles.kycBadgeVerified : styles.kycBadgeUnverified,
+                ]}
+              >
+                <Ionicons
+                  name={user?.isVerified ? 'shield-checkmark' : 'alert-circle-outline'}
+                  size={12}
+                  color={user?.isVerified ? colors.primaryDark : colors.warning}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.kycBadgeText,
+                    { color: user?.isVerified ? colors.primaryDark : colors.warning },
+                  ]}
+                >
+                  {user?.isVerified
+                    ? 'Akun Premium (Limit Rp 50 Jt)'
+                    : 'Akun Basic (Limit Rp 5 Jt)'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
+
+        {!user?.isVerified && (
+          <TouchableOpacity
+            style={styles.kycBanner}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('KycVerification')}
+          >
+            <View style={styles.kycBannerLeft}>
+              <View style={styles.kycBannerIconBox}>
+                <Ionicons name="sparkles" size={20} color={colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.kycBannerTitle}>Upgrade ke Premium (KYC)</Text>
+                <Text style={styles.kycBannerSubtitle}>
+                  Tingkatkan limit saldo transaksi hingga Rp 50.000.000
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.accent} />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.menuContainer}>
           <Text style={styles.sectionTitle}>Pengaturan Akun</Text>
           <View style={styles.menuBox}>
@@ -133,7 +180,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.lg,
     borderRadius: spacing.radius.lg,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
     shadowColor: colors.textMain,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -161,8 +208,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: spacing.xs,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   badgeContainer: {
-    alignSelf: 'flex-start',
     backgroundColor: colors.primaryLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -172,6 +224,58 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     fontWeight: typography.weight.medium as any,
     color: colors.primaryDark,
+  },
+  kycBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: spacing.radius.sm,
+  },
+  kycBadgeVerified: {
+    backgroundColor: colors.primaryLight,
+  },
+  kycBadgeUnverified: {
+    backgroundColor: `${colors.warning}15`,
+  },
+  kycBadgeText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold as any,
+  },
+  kycBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.xxl,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  kycBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  kycBannerIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: spacing.radius.md,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  kycBannerTitle: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold as any,
+    color: colors.textMain,
+  },
+  kycBannerSubtitle: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   menuContainer: {
     marginBottom: spacing.xxl,

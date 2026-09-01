@@ -8,6 +8,7 @@ import SetupPinScreen from '@features/user/screens/SetupPinScreen';
 import ChangePinScreen from '@features/user/screens/ChangePinScreen';
 import ChangePasswordScreen from '@features/user/screens/ChangePasswordScreen';
 import ChangeEmailScreen from '@features/user/screens/ChangeEmailScreen';
+import KycVerificationScreen from '@features/user/screens/KycVerificationScreen';
 
 export type UserStackParamList = {
   MainTab: undefined;
@@ -18,6 +19,7 @@ export type UserStackParamList = {
   ChangePin: undefined;
   ChangePassword: undefined;
   ChangeEmail: undefined;
+  KycVerification: undefined;
 };
 
 const Stack = createNativeStackNavigator<UserStackParamList>();
@@ -33,6 +35,7 @@ const UserStack = () => {
       <Stack.Screen name="ChangePin" component={ChangePinScreen} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
+      <Stack.Screen name="KycVerification" component={KycVerificationScreen} />
     </Stack.Navigator>
   );
 };
