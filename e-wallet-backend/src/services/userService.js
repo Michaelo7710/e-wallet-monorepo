@@ -1,8 +1,53 @@
-const { User, Wallet, SavedContact } = require('../models');
+const { User, Wallet, SavedContact, VerificationCode } = require('../models');
 const { StatusCodes } = require('http-status-codes');
 const AppError = require('../utils/AppError');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+
+// ==========================================
+// ENGINES BEBAS EMISI: NATIVE BASE32 DECODER & TOTP VERIFIER
+// ==========================================
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+const base32Decode = (str) => {
+  let bin = '';
+  for (let char of str.toUpperCase()) {
+    const idx = BASE32_ALPHABET.indexOf(char);
+    if (idx === -1) throw new AppError('Deteksi karakter ilegal non-Base32 pada token 2FA.', StatusCodes.BAD_REQUEST);
+    bin += idx.toString(2).padStart(5, '0');
+  }
+  const bytes = [];
+  for (let i = 0; i < bin.length; i += 8) {
+    const sub = bin.substring(i, i + 8);
+    if (sub.length === 8) bytes.push(parseInt(sub, 2));
+  }
+  return Buffer.from(bytes);
+};
+
+const verifyTOTP = (token, secret) => {
+  if (!secret || !token) return false;
+  try {
+    const counter = Math.floor(Date.now() / 30000);
+    const secretBuffer = base32Decode(secret);
+    const windowSteps = parseInt(process.env.TOTP_WINDOW_STEPS, 10) || 1;
+
+    for (let i = -windowSteps; i <= windowSteps; i++) {
+      const timeBuffer = Buffer.alloc(8);
+      timeBuffer.writeUInt32BE(counter + i, 4);
+
+      const hmac = crypto.createHmac('sha1', secretBuffer).update(timeBuffer).digest();
+      const offset = hmac[hmac.length - 1] & 0xf;
+      const code = ((hmac.readUInt32BE(offset) & 0x7fffffff) % 1000000).toString().padStart(6, '0');
+
+      if (code === token) {
+        return true;
+      }
+    }
+  } catch (err) {
+    return false;
+  }
+  return false;
+};
 
 // ========================================================
 // 1. SERVICE LAYER: PROFILE & WALLET AGGREGATOR
@@ -95,14 +140,27 @@ exports.updateEmailSecurely = async (userId, emailData) => {
   const isPinValid = await user.correctPin(pin, user.pin);
   if (!isPinValid) throw new AppError('PIN transaksi yang Anda masukkan salah.', StatusCodes.BAD_REQUEST);
 
-  // Benteng 4: Verifikasi OTP 2FA (Sesuai Diagram)
-  // [BUDGET Rp0 OPTIMIZATION]: Jika 2FA aktif, validasi TOTP. Jika belum aktif, gunakan simulasi sandbox OTP '123456'
+  // Benteng 4: Verifikasi OTP / 2FA (Sesuai Diagram)
   if (user.two_factor_enabled) {
-    // Di industri nyata, di sini dipasang instrumen: totp.verify({ token: otp, secret: user.two_factor_secret })
-    if (otp !== '123456') throw new AppError('Token OTP Security 2FA tidak valid.', StatusCodes.BAD_REQUEST);
+    const isValid = verifyTOTP(otp, user.two_factor_secret);
+    if (!isValid) {
+      throw new AppError('Token otentikasi 2FA tidak valid atau telah kedaluwarsa.', StatusCodes.UNAUTHORIZED);
+    }
   } else {
-    // Jalur Sandbox Portofolio: Maklum bertarif Rp0
-    if (otp !== '123456') throw new AppError('Simulasi OTP Sandbox yang Anda masukkan salah (Gunakan: 123456).', StatusCodes.BAD_REQUEST);
+    const otpRecord = await VerificationCode.findOne({
+      user_id: userId,
+      code: otp,
+      type: 'change_email',
+      is_used: false,
+      expires_at: { $gt: Date.now() }
+    });
+
+    if (!otpRecord) {
+      throw new AppError('Kode OTP pembaruan email tidak valid atau telah kedaluwarsa.', StatusCodes.BAD_REQUEST);
+    }
+
+    otpRecord.is_used = true;
+    await otpRecord.save();
   }
 
   // Eksekusi Pembaruan Data
@@ -128,16 +186,35 @@ exports.updatePinSecurely = async (userId, pinData) => {
   if (new_pin !== confirm_new_pin) throw new AppError('Konfirmasi PIN baru tidak cocok.', StatusCodes.BAD_REQUEST);
   if (new_pin.length !== 6 || isNaN(new_pin)) throw new AppError('PIN baru wajib berupa 6 digit angka.', StatusCodes.BAD_REQUEST);
 
-  const user = await User.findById(userId).select('+pin +two_factor_enabled');
+  const user = await User.findById(userId).select('+pin +two_factor_secret +two_factor_enabled');
   if (!user) throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
 
   // Benteng 1: Cek Keaslian PIN Lama (Sesuai Diagram)
+  if (!user.pin) throw new AppError('Aktivasi PIN Anda terlebih dahulu sebelum mengubah data sensitif.', StatusCodes.BAD_REQUEST);
   const isOldPinValid = await user.correctPin(old_pin, user.pin);
   if (!isOldPinValid) throw new AppError('PIN lama yang Anda masukkan salah.', StatusCodes.BAD_REQUEST);
 
-  // Benteng 2: Cek OTP (Sesuai Diagram)
-  if (otp !== '123456') { // Pola bypass sandbox hemat biaya
-    throw new AppError('Token OTP salah atau telah kedaluwarsa.', StatusCodes.BAD_REQUEST);
+  // Benteng 2: Cek OTP / 2FA (Sesuai Diagram)
+  if (user.two_factor_enabled) {
+    const isValid = verifyTOTP(otp, user.two_factor_secret);
+    if (!isValid) {
+      throw new AppError('Token otentikasi 2FA tidak valid atau telah kedaluwarsa.', StatusCodes.UNAUTHORIZED);
+    }
+  } else {
+    const otpRecord = await VerificationCode.findOne({
+      user_id: userId,
+      code: otp,
+      type: 'change_pin',
+      is_used: false,
+      expires_at: { $gt: Date.now() }
+    });
+
+    if (!otpRecord) {
+      throw new AppError('Kode OTP pembaruan PIN tidak valid atau telah kedaluwarsa.', StatusCodes.BAD_REQUEST);
+    }
+
+    otpRecord.is_used = true;
+    await otpRecord.save();
   }
 
   // Eksekusi Pemuatan Data Baru
