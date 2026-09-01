@@ -374,12 +374,13 @@ exports.handleMidtransWebhook = async (notificationBody) => {
       topUpRequest.settled_at = settlement_time ? new Date(settlement_time) : new Date();
       await topUpRequest.save({ session });
 
-      // B. Update Wallet (Atomic modification using session)
-      const wallet = await Wallet.findOne({ user_id: topUpRequest.user_id }).session(session);
+      // B. Update Wallet (Atomic modification using $inc)
+      const wallet = await Wallet.findOneAndUpdate(
+        { user_id: topUpRequest.user_id },
+        { $inc: { balance: parseFloat(gross_amount) } },
+        { new: true, session: session || undefined }
+      );
       if (!wallet) throw new Error(`Wallet not found for user ${topUpRequest.user_id}`);
-
-      wallet.balance += parseFloat(gross_amount);
-      await wallet.save({ session });
 
       // C. Inject Polymorphic Ledger Logs
       await Transaction.create([{
@@ -437,16 +438,6 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
     throw new AppError('Minimal penarikan saldo keluar sistem adalah Rp 50.000', StatusCodes.BAD_REQUEST);
   }
 
-  // Tarik dompet pengguna untuk memeriksa kedaulatan saldo
-  const wallet = await Wallet.findOne({ user_id: userId });
-  if (!wallet) {
-    throw new AppError('Komponen dompet digital Anda tidak ditemukan.', StatusCodes.NOT_FOUND);
-  }
-
-  if (wallet.balance < amount) {
-    throw new AppError('Saldo dompet Anda tidak mencukupi untuk melakukan penarikan ini.', StatusCodes.BAD_REQUEST);
-  }
-
   // ========================================================
   // LAPISAN 2: INTEGRASI INFRASTRUKTUR & EKSEKUSI MUTASI
   // ========================================================
@@ -471,8 +462,18 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
     const isHighValue = amount >= 10000000;
     const initialStatus = isHighValue ? 'pending_approval' : 'success';
 
-    // [VALIDATION FIRST] Kita buat data request TERLEBIH DAHULU. 
-    // Jika baris ini gagal karena validasi Mongoose, saldo di bawah aman tidak terpotong.
+    // Eksekusi pemotongan saldo secara atomik dengan predicate lock
+    const wallet = await Wallet.findOneAndUpdate(
+      { user_id: userId, balance: { $gte: parseFloat(amount) } },
+      { $inc: { balance: -parseFloat(amount) } },
+      { new: true, ...options }
+    );
+
+    if (!wallet) {
+      throw new AppError('Saldo dompet Anda tidak mencukupi untuk melakukan penarikan ini.', StatusCodes.BAD_REQUEST);
+    }
+    console.log(`   -> Saldo resmi dipotong aman secara atomik. Sisa saldo saat ini: Rp ${wallet.balance}`);
+
     const withdrawalRequest = await WithdrawalRequest.create([{
       user_id: userId,
       reference_number: referenceNumber,
@@ -482,11 +483,6 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
       amount,
       status: initialStatus
     }], options);
-
-    // KETIKA DOKUMEN AMAN, BARU POTONG SALDO WALLET (STATE CONSISTENCY SECURE)
-    wallet.balance -= parseFloat(amount);
-    await wallet.save(options);
-    console.log(`   -> Saldo resmi dipotong aman. Sisa saldo saat ini: Rp ${wallet.balance}`);
 
     // Suntik baris riwayat ke Buku Besar jika bernilai kecil
     if (!isHighValue) {
@@ -576,11 +572,12 @@ exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedR
       request.rejected_reason = rejectedReason || 'Ditolak oleh kebijakan kepatuhan keamanan Admin.';
       await request.save(options);
 
-      const wallet = await Wallet.findOne({ user_id: request.user_id }).session(session);
+      const wallet = await Wallet.findOneAndUpdate(
+        { user_id: request.user_id },
+        { $inc: { balance: request.amount } },
+        { new: true, ...options }
+      );
       if (!wallet) throw new Error('Dompet Wallet pengguna tidak ditemukan saat proses refund.');
-
-      wallet.balance += request.amount; // Uang kembali ke dompet asal
-      await wallet.save(options);
       
       console.log(`❌ [ADMIN REJECTED] Transaksi digagalkan. Dana Rp ${request.amount} dipulangkan ke User.`);
     }
@@ -637,17 +634,10 @@ exports.transferP2P = async (senderId, transferData) => {
     throw new AppError('Anda tidak dapat mengirimkan uang ke nomor HP Anda sendiri.', StatusCodes.BAD_REQUEST);
   }
 
-  // Tarik kedua dompet untuk eksekusi mutasi paralel
-  const senderWallet = await Wallet.findOne({ user_id: senderId });
+  // Tarik dompet penerima untuk verifikasi
   const receiverWallet = await Wallet.findOne({ user_id: receiver._id });
-
-  if (!senderWallet || !receiverWallet) {
+  if (!receiverWallet) {
     throw new AppError('Komponen dompet digital salah satu pihak tidak ditemukan.', StatusCodes.NOT_FOUND);
-  }
-
-  // Benteng 5: Cek Kecukupan Saldo Pengirim
-  if (senderWallet.balance < amount) {
-    throw new AppError('Saldo dompet Anda tidak mencukupi untuk melakukan transfer ini.', StatusCodes.BAD_REQUEST);
   }
 
   // Deteksi Otomatis Topologi Database (Anti-Crash lokal standalone)
@@ -669,17 +659,27 @@ exports.transferP2P = async (senderId, transferData) => {
     // Uang dikelompokkan sebagai High-Value jika menyentuh limit nominal >= 10jt
     const isHighValue = amount >= 10000000;
     
-    // 1. Potong Saldo Pengirim SECARA ABSOLUT (Hold Mechanism anti double-spending)
-    senderWallet.balance -= parseFloat(amount);
-    await senderWallet.save(options);
+    // 1. Potong Saldo Pengirim SECARA ATOMIK (Hold Mechanism anti double-spending)
+    const senderWallet = await Wallet.findOneAndUpdate(
+      { user_id: senderId, balance: { $gte: parseFloat(amount) } },
+      { $inc: { balance: -parseFloat(amount) } },
+      { new: true, ...options }
+    );
+
+    if (!senderWallet) {
+      throw new AppError('Saldo dompet Anda tidak mencukupi untuk melakukan transfer ini.', StatusCodes.BAD_REQUEST);
+    }
     console.log(`   -> Saldo pengirim berhasil diamankan. Sisa: Rp ${senderWallet.balance}`);
 
     const txId = new mongoose.Types.ObjectId();
 
     if (!isHighValue) {
-      // KONDISI A: Nominal Kecil (< 10 Juta) -> Saldo penerima langsung bertambah instan
-      receiverWallet.balance += parseFloat(amount);
-      await receiverWallet.save(options);
+      // KONDISI A: Nominal Kecil (< 10 Juta) -> Saldo penerima langsung bertambah instan secara atomik
+      await Wallet.findOneAndUpdate(
+        { user_id: receiver._id },
+        { $inc: { balance: parseFloat(amount) } },
+        { new: true, ...options }
+      );
 
       await Transaction.create([{
         _id: txId,

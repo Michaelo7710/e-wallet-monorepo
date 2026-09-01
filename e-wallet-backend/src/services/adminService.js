@@ -191,15 +191,11 @@ exports.processTopUpDecision = async (
 
       await request.save(options);
 
-      const walletQuery = Wallet.findOne({
-        user_id: request.user_id,
-      });
-
-      if (session) {
-        walletQuery.session(session);
-      }
-
-      const wallet = await walletQuery;
+      const wallet = await Wallet.findOneAndUpdate(
+        { user_id: request.user_id },
+        { $inc: { balance: request.amount } },
+        { new: true, ...options }
+      );
 
       if (!wallet) {
         throw new AppError(
@@ -207,10 +203,6 @@ exports.processTopUpDecision = async (
           StatusCodes.NOT_FOUND
         );
       }
-
-      wallet.balance += request.amount;
-
-      await wallet.save(options);
 
       await Transaction.create(
         [
@@ -492,15 +484,11 @@ exports.processTransferDecision = async (
     const options = session ? { session } : {};
 
     if (decision === 'approve') {
-      const receiverWalletQuery = Wallet.findOne({
-        user_id: transaction.receiver_id,
-      });
-
-      if (session) {
-        receiverWalletQuery.session(session);
-      }
-
-      const receiverWallet = await receiverWalletQuery;
+      const receiverWallet = await Wallet.findOneAndUpdate(
+        { user_id: transaction.receiver_id },
+        { $inc: { balance: transaction.amount } },
+        { new: true, ...options }
+      );
 
       if (!receiverWallet) {
         throw new AppError(
@@ -509,25 +497,17 @@ exports.processTransferDecision = async (
         );
       }
 
-      receiverWallet.balance += transaction.amount;
-
-      await receiverWallet.save(options);
-
       transaction.status = 'success';
 
       await transaction.save(options);
     }
 
     if (decision === 'reject') {
-      const senderWalletQuery = Wallet.findOne({
-        user_id: transaction.sender_id,
-      });
-
-      if (session) {
-        senderWalletQuery.session(session);
-      }
-
-      const senderWallet = await senderWalletQuery;
+      const senderWallet = await Wallet.findOneAndUpdate(
+        { user_id: transaction.sender_id },
+        { $inc: { balance: transaction.amount } },
+        { new: true, ...options }
+      );
 
       if (!senderWallet) {
         throw new AppError(
@@ -535,10 +515,6 @@ exports.processTransferDecision = async (
           StatusCodes.NOT_FOUND
         );
       }
-
-      senderWallet.balance += transaction.amount;
-
-      await senderWallet.save(options);
 
       transaction.status = 'rejected';
 
