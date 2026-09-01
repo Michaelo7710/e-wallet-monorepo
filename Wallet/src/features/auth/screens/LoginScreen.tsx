@@ -111,6 +111,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
+import { useAuthStore } from '@core/storage/useAuthStore';
 import { useLoginMutation } from '../hooks/useAuthMutations';
 
 const loginSchema = z.object({
@@ -122,6 +123,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginScreen = () => {
   const navigation = useNavigation<any>();
+  const loginSession = useAuthStore((state) => state.loginSession);
   const { mutate: login, isPending } = useLoginMutation();
 
   const { control, handleSubmit } = useForm<LoginFormValues>({
@@ -131,6 +133,20 @@ const LoginScreen = () => {
 
   const onSubmit = (data: LoginFormValues) => {
     login(data, {
+      onSuccess: async (session) => {
+        if (session.user.twoFactorEnabled) {
+          navigation.navigate('TwoFactorAuth', {
+            user: session.user,
+            tokens: session.tokens,
+          });
+        } else {
+          await loginSession(
+            session.user,
+            session.tokens.accessToken,
+            session.tokens.refreshToken
+          );
+        }
+      },
       onError: (error: any) => {
         const message = error.response?.data?.message || error.message || 'Login Gagal';
         Alert.alert('Gagal Masuk', message);

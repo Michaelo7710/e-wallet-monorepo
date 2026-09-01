@@ -36,15 +36,9 @@ export interface Verify2FAPayload {
 }
 
 export const useLoginMutation = () => {
-  const loginSession = useAuthStore((state) => state.loginSession);
-
   return useMutation({
     mutationFn: async ({ email, password }: LoginPayload) => {
       return await authRepository.login(email, password);
-    },
-    onSuccess: async (session) => {
-      await loginSession(session.user, session.tokens.accessToken, session.tokens.refreshToken);
-      queryClient.clear();
     },
   });
 };
