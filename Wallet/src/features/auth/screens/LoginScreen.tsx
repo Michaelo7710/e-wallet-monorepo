@@ -161,6 +161,12 @@ const LoginScreen = () => {
           placeholder="Masukkan password Anda"
           isPassword
         />
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ForgotPassword')}
+          style={styles.forgotPasswordButton}
+        >
+          <Text style={styles.forgotPasswordText}>Lupa Password?</Text>
+        </TouchableOpacity>
         <ButtonCustom
           title="Masuk"
           onPress={handleSubmit(onSubmit)}
@@ -188,6 +194,15 @@ const styles = StyleSheet.create({
   },
   subtitle: { fontSize: typography.size.md, color: colors.textLight },
   formContainer: { marginBottom: spacing.xxl },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.md,
+  },
+  forgotPasswordText: {
+    color: colors.accent,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium as any,
+  },
   footerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   footerText: { color: colors.white, fontSize: typography.size.sm },
   registerText: {
