@@ -45,11 +45,11 @@ const TopUpScreen = () => {
 
     initiateTopUp(finalAmount, {
       onSuccess: (data) => {
-        Alert.alert(
-          'Instruksi Pembayaran Dibuat',
-          `Silakan selesaikan pembayaran sebesar Rp ${finalAmount.toLocaleString('id-ID')}.\nKode Ref: ${data.referenceId}`,
-          [{ text: 'Selesai', onPress: () => navigation.goBack() }]
-        );
+        navigation.navigate('SnapPaymentWebView', {
+          redirectUrl: data.redirectUrl,
+          referenceId: data.referenceId,
+          amount: finalAmount,
+        });
       },
       onError: (err: any) => {
         const msg = err.response?.data?.message || err.message || 'Gagal memproses top up';
