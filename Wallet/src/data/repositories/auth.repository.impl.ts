@@ -48,4 +48,14 @@ export class AuthRepositoryImpl implements IAuthRepository {
   async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
     await this.remoteDataSource.resetPassword(email, otp, newPassword);
   }
+
+  async generate2FA(): Promise<{ secret: string; otpauth_url: string }> {
+    const res = await this.remoteDataSource.generate2FA();
+    return res.data;
+  }
+
+  async verify2FA(token: string): Promise<boolean> {
+    const res = await this.remoteDataSource.verify2FA(token);
+    return res.status === 'success';
+  }
 }

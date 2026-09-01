@@ -19,7 +19,7 @@ const PROFILE_MENUS: MenuType[] = [
 ];
 
 const ProfileScreen = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logoutSession } = useAuthStore();
 
   const handleLogout = () => {
     Alert.alert(
@@ -31,7 +31,7 @@ const ProfileScreen = () => {
           text: 'Keluar',
           style: 'destructive',
           onPress: async () => {
-            await logout();
+            await logoutSession();
           },
         },
       ]

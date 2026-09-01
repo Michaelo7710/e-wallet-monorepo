@@ -101,7 +101,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        await useAuthStore.getState().logout();
+        await useAuthStore.getState().logoutSession();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

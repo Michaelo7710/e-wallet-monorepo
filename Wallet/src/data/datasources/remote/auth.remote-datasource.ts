@@ -26,13 +26,13 @@ export class AuthRemoteDataSource {
     return response.data;
   }
 
-  async verifyEmail(email: string, code: string): Promise<{ status: string }> {
-    const response = await api.post('/auth/verify-email', { email, code });
+  async verifyEmail(email: string, code: string): Promise<{ status: string; message: string }> {
+    const response = await api.post<{ status: string; message: string }>('/auth/verify-email', { email, code });
     return response.data;
   }
 
   async refreshToken(refreshToken: string): Promise<{ token: string }> {
-    const response = await api.post('/auth/refresh-token', { refresh_token: refreshToken });
+    const response = await api.post<{ token: string }>('/auth/refresh-token', { refresh_token: refreshToken });
     return response.data;
   }
 
@@ -40,15 +40,27 @@ export class AuthRemoteDataSource {
     await api.post('/auth/logout', { refresh_token: refreshToken });
   }
 
-  async forgotPassword(email: string): Promise<void> {
-    await api.post('/auth/forgot-password', { email });
+  async forgotPassword(email: string): Promise<{ status: string; message: string }> {
+    const response = await api.post<{ status: string; message: string }>('/auth/forgot-password', { email });
+    return response.data;
   }
 
-  async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
-    await api.post('/auth/reset-password', {
+  async resetPassword(email: string, otp: string, new_password: string): Promise<{ status: string; message: string }> {
+    const response = await api.post<{ status: string; message: string }>('/auth/reset-password', {
       email,
       otp,
-      new_password: newPassword,
+      new_password,
     });
+    return response.data;
+  }
+
+  async generate2FA(): Promise<{ status: string; data: { secret: string; otpauth_url: string } }> {
+    const response = await api.post<{ status: string; data: { secret: string; otpauth_url: string } }>('/auth/2fa/generate');
+    return response.data;
+  }
+
+  async verify2FA(token: string): Promise<{ status: string; message: string }> {
+    const response = await api.post<{ status: string; message: string }>('/auth/2fa/verify', { token });
+    return response.data;
   }
 }
