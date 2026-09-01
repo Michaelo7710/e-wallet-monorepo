@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 import { UserLayout } from '@shared/layouts';
 import { ButtonCustom } from '@shared/components';
@@ -19,7 +20,14 @@ const PROFILE_MENUS: MenuType[] = [
 ];
 
 const ProfileScreen = () => {
+  const navigation = useNavigation<any>();
   const { user, logoutSession } = useAuthStore();
+
+  const handleMenuPress = (menuId: string) => {
+    if (menuId === '1') {
+      navigation.navigate('ChangePin');
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -39,7 +47,12 @@ const ProfileScreen = () => {
   };
 
   const renderMenuRow = (menu: MenuType) => (
-    <TouchableOpacity key={menu.id} style={styles.menuRow} activeOpacity={0.7}>
+    <TouchableOpacity
+      key={menu.id}
+      style={styles.menuRow}
+      activeOpacity={0.7}
+      onPress={() => handleMenuPress(menu.id)}
+    >
       <View style={styles.menuLeft}>
         <View style={[styles.iconBox, { backgroundColor: `${menu.color}15` }]}>
           <Ionicons name={menu.icon} size={22} color={menu.color} />

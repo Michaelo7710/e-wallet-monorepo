@@ -4,8 +4,19 @@ import UserTab from './UserTab';
 import TransferScreen from '@features/payment/screens/TransferScreen';
 import TopUpScreen from '@features/payment/screens/TopUpScreen';
 import WithdrawScreen from '@features/payment/screens/WithdrawScreen';
+import SetupPinScreen from '@features/user/screens/SetupPinScreen';
+import ChangePinScreen from '@features/user/screens/ChangePinScreen';
 
-const Stack = createNativeStackNavigator();
+export type UserStackParamList = {
+  MainTab: undefined;
+  Transfer: undefined;
+  TopUp: undefined;
+  Withdraw: undefined;
+  SetupPin: undefined;
+  ChangePin: undefined;
+};
+
+const Stack = createNativeStackNavigator<UserStackParamList>();
 
 const UserStack = () => {
   return (
@@ -14,6 +25,8 @@ const UserStack = () => {
       <Stack.Screen name="Transfer" component={TransferScreen} />
       <Stack.Screen name="TopUp" component={TopUpScreen} />
       <Stack.Screen name="Withdraw" component={WithdrawScreen} />
+      <Stack.Screen name="SetupPin" component={SetupPinScreen} />
+      <Stack.Screen name="ChangePin" component={ChangePinScreen} />
     </Stack.Navigator>
   );
 };
