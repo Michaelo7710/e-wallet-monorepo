@@ -13,10 +13,12 @@ import defaultAvatar from '@assets/images/avatar-default.png';
 type MenuType = { id: string; icon: any; title: string; subtitle?: string; color: string };
 
 const PROFILE_MENUS: MenuType[] = [
-  { id: '1', icon: 'shield-checkmark-outline', title: 'Keamanan & PIN', subtitle: 'Ubah PIN & Password', color: colors.primary },
-  { id: '2', icon: 'card-outline', title: 'Rekening Bank', subtitle: 'Atur rekening penarikan', color: colors.info },
-  { id: '3', icon: 'help-buoy-outline', title: 'Pusat Bantuan', subtitle: 'Hubungi layanan pelanggan', color: colors.warning },
-  { id: '4', icon: 'document-text-outline', title: 'Syarat & Ketentuan', color: colors.textMuted },
+  { id: '1', icon: 'shield-checkmark-outline', title: 'PIN Transaksi', subtitle: 'Ubah atau kelola PIN transaksi', color: colors.primary },
+  { id: '2', icon: 'key-outline', title: 'Ubah Kata Sandi', subtitle: 'Perbarui kata sandi akun', color: colors.warning },
+  { id: '3', icon: 'mail-outline', title: 'Ubah Alamat Email', subtitle: 'Perbarui email akun terdaftar', color: colors.info },
+  { id: '4', icon: 'card-outline', title: 'Rekening Bank', subtitle: 'Atur rekening penarikan', color: colors.primaryDark },
+  { id: '5', icon: 'help-buoy-outline', title: 'Pusat Bantuan', subtitle: 'Hubungi layanan pelanggan', color: colors.warning },
+  { id: '6', icon: 'document-text-outline', title: 'Syarat & Ketentuan', color: colors.textMuted },
 ];
 
 const ProfileScreen = () => {
@@ -24,8 +26,18 @@ const ProfileScreen = () => {
   const { user, logoutSession } = useAuthStore();
 
   const handleMenuPress = (menuId: string) => {
-    if (menuId === '1') {
-      navigation.navigate('ChangePin');
+    switch (menuId) {
+      case '1':
+        navigation.navigate('ChangePin');
+        break;
+      case '2':
+        navigation.navigate('ChangePassword');
+        break;
+      case '3':
+        navigation.navigate('ChangeEmail');
+        break;
+      default:
+        break;
     }
   };
 

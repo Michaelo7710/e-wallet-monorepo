@@ -6,6 +6,8 @@ import TopUpScreen from '@features/payment/screens/TopUpScreen';
 import WithdrawScreen from '@features/payment/screens/WithdrawScreen';
 import SetupPinScreen from '@features/user/screens/SetupPinScreen';
 import ChangePinScreen from '@features/user/screens/ChangePinScreen';
+import ChangePasswordScreen from '@features/user/screens/ChangePasswordScreen';
+import ChangeEmailScreen from '@features/user/screens/ChangeEmailScreen';
 
 export type UserStackParamList = {
   MainTab: undefined;
@@ -14,6 +16,8 @@ export type UserStackParamList = {
   Withdraw: undefined;
   SetupPin: undefined;
   ChangePin: undefined;
+  ChangePassword: undefined;
+  ChangeEmail: undefined;
 };
 
 const Stack = createNativeStackNavigator<UserStackParamList>();
@@ -27,6 +31,8 @@ const UserStack = () => {
       <Stack.Screen name="Withdraw" component={WithdrawScreen} />
       <Stack.Screen name="SetupPin" component={SetupPinScreen} />
       <Stack.Screen name="ChangePin" component={ChangePinScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
     </Stack.Navigator>
   );
 };
