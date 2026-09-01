@@ -19,15 +19,17 @@ export class UserRepositoryImpl implements IUserRepository {
     await this.remoteDataSource.updatePassword(oldPassword, newPassword, confirmNewPassword);
   }
 
-  async updateEmail(newEmail: string, otp: string, pin: string): Promise<void> {
-    await this.remoteDataSource.updateEmail(newEmail, otp, pin);
+  async updateEmail(newEmail: string, otp: string, pin: string): Promise<{ email: string }> {
+    const raw = await this.remoteDataSource.updateEmail(newEmail, otp, pin);
+    return { email: raw.email };
   }
 
   async updatePin(oldPin: string, otp: string, newPin: string, confirmNewPin: string): Promise<void> {
     await this.remoteDataSource.updatePin(oldPin, otp, newPin, confirmNewPin);
   }
 
-  async updateKyc(nik: string): Promise<void> {
-    await this.remoteDataSource.updateKyc(nik);
+  async updateKyc(nik: string): Promise<User> {
+    const raw = await this.remoteDataSource.updateKyc(nik);
+    return UserMapper.toDomain(raw.data);
   }
 }
