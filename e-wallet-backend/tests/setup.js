@@ -1,8 +1,16 @@
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 
-// 🚀 DYNAMIC MOCK: Palsukan fungsi sendEmail agar test tidak butuh kredensial Mailtrap
+// 🚀 DYNAMIC MOCK: Palsukan fungsi sendEmail & Midtrans Snap agar test tidak butuh kredensial eksternal
 jest.mock('../src/utils/email', () => jest.fn().mockResolvedValue(true));
+jest.mock('midtrans-client', () => ({
+  Snap: jest.fn().mockImplementation(() => ({
+    createTransaction: jest.fn().mockResolvedValue({
+      token: 'mock-snap-token-12345',
+      redirect_url: 'https://app.sandbox.midtrans.com/snap/v2/vtweb/mock-snap-token-12345'
+    })
+  }))
+}));
 
 let mongoServer;
 

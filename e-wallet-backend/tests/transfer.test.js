@@ -119,4 +119,36 @@ describe('🧪 [P2P TRANSFER & AML INTEGRATION TEST]', () => {
     const updatedSender = await Wallet.findOne({ user_id: senderUser._id });
     expect(updatedSender.balance).toBe(5000000); // 15 Juta - 10 Juta (hanya satu mutasi yang berhasil)
   });
+
+  it('5. Harus menolak transfer jika nominal menyebabkan saldo dompet penerima melebihi batas limit akunnya (400)', async () => {
+    // Buat penerima Non-KYC dengan saldo 4.5 Juta
+    const nonKycReceiver = await User.create({
+      username: 'Penerima Non-KYC',
+      email: 'nonkyc_receiver@test.com',
+      password: 'Password123!',
+      phone_number: '083333333333',
+      pin: '123456',
+      is_verified: false, // Non-KYC (Limit 5 Juta)
+    });
+
+    await Wallet.create({
+      user_id: nonKycReceiver._id,
+      balance: 4500000, // Saldo awal 4.5 Juta
+    });
+
+    // Pengirim mengirimkan Rp 1.000.000 (Total akan menjadi 5.5 Juta > Limit 5 Juta)
+    const res = await request(app)
+      .post('/api/v1/payments/transfer')
+      .set('Authorization', `Bearer ${senderToken}`)
+      .send({
+        receiver_phone_number: '083333333333',
+        amount: 1000000,
+        pin: '123456',
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.status).toBe('fail');
+    expect(res.body.error_code).toBe('RECEIVER_WALLET_LIMIT_EXCEEDED');
+    expect(res.body.message).toMatch(/Saldo akun penerima akan melebihi batas maksimum/i);
+  });
 });

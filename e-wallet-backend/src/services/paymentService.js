@@ -217,6 +217,13 @@ const { TopUpRequest, Wallet, Transaction, User, WithdrawalRequest, SavedContact
 const AppError = require('../utils/AppError');
 
 // ========================================================
+// 0. TIERED KYC BALANCE LIMITS & RULES
+// ========================================================
+const LIMIT_NON_KYC = 5000000;  // Rp 5 Juta
+const LIMIT_KYC = 50000000;      // Rp 50 Juta
+const getWalletLimit = (isVerified) => (isVerified ? LIMIT_KYC : LIMIT_NON_KYC);
+
+// ========================================================
 // 1. INITIALIZE MIDTRANS SNAP SDK CLIENT
 // ========================================================
 const snap = new midtransClient.Snap({
@@ -244,9 +251,25 @@ exports.initiateTopUp = async (userId, amount) => {
     throw new AppError('Minimal pengisian saldo adalah Rp 10.000', StatusCodes.BAD_REQUEST);
   }
 
-  const user = await User.findById(userId);
+  const [user, wallet] = await Promise.all([
+    User.findById(userId),
+    Wallet.findOne({ user_id: userId })
+  ]);
+
   if (!user) {
     throw new AppError('Pengguna tidak terdaftar di dalam sistem.', StatusCodes.NOT_FOUND);
+  }
+
+  const maxLimit = getWalletLimit(user.is_verified);
+  const currentBalance = wallet ? wallet.balance : 0;
+  const projectedBalance = currentBalance + parseFloat(amount);
+
+  if (projectedBalance > maxLimit) {
+    throw new AppError(
+      `Top Up gagal. Batas maksimum saldo untuk akun Anda adalah Rp ${maxLimit.toLocaleString('id-ID')}. Saldo saat ini: Rp ${currentBalance.toLocaleString('id-ID')}.`,
+      StatusCodes.BAD_REQUEST,
+      'WALLET_LIMIT_EXCEEDED'
+    );
   }
 
   const referenceNumber = generateReferenceNumber('TP');
@@ -638,6 +661,17 @@ exports.transferP2P = async (senderId, transferData) => {
   const receiverWallet = await Wallet.findOne({ user_id: receiver._id });
   if (!receiverWallet) {
     throw new AppError('Komponen dompet digital salah satu pihak tidak ditemukan.', StatusCodes.NOT_FOUND);
+  }
+
+  // Validasi Limit Saldo Penerima Berjenjang KYC
+  const receiverLimit = getWalletLimit(receiver.is_verified);
+  const receiverProjectedBalance = receiverWallet.balance + parseFloat(amount);
+  if (receiverProjectedBalance > receiverLimit) {
+    throw new AppError(
+      `Transfer gagal. Saldo akun penerima akan melebihi batas maksimum (Limit: Rp ${receiverLimit.toLocaleString('id-ID')}).`,
+      StatusCodes.BAD_REQUEST,
+      'RECEIVER_WALLET_LIMIT_EXCEEDED'
+    );
   }
 
   // Deteksi Otomatis Topologi Database (Anti-Crash lokal standalone)

@@ -82,4 +82,37 @@ describe('🧪 [PAYMENT & TRANSACTION INTEGRATION TEST]', () => {
     const updatedWallet = await Wallet.findOne({ user_id: user._id });
     expect(updatedWallet.balance).toBe(25000); // 100rb - 75rb
   });
+
+  it('5. Harus menolak Top Up jika akumulasi saldo melebihi limit Rp 5.000.000 untuk akun Non-KYC (400)', async () => {
+    const { accessToken } = await createTestUser({
+      is_verified: false,
+      balance: 4000000,
+    });
+
+    const res = await request(app)
+      .post('/api/v1/payments/topup/initiate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ amount: 2000000 }); // 4jt + 2jt = 6jt > limit 5jt
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.status).toBe('fail');
+    expect(res.body.error_code).toBe('WALLET_LIMIT_EXCEEDED');
+    expect(res.body.message).toMatch(/Batas maksimum saldo untuk akun Anda adalah Rp 5\.000\.000/i);
+  });
+
+  it('6. Harus mengizinkan Top Up di atas Rp 5.000.000 (hingga Rp 50.000.000) jika akun sudah berstatus KYC Terverifikasi (is_verified: true)', async () => {
+    const { accessToken } = await createTestUser({
+      is_verified: true,
+      balance: 4000000,
+    });
+
+    const res = await request(app)
+      .post('/api/v1/payments/topup/initiate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ amount: 6000000 }); // 4jt + 6jt = 10jt <= limit 50jt
+
+    expect(res.statusCode).toEqual(201);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data).toHaveProperty('snap_token');
+  });
 });
