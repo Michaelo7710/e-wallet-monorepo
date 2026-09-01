@@ -50,8 +50,6 @@ export const useLoginMutation = () => {
 };
 
 export const useRegisterMutation = () => {
-  const loginSession = useAuthStore((state) => state.loginSession);
-
   return useMutation({
     mutationFn: async (params: RegisterPayload) => {
       return await authRepository.register(
@@ -60,10 +58,6 @@ export const useRegisterMutation = () => {
         params.phoneNumber,
         params.password
       );
-    },
-    onSuccess: async (session) => {
-      await loginSession(session.user, session.tokens.accessToken, session.tokens.refreshToken);
-      queryClient.clear();
     },
   });
 };
