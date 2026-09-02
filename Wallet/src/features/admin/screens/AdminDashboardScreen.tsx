@@ -59,16 +59,24 @@ const AdminDashboardScreen = () => {
             </Text>
           </View>
 
-          <View style={[styles.statCardFull, { borderLeftColor: colors.info }]}>
-            <Text style={styles.statLabel}>Total Volume Transaksi</Text>
+          <TouchableOpacity
+            style={[styles.statCardFull, { borderLeftColor: colors.info }]}
+            onPress={() => navigation.navigate('AdminFinancialReport')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.statHeaderRow}>
+              <Text style={styles.statLabel}>Total Volume Transaksi</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.info} />
+            </View>
             <Text style={styles.statValueLarge}>
               Rp {(stats?.totalVolume ?? 0).toLocaleString('id-ID')}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Aksi Manajemen</Text>
 
+        {/* 1. Persetujuan Penarikan */}
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminApprovals')}
@@ -86,14 +94,15 @@ const AdminDashboardScreen = () => {
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
         </TouchableOpacity>
 
+        {/* 2. Persetujuan Top Up Manual */}
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminTopUpApprovals')}
           activeOpacity={0.7}
         >
           <View style={styles.actionLeft}>
-            <View style={[styles.iconBox, { backgroundColor: `${colors.info}15` }]}>
-              <Ionicons name="wallet-outline" size={26} color={colors.info} />
+            <View style={[styles.iconBox, { backgroundColor: `${colors.primary}15` }]}>
+              <Ionicons name="wallet-outline" size={26} color={colors.primary} />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Persetujuan Top Up Manual</Text>
@@ -103,14 +112,15 @@ const AdminDashboardScreen = () => {
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
         </TouchableOpacity>
 
+        {/* 3. Kliring Transfer AML */}
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminTransferApprovals')}
           activeOpacity={0.7}
         >
           <View style={styles.actionLeft}>
-            <View style={[styles.iconBox, { backgroundColor: `${colors.warning}15` }]}>
-              <Ionicons name="swap-horizontal-outline" size={26} color={colors.warning} />
+            <View style={[styles.iconBox, { backgroundColor: `${colors.info}15` }]}>
+              <Ionicons name="swap-horizontal-outline" size={26} color={colors.info} />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Kliring Transfer AML</Text>
@@ -120,6 +130,7 @@ const AdminDashboardScreen = () => {
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
         </TouchableOpacity>
 
+        {/* 4. Rekening Bank Master */}
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminBankManagement')}
@@ -132,6 +143,24 @@ const AdminDashboardScreen = () => {
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Rekening Bank Master</Text>
               <Text style={styles.actionSubtitle}>Kelola rekening penampung platform</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+        </TouchableOpacity>
+
+        {/* 5. Laporan Neraca Keuangan */}
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('AdminFinancialReport')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.actionLeft}>
+            <View style={[styles.iconBox, { backgroundColor: `${colors.success}15` }]}>
+              <Ionicons name="analytics-outline" size={26} color={colors.success} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Laporan Neraca Keuangan</Text>
+              <Text style={styles.actionSubtitle}>Analisis likuiditas, peredaran uang & arus kas</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
@@ -190,6 +219,11 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.md,
     borderLeftWidth: 4,
     elevation: 2,
+  },
+  statHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   statLabel: {
     fontSize: typography.size.xs,
