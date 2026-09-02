@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@core/theme';
 import { useScreenGuard } from '@core/security/useScreenGuard';
+import { NetworkStatusBanner } from '@shared/components';
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -34,6 +35,9 @@ const UserLayout = ({
         },
       ]}
     >
+      {/* Banner status jaringan offline/online di layer paling atas */}
+      <NetworkStatusBanner />
+
       {/* Status bar gelap karena background UserLayout berwarna terang */}
       <StatusBar style="dark" />
 
