@@ -180,6 +180,35 @@
 
 /**
  * @openapi
+ * /auth/2fa/verify-login:
+ *   post:
+ *     summary: Verifikasi Kode 2FA saat Login (Tukar Pre-Auth Ticket)
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pre_auth_token, token]
+ *             properties:
+ *               pre_auth_token: { type: string, example: "eyJhbGciOiJIUzI1Ni..." }
+ *               token: { type: string, example: "123456" }
+ *     responses:
+ *       200:
+ *         description: Verifikasi 2FA berhasil, mengembalikan Dual-Token JWT
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/AuthSuccessResponse' }
+ *       400:
+ *         $ref: '#/components/responses/400BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/401Unauthorized'
+ */
+
+/**
+ * @openapi
  * /auth/2fa/generate:
  *   post:
  *     summary: Generate Secret Key & TOTP URL 2FA

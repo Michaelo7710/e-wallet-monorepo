@@ -166,4 +166,106 @@ describe('🧪 [AUTH ENGINE INTEGRATION TEST]', () => {
     expect(res.statusCode).toEqual(401);
     expect(res.body.message).toMatch(/Verifikasi refresh token gagal/i);
   });
+
+  it('7. Harus menahan sesi dan mengembalikan pre_auth_token jika user mengaktifkan 2FA saat login', async () => {
+    // Buat user dengan 2FA aktif dan secret terisi
+    const rawSecret = crypto.randomBytes(20);
+    const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let bin = '';
+    for (let byte of rawSecret) {
+      bin += byte.toString(2).padStart(8, '0');
+    }
+    let secret = '';
+    for (let i = 0; i < bin.length; i += 5) {
+      const sub = bin.substring(i, i + 5);
+      const idx = parseInt(sub, 2);
+      secret += BASE32_ALPHABET[idx];
+    }
+
+    const user = await User.create({
+      username: 'TwoFactor User',
+      email: 'twofactor@test.com',
+      password: 'Password123!',
+      phone_number: '081122334455',
+      is_verified: true,
+      two_factor_enabled: true,
+      two_factor_secret: secret,
+    });
+
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'twofactor@test.com', password: 'Password123!' });
+
+    expect(loginRes.statusCode).toEqual(200);
+    expect(loginRes.body.status).toBe('success');
+    expect(loginRes.body.data.require_2fa).toBe(true);
+    expect(loginRes.body.data).toHaveProperty('pre_auth_token');
+    expect(loginRes.body.data.user).toHaveProperty('two_factor_enabled', true);
+    expect(loginRes.body.data).not.toHaveProperty('access_token');
+    expect(loginRes.body.data).not.toHaveProperty('refresh_token');
+
+    // 8. Sukses tukar pre_auth_token + TOTP menjadi token sesi sah
+    const preAuthToken = loginRes.body.data.pre_auth_token;
+    const totpToken = generateTOTPCode(secret);
+
+    const verifyLoginRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({ pre_auth_token: preAuthToken, token: totpToken });
+
+    expect(verifyLoginRes.statusCode).toEqual(200);
+    expect(verifyLoginRes.body.status).toBe('success');
+    expect(verifyLoginRes.body.data).toHaveProperty('access_token');
+    expect(verifyLoginRes.body.data).toHaveProperty('refresh_token');
+    expect(verifyLoginRes.body.data.user).toHaveProperty('email', 'twofactor@test.com');
+  });
+
+  it('9. Harus menolak /2fa/verify-login jika pre_auth_token tidak valid, kode TOTP salah, atau payload kosong', async () => {
+    // Payload kosong
+    const emptyRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({});
+    expect(emptyRes.statusCode).toEqual(400);
+
+    // Invalid pre_auth_token
+    const invalidTokenRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({ pre_auth_token: 'invalid_token', token: '123456' });
+    expect(invalidTokenRes.statusCode).toEqual(401);
+
+    // Wrong TOTP code with valid ticket
+    const rawSecret = crypto.randomBytes(20);
+    const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let bin = '';
+    for (let byte of rawSecret) {
+      bin += byte.toString(2).padStart(8, '0');
+    }
+    let secret = '';
+    for (let i = 0; i < bin.length; i += 5) {
+      const sub = bin.substring(i, i + 5);
+      const idx = parseInt(sub, 2);
+      secret += BASE32_ALPHABET[idx];
+    }
+
+    const user = await User.create({
+      username: 'TwoFactor Wrong TOTP',
+      email: 'wrongtotp@test.com',
+      password: 'Password123!',
+      phone_number: '081122334466',
+      is_verified: true,
+      two_factor_enabled: true,
+      two_factor_secret: secret,
+    });
+
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'wrongtotp@test.com', password: 'Password123!' });
+
+    const preAuthToken = loginRes.body.data.pre_auth_token;
+
+    const wrongCodeRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({ pre_auth_token: preAuthToken, token: '000000' });
+
+    expect(wrongCodeRes.statusCode).toEqual(401);
+  });
 });

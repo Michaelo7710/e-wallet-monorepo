@@ -211,7 +211,7 @@ const { User, Wallet, VerificationCode, RefreshToken } = require('../models');
 const AppError = require('../utils/AppError');
 const sendEmail = require('../utils/email');
 const { StatusCodes } = require('http-status-codes');
-const { signAccessToken, signRefreshToken } = require('../utils/jwt');
+const { signAccessToken, signRefreshToken, signPreAuthToken, verifyPreAuthToken } = require('../utils/jwt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
@@ -409,13 +409,33 @@ exports.loginUser = async (email, password) => {
     throw new AppError('Silakan masukkan email dan password', StatusCodes.BAD_REQUEST);
   }
 
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email }).select('+password +two_factor_enabled');
   if (!user || !(await user.correctPassword(password, user.password))) {
     throw new AppError('Email atau password salah', StatusCodes.UNAUTHORIZED);
   }
 
   if (!user.is_verified) {
     throw new AppError('Akun Anda belum terverifikasi OTP email.', StatusCodes.FORBIDDEN);
+  }
+
+  // [ZERO-TRUST 2FA CHECK] Jika pengguna mengaktifkan 2FA, tahan penerbitan token sesi
+  if (user.two_factor_enabled) {
+    const preAuthToken = signPreAuthToken(user._id);
+    user.password = undefined;
+
+    return {
+      require_2fa: true,
+      pre_auth_token: preAuthToken,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone_number: user.phone_number,
+        role: user.role,
+        is_verified: user.is_verified,
+        two_factor_enabled: true
+      }
+    };
   }
 
   // PRODUKSI DUAL-TOKEN ENTERPRISE
@@ -431,7 +451,7 @@ exports.loginUser = async (email, password) => {
   });
 
   user.password = undefined;
-  return { user, accessToken, refreshToken };
+  return { require_2fa: false, user, accessToken, refreshToken };
 };
 
 // ==========================================
@@ -802,6 +822,68 @@ exports.verify2FAToken = async (userId, token) => {
   }
 
   return true;
+};
+
+// ==========================================
+// FITUR: VERIFIKASI 2FA SAAT LOGIN (TUKAR PRE-AUTH TICKET)
+// ==========================================
+exports.verify2FALogin = async (preAuthToken, totpCode) => {
+  if (!preAuthToken || !totpCode) {
+    throw new AppError('Tiket pra-autentikasi dan kode 2FA wajib diisi.', StatusCodes.BAD_REQUEST);
+  }
+
+  let decoded;
+  try {
+    decoded = verifyPreAuthToken(preAuthToken);
+  } catch (error) {
+    throw new AppError('Tiket 2FA tidak valid atau telah kedaluwarsa. Silakan login ulang.', StatusCodes.UNAUTHORIZED);
+  }
+
+  if (!decoded || decoded.stage !== '2fa_pending') {
+    throw new AppError('Tiket 2FA tidak valid atau telah kedaluwarsa. Silakan login ulang.', StatusCodes.UNAUTHORIZED);
+  }
+
+  const user = await User.findById(decoded.id).select('+two_factor_secret +two_factor_enabled');
+  if (!user || !user.two_factor_enabled || !user.two_factor_secret) {
+    throw new AppError('Konfigurasi 2FA akun tidak valid.', StatusCodes.BAD_REQUEST);
+  }
+
+  const counter = Math.floor(Date.now() / 30000);
+  const secretBuffer = base32Decode(user.two_factor_secret);
+  const windowSteps = parseInt(process.env.TOTP_WINDOW_STEPS, 10) || 1;
+
+  let isValid = false;
+  for (let i = -windowSteps; i <= windowSteps; i++) {
+    const timeBuffer = Buffer.alloc(8);
+    timeBuffer.writeUInt32BE(counter + i, 4);
+
+    const hmac = crypto.createHmac('sha1', secretBuffer).update(timeBuffer).digest();
+    const offset = hmac[hmac.length - 1] & 0xf;
+    const code = ((hmac.readUInt32BE(offset) & 0x7fffffff) % 1000000).toString().padStart(6, '0');
+
+    if (code === totpCode) {
+      isValid = true;
+      break;
+    }
+  }
+
+  if (!isValid) {
+    throw new AppError('Kode otentikasi 2FA salah atau kedaluwarsa.', StatusCodes.UNAUTHORIZED);
+  }
+
+  const accessToken = signAccessToken(user._id, user.role);
+  const refreshToken = signRefreshToken(user._id);
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await RefreshToken.create({
+    user_id: user._id,
+    token: refreshToken,
+    expires_at: expiresAt
+  });
+
+  user.two_factor_secret = undefined;
+
+  return { user, accessToken, refreshToken };
 };
 
 // ==========================================

@@ -15,6 +15,9 @@ router.post('/logout', authController.logout);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password', authController.resetPassword);
 
+// Lintas Otentikasi Tahap Lanjutan (Pre-Auth 2FA)
+router.post('/2fa/verify-login', authController.verify2FALogin);
+
 // Lintas Protokol Keamanan Lapis Baja (2FA)
 router.use(protect);
 router.post('/2fa/generate', authController.generate2FA);

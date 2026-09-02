@@ -70,9 +70,36 @@ exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
   const result = await authService.loginUser(email, password);
 
+  if (result.require_2fa) {
+    return res.status(StatusCodes.OK).json({
+      status: 'success',
+      message: 'Kredensial valid. Diperlukan verifikasi kode 2FA.',
+      data: {
+        require_2fa: true,
+        pre_auth_token: result.pre_auth_token,
+        user: result.user
+      }
+    });
+  }
+
   res.status(StatusCodes.OK).json({
     status: 'success',
     message: 'Autentikasi login berhasil.',
+    data: {
+      user: result.user,
+      access_token: result.accessToken,
+      refresh_token: result.refreshToken
+    }
+  });
+});
+
+exports.verify2FALogin = catchAsync(async (req, res, next) => {
+  const { pre_auth_token, token } = req.body;
+  const result = await authService.verify2FALogin(pre_auth_token, token);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Verifikasi 2FA berhasil. Sesi penuh aktif.',
     data: {
       user: result.user,
       access_token: result.accessToken,

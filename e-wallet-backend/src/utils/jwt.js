@@ -21,3 +21,18 @@ exports.signRefreshToken = (userId) => {
     { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
   );
 };
+
+// 3. PABRIK TIKET PRA-AUTENTIKASI 2FA (Masa Aktif Singkat: 3 Menit)
+exports.signPreAuthToken = (userId) => {
+  const secret = process.env.JWT_PRE_AUTH_SECRET || `${process.env.JWT_SECRET}_preauth`;
+  return jwt.sign(
+    { id: userId, stage: '2fa_pending' },
+    secret,
+    { expiresIn: process.env.JWT_PRE_AUTH_EXPIRES_IN || '3m' }
+  );
+};
+
+exports.verifyPreAuthToken = (token) => {
+  const secret = process.env.JWT_PRE_AUTH_SECRET || `${process.env.JWT_SECRET}_preauth`;
+  return jwt.verify(token, secret);
+};
