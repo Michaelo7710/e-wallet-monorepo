@@ -36,6 +36,10 @@ const TransferScreen = () => {
       Alert.alert('Data Tidak Lengkap', 'Nomor handphone tujuan minimal 10 digit.');
       return;
     }
+    if (user?.phoneNumber && phoneNumber.trim() === user.phoneNumber.trim()) {
+      Alert.alert('Transfer Ditolak', 'Anda tidak dapat melakukan transfer ke nomor handphone akun Anda sendiri.');
+      return;
+    }
     if (numericAmount < 10000) {
       Alert.alert('Nominal Minimal', 'Nominal transfer minimal Rp 10.000.');
       return;
@@ -57,14 +61,31 @@ const TransferScreen = () => {
       {
         onSuccess: (tx) => {
           setIsPinVisible(false);
-          Alert.alert(
-            'Transfer Berhasil',
-            `Berhasil transfer Rp ${numericAmount.toLocaleString('id-ID')} ke ${phoneNumber}.\nRef: ${tx.referenceId}`,
-            [{ text: 'Selesai', onPress: () => navigation.goBack() }]
-          );
+          setAmount('');
+          setPhoneNumber('');
+          if (tx.status === 'pending_approval' || tx.isHighValue) {
+            Alert.alert(
+              'Transfer Sedang Ditinjau (AML)',
+              `Transfer bernilai besar sebesar Rp ${numericAmount.toLocaleString('id-ID')} berhasil diajukan.\n\nSesuai kepatuhan AML, transaksi ini memerlukan verifikasi Administrator sebelum dana diteruskan ke penerima.\nRef: ${tx.transactionId}`,
+              [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            );
+          } else {
+            Alert.alert(
+              'Transfer Berhasil',
+              `Berhasil transfer Rp ${numericAmount.toLocaleString('id-ID')} ke ${phoneNumber}.\nSisa Saldo: Rp ${tx.remainingBalance.toLocaleString('id-ID')}\nRef: ${tx.transactionId}`,
+              [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            );
+          }
         },
         onError: (err: any) => {
           setIsPinVisible(false);
+          if (err.response?.data?.error_code === 'RECEIVER_WALLET_LIMIT_EXCEEDED') {
+            Alert.alert(
+              'Batas Saldo Penerima Penuh',
+              err.response?.data?.message || 'Saldo penerima akan melebihi batas limit akunnya.'
+            );
+            return;
+          }
           const msg = err.response?.data?.message || err.message || 'Transfer gagal diproses';
           Alert.alert('Transfer Gagal', msg);
         },

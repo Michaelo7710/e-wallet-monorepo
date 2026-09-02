@@ -58,11 +58,19 @@ const WithdrawScreen = () => {
       },
       {
         onSuccess: () => {
-          Alert.alert(
-            'Pengajuan Berhasil',
-            `Pengajuan penarikan dana sebesar Rp ${numericAmount.toLocaleString('id-ID')} sedang diverifikasi oleh admin.`,
-            [{ text: 'Kembali', onPress: () => navigation.goBack() }]
-          );
+          if (numericAmount >= 10000000) {
+            Alert.alert(
+              'Pengajuan Penarikan Tertahan',
+              `Pengajuan penarikan dana bernilai besar sebesar Rp ${numericAmount.toLocaleString('id-ID')} sedang menunggu verifikasi kepatuhan oleh Administrator.`,
+              [{ text: 'Kembali', onPress: () => navigation.goBack() }]
+            );
+          } else {
+            Alert.alert(
+              'Penarikan Berhasil Diproses',
+              `Penarikan dana sebesar Rp ${numericAmount.toLocaleString('id-ID')} ke ${selectedBank} (${accountNumber}) a.n ${accountName} berhasil diproses instan.`,
+              [{ text: 'Kembali', onPress: () => navigation.goBack() }]
+            );
+          }
         },
         onError: (err: any) => {
           const msg = err.response?.data?.message || err.message || 'Penarikan gagal';

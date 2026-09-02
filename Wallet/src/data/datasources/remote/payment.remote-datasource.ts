@@ -19,7 +19,21 @@ export class PaymentRemoteDataSource {
     return response.data.data;
   }
 
-  async transfer(receiverPhoneNumber: string, amount: number, pin: string): Promise<{ data: { transaction: TransactionDTO } }> {
+  async transfer(
+    receiverPhoneNumber: string,
+    amount: number,
+    pin: string
+  ): Promise<{
+    status: string;
+    message: string;
+    data: {
+      transaction_id: string;
+      amount: number;
+      status: 'success' | 'pending_approval';
+      is_high_value: boolean;
+      remaining_balance: number;
+    };
+  }> {
     const response = await api.post('/payments/transfer', {
       receiver_phone_number: receiverPhoneNumber,
       amount,

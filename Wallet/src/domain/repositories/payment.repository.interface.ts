@@ -12,6 +12,14 @@ export interface TransferParams {
   pin: string;
 }
 
+export interface TransferResult {
+  transactionId: string;
+  amount: number;
+  status: 'success' | 'pending_approval';
+  isHighValue: boolean;
+  remainingBalance: number;
+}
+
 export interface WithdrawalParams {
   bankName: string;
   accountNumber: string;
@@ -21,7 +29,7 @@ export interface WithdrawalParams {
 
 export interface IPaymentRepository {
   initiateTopUp(amount: number): Promise<TopUpInitiateResult>;
-  transfer(params: TransferParams): Promise<Transaction>;
+  transfer(params: TransferParams): Promise<TransferResult>;
   requestWithdrawal(params: WithdrawalParams): Promise<void>;
   getHistory(page?: number, limit?: number, type?: string): Promise<{ transactions: Transaction[]; total: number }>;
   getRecentContacts(): Promise<SavedContact[]>;

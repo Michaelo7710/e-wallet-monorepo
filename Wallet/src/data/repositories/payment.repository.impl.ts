@@ -2,6 +2,7 @@ import {
   IPaymentRepository,
   TopUpInitiateResult,
   TransferParams,
+  TransferResult,
   WithdrawalParams,
 } from '@domain/repositories/payment.repository.interface';
 import { Transaction, SavedContact } from '@domain/entities/transaction';
@@ -20,13 +21,20 @@ export class PaymentRepositoryImpl implements IPaymentRepository {
     };
   }
 
-  async transfer(params: TransferParams): Promise<Transaction> {
-    const raw = await this.remoteDataSource.transfer(
+  async transfer(params: TransferParams): Promise<TransferResult> {
+    const res = await this.remoteDataSource.transfer(
       params.receiverPhoneNumber,
       params.amount,
       params.pin
     );
-    return TransactionMapper.toDomain(raw.data.transaction);
+    const d = res.data;
+    return {
+      transactionId: d.transaction_id,
+      amount: d.amount,
+      status: d.status,
+      isHighValue: d.is_high_value,
+      remainingBalance: d.remaining_balance,
+    };
   }
 
   async requestWithdrawal(params: WithdrawalParams): Promise<void> {
