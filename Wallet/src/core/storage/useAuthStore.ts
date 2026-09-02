@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
 import { User } from '@domain/entities/user';
 import { STORAGE_KEYS } from '@core/network/api';
-import { biometricsService } from '@core/security/biometrics.service';
+import { secureStorageService } from '@core/security/secureStorage.service';
+import { BiometricsService } from '@core/security/biometrics.service';
 
 interface AuthState {
   user: User | null;
@@ -31,21 +31,27 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setBiometricsEnabled: async (enabled: boolean) => {
     try {
-      await SecureStore.setItemAsync(
+      await secureStorageService.setItem(
         STORAGE_KEYS.BIOMETRICS_ENABLED,
         enabled ? 'true' : 'false'
       );
     } catch (error) {
-      console.error('Error storing biometric preference:', error);
+      console.warn('[AUTH_STORE] Gagal menyimpan preferensi biometrik:', error);
     } finally {
       set({ isBiometricsEnabled: enabled });
     }
   },
 
   loginSession: async (user, accessToken, refreshToken) => {
-    await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-    await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+    if (!user || !accessToken || !refreshToken) {
+      console.warn('[AUTH_STORE] loginSession dibatalkan: parameter tidak lengkap.');
+      return;
+    }
+
+    await secureStorageService.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    await secureStorageService.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    await secureStorageService.setItem(STORAGE_KEYS.USER_DATA, user);
+
     set({
       user,
       token: accessToken,
@@ -56,10 +62,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logoutSession: async () => {
     try {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      await secureStorageService.clearSession();
     } catch (error) {
-      console.error('Error clearing secure tokens:', error);
+      console.warn('[AUTH_STORE] Gagal membersihkan secure storage saat logout:', error);
     } finally {
       set({
         user: null,
@@ -72,33 +77,24 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   fastLoginWithBiometrics: async () => {
     try {
-      const isAvailable = await biometricsService.isAvailable();
+      const isAvailable = await BiometricsService.isAvailable();
       if (!isAvailable) {
         return false;
       }
 
-      const accessToken = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-      const userDataStr = await SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA);
+      const accessToken = await secureStorageService.getItem<string>(STORAGE_KEYS.ACCESS_TOKEN);
+      const refreshToken = await secureStorageService.getItem<string>(STORAGE_KEYS.REFRESH_TOKEN);
+      const user = await secureStorageService.getItem<User>(STORAGE_KEYS.USER_DATA, true);
 
       if (!accessToken || !refreshToken) {
         return false;
       }
 
-      const authSuccess = await biometricsService.authenticate(
+      const authSuccess = await BiometricsService.authenticate(
         'Pindai sidik jari atau wajah Anda untuk masuk'
       );
 
       if (authSuccess) {
-        let user: User | null = null;
-        if (userDataStr) {
-          try {
-            user = JSON.parse(userDataStr);
-          } catch {
-            user = null;
-          }
-        }
-
         set({
           user,
           token: accessToken,
@@ -109,27 +105,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       return false;
     } catch (error) {
-      console.error('Fast login with biometrics failed:', error);
+      console.warn('[AUTH_STORE] Fast login biometrik gagal:', error);
       return false;
     }
   },
 
   hydrate: async () => {
     try {
-      const accessToken = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-      const userDataStr = await SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA);
-      const biometricPref = await SecureStore.getItemAsync(STORAGE_KEYS.BIOMETRICS_ENABLED);
+      const accessToken = await secureStorageService.getItem<string>(STORAGE_KEYS.ACCESS_TOKEN);
+      const refreshToken = await secureStorageService.getItem<string>(STORAGE_KEYS.REFRESH_TOKEN);
+      const user = await secureStorageService.getItem<User>(STORAGE_KEYS.USER_DATA, true);
+      const biometricPref = await secureStorageService.getItem<string>(STORAGE_KEYS.BIOMETRICS_ENABLED);
 
       const isBiometricsEnabled = biometricPref !== 'false';
-      let user: User | null = null;
-      if (userDataStr) {
-        try {
-          user = JSON.parse(userDataStr);
-        } catch {
-          user = null;
-        }
-      }
 
       if (accessToken && refreshToken) {
         set({
@@ -147,7 +135,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
       }
     } catch (error) {
-      console.error('Auth Hydration Error:', error);
+      console.warn('[AUTH_STORE] Gagal melakukan hidrasi sesi:', error);
       set({ isLoading: false });
     }
   },

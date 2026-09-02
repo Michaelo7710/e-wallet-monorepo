@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 
 import { AuthLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
@@ -13,7 +12,6 @@ import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { useLoginMutation } from '../hooks/useAuthMutations';
 import { BiometricsService } from '@core/security/biometrics.service';
-import { STORAGE_KEYS } from '@core/network/api';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid' }),
@@ -26,7 +24,7 @@ const LoginScreen = () => {
   const navigation = useNavigation<any>();
   const loginSession = useAuthStore((state) => state.loginSession);
   const isBiometricsEnabled = useAuthStore((state) => state.isBiometricsEnabled);
-  const hydrate = useAuthStore((state) => state.hydrate);
+  const fastLoginWithBiometrics = useAuthStore((state) => state.fastLoginWithBiometrics);
   const { mutate: login, isPending } = useLoginMutation();
 
   const [isBiometricsAvailable, setIsBiometricsAvailable] = useState<boolean>(false);
@@ -53,23 +51,8 @@ const LoginScreen = () => {
   const handleBiometricAuth = async () => {
     setIsBiometricLoading(true);
     try {
-      const authSuccess = await BiometricsService.authenticate(
-        'Pindai sidik jari atau wajah Anda untuk masuk'
-      );
-
-      if (authSuccess) {
-        const accessToken = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-        const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-
-        if (accessToken && refreshToken) {
-          await hydrate();
-        } else {
-          Alert.alert(
-            'Sesi Belum Tersimpan',
-            'Silakan masuk dengan email dan kata sandi terlebih dahulu untuk mengaktifkan sesi biometrik.'
-          );
-        }
-      } else {
+      const success = await fastLoginWithBiometrics();
+      if (!success) {
         Alert.alert(
           'Autentikasi Dibatalkan',
           'Silakan gunakan email dan kata sandi Anda untuk masuk.'

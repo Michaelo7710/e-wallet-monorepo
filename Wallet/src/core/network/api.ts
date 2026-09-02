@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { secureStorageService } from '@core/security/secureStorage.service';
 import { ENV } from '@core/config/env';
 
 export const STORAGE_KEYS = {
@@ -41,7 +41,7 @@ api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     let token = useAuthStore.getState().token;
     if (!token) {
-      token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      token = await secureStorageService.getItem<string>(STORAGE_KEYS.ACCESS_TOKEN);
     }
 
     if (token && config.headers) {
@@ -80,7 +80,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+        const refreshToken = await secureStorageService.getItem<string>(STORAGE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
           throw new Error('Refresh Token tidak tersedia.');
         }
@@ -91,7 +91,7 @@ api.interceptors.response.use(
 
         const { token: newAccessToken } = response.data;
 
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+        await secureStorageService.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
         useAuthStore.getState().setAccessToken(newAccessToken);
 
         processQueue(null, newAccessToken);
