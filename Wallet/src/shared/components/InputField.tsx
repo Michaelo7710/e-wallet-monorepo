@@ -21,6 +21,7 @@ const InputField = ({
   error,
   isPassword = false,
   style,
+  placeholder,
   ...rest
 }: InputFieldProps) => {
   const [isSecure, setIsSecure] = useState(isPassword);
@@ -38,10 +39,17 @@ const InputField = ({
       <View style={[styles.inputContainer, { borderColor: getBorderColor() }]}>
         <TextInput
           style={styles.input}
+          placeholder={placeholder}
           placeholderTextColor={colors.textLight}
           secureTextEntry={isSecure}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          accessible={true}
+          accessibilityLabel={label}
+          accessibilityHint={placeholder}
+          accessibilityState={{ disabled: rest.editable === false }}
+          aria-invalid={!!error}
+          {...({ accessibilityInvalid: !!error } as any)}
           {...rest}
         />
         {isPassword && (
@@ -49,6 +57,11 @@ const InputField = ({
             onPress={() => setIsSecure(!isSecure)}
             style={styles.eyeIcon}
             activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isSecure ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi'
+            }
           >
             <Ionicons
               name={isSecure ? 'eye-off-outline' : 'eye-outline'}
@@ -58,7 +71,15 @@ const InputField = ({
           </TouchableOpacity>
         )}
       </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? (
+        <Text
+          style={styles.errorText}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 };
