@@ -1,5 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Switch,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -7,23 +15,100 @@ import { useNavigation } from '@react-navigation/native';
 import { UserLayout } from '@shared/layouts';
 import { ButtonCustom } from '@shared/components';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { BiometricsService } from '@core/security/biometrics.service';
 import { colors, typography, spacing } from '@core/theme';
 import defaultAvatar from '@assets/images/avatar-default.png';
 
-type MenuType = { id: string; icon: any; title: string; subtitle?: string; color: string };
+type MenuType = {
+  id: string;
+  icon: any;
+  title: string;
+  subtitle?: string;
+  color: string;
+};
 
 const PROFILE_MENUS: MenuType[] = [
-  { id: '1', icon: 'shield-checkmark-outline', title: 'PIN Transaksi', subtitle: 'Ubah atau kelola PIN transaksi', color: colors.primary },
-  { id: '2', icon: 'key-outline', title: 'Ubah Kata Sandi', subtitle: 'Perbarui kata sandi akun', color: colors.warning },
-  { id: '3', icon: 'mail-outline', title: 'Ubah Alamat Email', subtitle: 'Perbarui email akun terdaftar', color: colors.info },
-  { id: '4', icon: 'card-outline', title: 'Rekening Bank', subtitle: 'Atur rekening penarikan', color: colors.primaryDark },
-  { id: '5', icon: 'help-buoy-outline', title: 'Pusat Bantuan', subtitle: 'Hubungi layanan pelanggan', color: colors.warning },
-  { id: '6', icon: 'document-text-outline', title: 'Syarat & Ketentuan', color: colors.textMuted },
+  {
+    id: '1',
+    icon: 'shield-checkmark-outline',
+    title: 'PIN Transaksi',
+    subtitle: 'Ubah atau kelola PIN transaksi',
+    color: colors.primary,
+  },
+  {
+    id: '2',
+    icon: 'key-outline',
+    title: 'Ubah Kata Sandi',
+    subtitle: 'Perbarui kata sandi akun',
+    color: colors.warning,
+  },
+  {
+    id: '3',
+    icon: 'mail-outline',
+    title: 'Ubah Alamat Email',
+    subtitle: 'Perbarui email akun terdaftar',
+    color: colors.info,
+  },
+  {
+    id: '4',
+    icon: 'card-outline',
+    title: 'Rekening Bank',
+    subtitle: 'Atur rekening penarikan',
+    color: colors.primaryDark,
+  },
+  {
+    id: '5',
+    icon: 'help-buoy-outline',
+    title: 'Pusat Bantuan',
+    subtitle: 'Hubungi layanan pelanggan',
+    color: colors.warning,
+  },
+  {
+    id: '6',
+    icon: 'document-text-outline',
+    title: 'Syarat & Ketentuan',
+    color: colors.textMuted,
+  },
 ];
 
 const ProfileScreen = () => {
   const navigation = useNavigation<any>();
-  const { user, logoutSession } = useAuthStore();
+  const { user, logoutSession, isBiometricsEnabled, setBiometricsEnabled } =
+    useAuthStore();
+
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean>(false);
+
+  useEffect(() => {
+    const initBiometrics = async () => {
+      try {
+        const available = await BiometricsService.isAvailable();
+        setIsBiometricAvailable(available);
+      } catch {
+        setIsBiometricAvailable(false);
+      }
+    };
+
+    initBiometrics();
+  }, []);
+
+  const handleToggleBiometrics = async () => {
+    const nextValue = !isBiometricsEnabled;
+    if (nextValue) {
+      const verified = await BiometricsService.authenticate(
+        'Konfirmasi biometrik untuk mengaktifkan kunci biometrik'
+      );
+      if (verified) {
+        await setBiometricsEnabled(true);
+      } else {
+        Alert.alert(
+          'Aktivasi Dibatalkan',
+          'Gagal memverifikasi biometrik. Pengaturan tidak diubah.'
+        );
+      }
+    } else {
+      await setBiometricsEnabled(false);
+    }
+  };
 
   const handleMenuPress = (menuId: string) => {
     switch (menuId) {
@@ -71,7 +156,9 @@ const ProfileScreen = () => {
         </View>
         <View>
           <Text style={styles.menuTitle}>{menu.title}</Text>
-          {menu.subtitle && <Text style={styles.menuSubtitle}>{menu.subtitle}</Text>}
+          {menu.subtitle && (
+            <Text style={styles.menuSubtitle}>{menu.subtitle}</Text>
+          )}
         </View>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textLight} />
@@ -94,7 +181,9 @@ const ProfileScreen = () => {
           />
           <View style={styles.profileInfo}>
             <Text style={styles.userName}>{user?.username || 'Pengguna'}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'email@domain.com'}</Text>
+            <Text style={styles.userEmail}>
+              {user?.email || 'email@domain.com'}
+            </Text>
             <View style={styles.badgeRow}>
               <View style={styles.badgeContainer}>
                 <Text style={styles.badgeText}>{user?.phoneNumber || '-'}</Text>
@@ -102,11 +191,17 @@ const ProfileScreen = () => {
               <View
                 style={[
                   styles.kycBadge,
-                  user?.isVerified ? styles.kycBadgeVerified : styles.kycBadgeUnverified,
+                  user?.isVerified
+                    ? styles.kycBadgeVerified
+                    : styles.kycBadgeUnverified,
                 ]}
               >
                 <Ionicons
-                  name={user?.isVerified ? 'shield-checkmark' : 'alert-circle-outline'}
+                  name={
+                    user?.isVerified
+                      ? 'shield-checkmark'
+                      : 'alert-circle-outline'
+                  }
                   size={12}
                   color={user?.isVerified ? colors.primaryDark : colors.warning}
                   style={{ marginRight: 4 }}
@@ -114,7 +209,11 @@ const ProfileScreen = () => {
                 <Text
                   style={[
                     styles.kycBadgeText,
-                    { color: user?.isVerified ? colors.primaryDark : colors.warning },
+                    {
+                      color: user?.isVerified
+                        ? colors.primaryDark
+                        : colors.warning,
+                    },
                   ]}
                 >
                   {user?.isVerified
@@ -147,12 +246,48 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         )}
 
+        {/* Pengaturan Akun & Keamanan */}
         <View style={styles.menuContainer}>
           <Text style={styles.sectionTitle}>Pengaturan Akun</Text>
           <View style={styles.menuBox}>
+            {/* Opsi Biometrik (Hanya muncul jika perangkat mendukung & terdaftar di OS) */}
+            {isBiometricAvailable && (
+              <View style={styles.biometricRow}>
+                <View style={styles.menuLeft}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: `${colors.primary}15` },
+                    ]}
+                  >
+                    <Ionicons
+                      name="finger-print-outline"
+                      size={22}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={styles.menuTitle}>
+                      Kunci Biometrik (Face ID / Sidik Jari)
+                    </Text>
+                    <Text style={styles.menuSubtitle}>
+                      Masuk cepat menggunakan sensor biometrik
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={isBiometricsEnabled}
+                  onValueChange={handleToggleBiometrics}
+                  trackColor={{ false: colors.border, true: colors.primaryLight }}
+                  thumbColor={isBiometricsEnabled ? colors.primary : colors.surface}
+                />
+              </View>
+            )}
+
             {PROFILE_MENUS.map(renderMenuRow)}
           </View>
         </View>
+
         <View style={styles.logoutContainer}>
           <ButtonCustom
             title="Keluar Akun"
@@ -291,6 +426,14 @@ const styles = StyleSheet.create({
     borderRadius: spacing.radius.lg,
     paddingHorizontal: spacing.md,
   },
+  biometricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,6 +445,7 @@ const styles = StyleSheet.create({
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   iconBox: {
     width: 40,

@@ -3,33 +3,46 @@ import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing } from '@core/theme';
+import { useScreenGuard } from '@core/security/useScreenGuard';
 
 interface UserLayoutProps {
   children: React.ReactNode;
-  // Prop opsional jika ada halaman (seperti Maps) yang ingin menyentuh ujung layar
-  noPadding?: boolean; 
+  // Prop opsional jika ada halaman yang ingin menyentuh ujung layar
+  noPadding?: boolean;
+  // Anti-screenshot guard aktif secara default untuk melindungi data finansial & PII
+  enableScreenGuard?: boolean;
 }
 
-const UserLayout = ({ children, noPadding = false }: UserLayoutProps) => {
+const UserLayout = ({
+  children,
+  noPadding = false,
+  enableScreenGuard = true,
+}: UserLayoutProps) => {
   const insets = useSafeAreaInsets();
 
+  // Menerapkan Anti-Screenshot Guard secara preventif di seluruh tampilan UserLayout
+  useScreenGuard(enableScreenGuard);
+
   return (
-    <View style={[
-      styles.container, 
-      { 
-        // Mengamankan konten dari poni atas dan tombol navigasi virtual di bawah
-        paddingTop: insets.top, 
-        paddingBottom: Math.max(insets.bottom, spacing.md) 
-      }
-    ]}>
-      {/* Status bar gelap karena background UserLayout kita berwarna terang */}
+    <View
+      style={[
+        styles.container,
+        {
+          // Mengamankan konten dari status bar atas dan navigation bar bawah
+          paddingTop: insets.top,
+          paddingBottom: Math.max(insets.bottom, spacing.md),
+        },
+      ]}
+    >
+      {/* Status bar gelap karena background UserLayout berwarna terang */}
       <StatusBar style="dark" />
-      
-      <View style={[
-        styles.content, 
-        // Jika noPadding false, berikan jarak standar industri di sisi kiri-kanan
-        !noPadding && { paddingHorizontal: spacing.lg }
-      ]}>
+
+      <View
+        style={[
+          styles.content,
+          !noPadding && { paddingHorizontal: spacing.lg },
+        ]}
+      >
         {children}
       </View>
     </View>
@@ -39,7 +52,7 @@ const UserLayout = ({ children, noPadding = false }: UserLayoutProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background, // Menerapkan Aturan 60% Warna Ruang
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,

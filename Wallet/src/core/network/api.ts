@@ -6,6 +6,8 @@ import { ENV } from '@core/config/env';
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'gp_access_token',
   REFRESH_TOKEN: 'gp_refresh_token',
+  USER_DATA: 'gp_user_data',
+  BIOMETRICS_ENABLED: 'gp_biometrics_enabled',
 } as const;
 
 const api = axios.create({
