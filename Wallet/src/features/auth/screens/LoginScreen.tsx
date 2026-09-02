@@ -10,6 +10,7 @@ import { AuthLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { useTempAuthStore } from '@core/storage/useTempAuthStore';
 import { useLoginMutation } from '../hooks/useAuthMutations';
 import { BiometricsService } from '@core/security/biometrics.service';
 
@@ -70,17 +71,16 @@ const LoginScreen = () => {
 
   const onSubmit = (data: LoginFormValues) => {
     login(data, {
-      onSuccess: async (session) => {
-        if (session.user.twoFactorEnabled) {
-          navigation.navigate('TwoFactorAuth', {
-            user: session.user,
-            tokens: session.tokens,
-          });
+      onSuccess: async (result) => {
+        if (result.require2FA) {
+          // Simpan kredensial sementara di RAM terisolasi, sterilkan navigation params
+          useTempAuthStore.getState().setPreAuthSession(result.preAuthToken, result.user);
+          navigation.navigate('TwoFactorAuth');
         } else {
           await loginSession(
-            session.user,
-            session.tokens.accessToken,
-            session.tokens.refreshToken
+            result.session.user,
+            result.session.tokens.accessToken,
+            result.session.tokens.refreshToken
           );
         }
       },

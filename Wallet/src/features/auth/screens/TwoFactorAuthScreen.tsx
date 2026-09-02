@@ -1,17 +1,16 @@
-﻿import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 
 import { AuthLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
-import { useVerify2FAMutation } from '../hooks/useAuthMutations';
-import { User } from '@domain/entities/user';
-import { AuthTokens } from '@domain/repositories/auth.repository.interface';
+import { useTempAuthStore } from '@core/storage/useTempAuthStore';
+import { useVerify2FALoginMutation } from '../hooks/useAuthMutations';
 
 const twoFactorSchema = z.object({
   token: z
@@ -22,19 +21,12 @@ const twoFactorSchema = z.object({
 
 type TwoFactorFormValues = z.infer<typeof twoFactorSchema>;
 
-interface RouteParams {
-  user: User;
-  tokens: AuthTokens;
-}
-
 const TwoFactorAuthScreen = () => {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-  const { user, tokens } = (route.params as RouteParams) || {};
-
   const loginSession = useAuthStore((state) => state.loginSession);
-  const setAccessToken = useAuthStore((state) => state.setAccessToken);
-  const { mutate: verify2FA, isPending } = useVerify2FAMutation();
+  const { preAuthToken, tempUser, clearPreAuthSession, isSessionValid } =
+    useTempAuthStore();
+  const { mutate: verify2FALogin, isPending } = useVerify2FALoginMutation();
 
   const { control, handleSubmit } = useForm<TwoFactorFormValues>({
     resolver: zodResolver(twoFactorSchema),
@@ -44,12 +36,22 @@ const TwoFactorAuthScreen = () => {
   });
 
   const handleCancel = () => {
-    setAccessToken('');
+    clearPreAuthSession();
     navigation.navigate('Login');
   };
 
+  useEffect(() => {
+    if (!isSessionValid() || !preAuthToken) {
+      Alert.alert(
+        'Sesi Berakhir',
+        'Sesi login sementara telah kedaluwarsa. Silakan masuk kembali.',
+        [{ text: 'Kembali ke Login', onPress: handleCancel }]
+      );
+    }
+  }, []);
+
   const onSubmit = (data: TwoFactorFormValues) => {
-    if (!user || !tokens?.accessToken) {
+    if (!preAuthToken) {
       Alert.alert(
         'Sesi Tidak Valid',
         'Informasi login sementara tidak ditemukan. Silakan masuk kembali.',
@@ -58,20 +60,22 @@ const TwoFactorAuthScreen = () => {
       return;
     }
 
-    // Set token sementara ke in-memory store agar request POST /auth/2fa/verify membawa Bearer token
-    setAccessToken(tokens.accessToken);
-
-    verify2FA(
-      { token: data.token },
+    verify2FALogin(
+      { preAuthToken, totpCode: data.token },
       {
-        onSuccess: async () => {
-          await loginSession(user, tokens.accessToken, tokens.refreshToken);
+        onSuccess: async (session) => {
+          clearPreAuthSession();
+          await loginSession(
+            session.user,
+            session.tokens.accessToken,
+            session.tokens.refreshToken
+          );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message ||
             err.message ||
-            'Kode otentikasi salah atau telah kedaluwarsa.';
+            'Kode otentikasi salah atau kedaluwarsa.';
           Alert.alert('Verifikasi 2FA Gagal', errorMessage);
         },
       }
@@ -84,7 +88,7 @@ const TwoFactorAuthScreen = () => {
         <Text style={styles.title}>Verifikasi 2FA</Text>
         <Text style={styles.subtitle}>
           Buka aplikasi Google Authenticator atau Authy Anda dan masukkan 6 digit kode keamanan untuk{' '}
-          <Text style={styles.emailHighlight}>{user?.email || 'akun Anda'}</Text>.
+          <Text style={styles.emailHighlight}>{tempUser?.email || 'akun Anda'}</Text>.
         </Text>
       </View>
 

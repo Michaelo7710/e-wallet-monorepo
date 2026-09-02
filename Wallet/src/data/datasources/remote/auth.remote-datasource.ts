@@ -3,16 +3,28 @@ import { UserDTO } from '../../models/userDTO';
 
 export interface RawAuthResponse {
   status: string;
-  token: string;
+  token?: string;
   refresh_token?: string;
   data: {
     user: UserDTO;
+    require_2fa?: boolean;
+    pre_auth_token?: string;
+    access_token?: string;
+    refresh_token?: string;
   };
 }
 
 export class AuthRemoteDataSource {
   async login(email: string, password: string): Promise<RawAuthResponse> {
     const response = await api.post<RawAuthResponse>('/auth/login', { email, password });
+    return response.data;
+  }
+
+  async verify2FALogin(preAuthToken: string, code: string): Promise<RawAuthResponse> {
+    const response = await api.post<RawAuthResponse>('/auth/2fa/verify-login', {
+      pre_auth_token: preAuthToken,
+      token: code,
+    });
     return response.data;
   }
 

@@ -1,17 +1,44 @@
-import { IAuthRepository, AuthSession } from '@domain/repositories/auth.repository.interface';
+import {
+  IAuthRepository,
+  AuthSession,
+  LoginResult,
+} from '@domain/repositories/auth.repository.interface';
 import { AuthRemoteDataSource } from '../datasources/remote/auth.remote-datasource';
 import { UserMapper } from '../mappers/userMapper';
 
 export class AuthRepositoryImpl implements IAuthRepository {
   constructor(private remoteDataSource: AuthRemoteDataSource) {}
 
-  async login(email: string, password: string): Promise<AuthSession> {
+  async login(email: string, password: string): Promise<LoginResult> {
     const raw = await this.remoteDataSource.login(email, password);
+    const d = raw.data as any;
+    if (d?.require_2fa) {
+      return {
+        require2FA: true,
+        preAuthToken: d.pre_auth_token,
+        user: UserMapper.toDomain(d.user),
+      };
+    }
     return {
-      user: UserMapper.toDomain(raw.data.user),
+      require2FA: false,
+      session: {
+        user: UserMapper.toDomain(d.user),
+        tokens: {
+          accessToken: raw.token || d.access_token,
+          refreshToken: raw.refresh_token || d.refresh_token || raw.token,
+        },
+      },
+    };
+  }
+
+  async verify2FALogin(preAuthToken: string, totpCode: string): Promise<AuthSession> {
+    const raw = await this.remoteDataSource.verify2FALogin(preAuthToken, totpCode);
+    const d = raw.data as any;
+    return {
+      user: UserMapper.toDomain(d.user),
       tokens: {
-        accessToken: raw.token,
-        refreshToken: raw.refresh_token || raw.token,
+        accessToken: raw.token || d.access_token,
+        refreshToken: raw.refresh_token || d.refresh_token || raw.token,
       },
     };
   }
@@ -21,8 +48,8 @@ export class AuthRepositoryImpl implements IAuthRepository {
     return {
       user: UserMapper.toDomain(raw.data.user),
       tokens: {
-        accessToken: raw.token,
-        refreshToken: raw.refresh_token || raw.token,
+        accessToken: raw.token || (raw.data as any)?.access_token,
+        refreshToken: raw.refresh_token || (raw.data as any)?.refresh_token || raw.token,
       },
     };
   }

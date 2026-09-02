@@ -3,6 +3,7 @@ import { authRepository } from '@core/di/container';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { queryClient } from '@core/network/queryClient';
 import { QUERY_KEYS } from '@core/network/queryKeys';
+import { LoginResult, AuthSession } from '@domain/repositories/auth.repository.interface';
 
 export interface LoginPayload {
   email: string;
@@ -35,10 +36,23 @@ export interface Verify2FAPayload {
   token: string;
 }
 
+export interface Verify2FALoginPayload {
+  preAuthToken: string;
+  totpCode: string;
+}
+
 export const useLoginMutation = () => {
-  return useMutation({
+  return useMutation<LoginResult, Error, LoginPayload>({
     mutationFn: async ({ email, password }: LoginPayload) => {
       return await authRepository.login(email, password);
+    },
+  });
+};
+
+export const useVerify2FALoginMutation = () => {
+  return useMutation<AuthSession, Error, Verify2FALoginPayload>({
+    mutationFn: async ({ preAuthToken, totpCode }: Verify2FALoginPayload) => {
+      return await authRepository.verify2FALogin(preAuthToken, totpCode);
     },
   });
 };
