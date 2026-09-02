@@ -68,6 +68,7 @@ const AdminDashboardScreen = () => {
         </View>
 
         <Text style={styles.sectionTitle}>Aksi Manajemen</Text>
+
         <TouchableOpacity
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminApprovals')}
@@ -77,9 +78,43 @@ const AdminDashboardScreen = () => {
             <View style={[styles.iconBox, { backgroundColor: `${colors.warning}15` }]}>
               <Ionicons name="shield-checkmark" size={26} color={colors.warning} />
             </View>
-            <View>
+            <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Persetujuan Penarikan</Text>
               <Text style={styles.actionSubtitle}>Verifikasi dan cairkan dana nasabah</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('AdminTopUpApprovals')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.actionLeft}>
+            <View style={[styles.iconBox, { backgroundColor: `${colors.info}15` }]}>
+              <Ionicons name="wallet-outline" size={26} color={colors.info} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Persetujuan Top Up Manual</Text>
+              <Text style={styles.actionSubtitle}>Verifikasi permohonan deposit saldo pengguna</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('AdminTransferApprovals')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.actionLeft}>
+            <View style={[styles.iconBox, { backgroundColor: `${colors.warning}15` }]}>
+              <Ionicons name="swap-horizontal-outline" size={26} color={colors.warning} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Kliring Transfer AML</Text>
+              <Text style={styles.actionSubtitle}>Tinjau transaksi bernilai besar (&#8805; Rp 10 Juta)</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
@@ -169,11 +204,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing.lg,
     borderRadius: spacing.radius.lg,
+    marginBottom: spacing.md,
     elevation: 2,
   },
   actionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   iconBox: {
     width: 48,
@@ -182,6 +219,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
+  },
+  actionTextContainer: {
+    flex: 1,
   },
   actionTitle: {
     fontSize: typography.size.md,
