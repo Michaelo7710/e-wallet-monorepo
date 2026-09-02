@@ -119,6 +119,23 @@ const AdminDashboardScreen = () => {
           </View>
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('AdminBankManagement')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.actionLeft}>
+            <View style={[styles.iconBox, { backgroundColor: `${colors.primaryDark}15` }]}>
+              <Ionicons name="card-outline" size={26} color={colors.primaryDark} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Rekening Bank Master</Text>
+              <Text style={styles.actionSubtitle}>Kelola rekening penampung platform</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+        </TouchableOpacity>
       </ScrollView>
     </UserLayout>
   );

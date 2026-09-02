@@ -4,6 +4,7 @@ import AdminDashboardScreen from '@features/admin/screens/AdminDashboardScreen';
 import AdminWithdrawalApprovalScreen from '@features/admin/screens/AdminWithdrawalApprovalScreen';
 import AdminTopUpApprovalScreen from '@features/admin/screens/AdminTopUpApprovalScreen';
 import AdminTransferApprovalScreen from '@features/admin/screens/AdminTransferApprovalScreen';
+import AdminBankManagementScreen from '@features/admin/screens/AdminBankManagementScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -14,6 +15,7 @@ const AdminStack = () => {
       <Stack.Screen name="AdminApprovals" component={AdminWithdrawalApprovalScreen} />
       <Stack.Screen name="AdminTopUpApprovals" component={AdminTopUpApprovalScreen} />
       <Stack.Screen name="AdminTransferApprovals" component={AdminTransferApprovalScreen} />
+      <Stack.Screen name="AdminBankManagement" component={AdminBankManagementScreen} />
     </Stack.Navigator>
   );
 };
