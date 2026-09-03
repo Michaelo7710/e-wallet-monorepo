@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { UserLayout } from '@shared/layouts';
 import { colors, typography, spacing } from '@core/theme';
 import { QUERY_KEYS } from '@core/network/queryKeys';
+import { isWhitelistedPaymentUrl, isExternalAppScheme } from '../utils/webViewSecurity';
 
 interface RouteParams {
   redirectUrl: string;
@@ -28,8 +30,12 @@ const SnapPaymentWebViewScreen = () => {
   const { redirectUrl, referenceId, amount } = (route.params as RouteParams) || {};
 
   const queryClient = useQueryClient();
+  const webViewRef = useRef<WebView<{}>>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFinished, setHasFinished] = useState(false);
+
+  // Pre-render security check: Verify redirect URL against whitelisted Midtrans domains
+  const isWhitelisted = Boolean(redirectUrl && isWhitelistedPaymentUrl(redirectUrl));
 
   const handleFinish = () => {
     if (hasFinished) return;
@@ -65,6 +71,52 @@ const SnapPaymentWebViewScreen = () => {
     );
   };
 
+  const handleShouldStartLoad = (request: { url: string }): boolean => {
+    const { url } = request;
+
+    // 1. Tangani callback selesai / finish internal
+    if (
+      url.includes('#finish') ||
+      url.includes('status_code=200') ||
+      url.includes('transaction_status=settlement') ||
+      url.includes('transaction_status=capture') ||
+      url.includes('status_code=201') ||
+      url.includes('transaction_status=pending') ||
+      url.includes('/payment/finish')
+    ) {
+      handleFinish();
+      return false;
+    }
+
+    // 2. Tangani skema aplikasi eksternal (GoPay, ShopeePay, dsb.)
+    if (isExternalAppScheme(url)) {
+      Linking.canOpenURL(url).then((supported) => {
+        if (supported) {
+          Linking.openURL(url).catch(() => {});
+        } else {
+          Alert.alert(
+            'Aplikasi Tidak Tersedia',
+            'Aplikasi pembayaran pihak ketiga yang dipilih tidak terpasang di perangkat Anda.'
+          );
+        }
+      });
+      return false;
+    }
+
+    // 3. Batasi hanya domain resmi Midtrans
+    if (isWhitelistedPaymentUrl(url)) {
+      return true;
+    }
+
+    // 4. Blokir seluruh navigasi ke domain asing
+    console.warn('[WEBVIEW SECURITY] Navigasi diblokir ke domain tidak sah:', url);
+    Alert.alert(
+      'Keamanan Terancam',
+      'Navigasi dialihkan ke luar sistem pembayaran resmi dan telah diblokir secara otomatis.'
+    );
+    return false;
+  };
+
   const handleNavigationStateChange = (navState: { url: string }) => {
     const url = navState.url.toLowerCase();
     if (
@@ -79,6 +131,42 @@ const SnapPaymentWebViewScreen = () => {
       handleFinish();
     }
   };
+
+  const renderErrorView = (
+    _errorDomain?: string,
+    _errorCode?: number,
+    errorDesc?: string
+  ) => (
+    <View style={styles.errorContainer}>
+      <Ionicons name="cloud-offline-outline" size={56} color={colors.error} />
+      <Text style={styles.errorTitle}>Koneksi Terputus</Text>
+      <Text style={styles.errorDescription}>
+        Gagal memuat halaman pembayaran. Periksa koneksi internet Anda atau coba lagi.
+      </Text>
+      {errorDesc ? (
+        <Text style={styles.errorDetails} numberOfLines={2}>
+          {errorDesc}
+        </Text>
+      ) : null}
+      <View style={styles.errorActions}>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => webViewRef.current?.reload()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh" size={16} color={colors.white} style={{ marginRight: 6 }} />
+          <Text style={styles.retryBtnText}>Coba Lagi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={handleClose}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cancelBtnText}>Batal</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <UserLayout noPadding={true}>
@@ -110,27 +198,45 @@ const SnapPaymentWebViewScreen = () => {
 
       {/* WebView Body */}
       <View style={styles.webViewContainer}>
-        {redirectUrl ? (
+        {isWhitelisted ? (
           <WebView
+            ref={webViewRef}
             source={{ uri: redirectUrl }}
             onLoadStart={() => setIsLoading(true)}
             onLoadEnd={() => setIsLoading(false)}
             javaScriptEnabled={true}
             domStorageEnabled={true}
             onNavigationStateChange={handleNavigationStateChange}
+            onShouldStartLoadWithRequest={handleShouldStartLoad}
+            allowFileAccess={false}
+            allowFileAccessFromFileURLs={false}
+            allowUniversalAccessFromFileURLs={false}
+            mixedContentMode="never"
+            setSupportMultipleWindows={false}
+            scalesPageToFit={true}
+            incognito={true}
+            renderError={renderErrorView}
             style={styles.webView}
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color={colors.warning} />
-            <Text style={styles.emptyText}>Tautan pembayaran tidak valid.</Text>
+            <Ionicons
+              name={redirectUrl ? 'shield-outline' : 'alert-circle-outline'}
+              size={48}
+              color={redirectUrl ? colors.error : colors.warning}
+            />
+            <Text style={styles.emptyText}>
+              {redirectUrl
+                ? 'Tautan pembayaran tidak aman atau tidak dikenali oleh sistem keamanan GreenPay.'
+                : 'Tautan pembayaran tidak valid.'}
+            </Text>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
               <Text style={styles.backBtnText}>Kembali</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {isLoading && redirectUrl && (
+        {isLoading && isWhitelisted && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Memuat Gateway Pembayaran...</Text>
@@ -226,6 +332,63 @@ const styles = StyleSheet.create({
   },
   backBtnText: {
     color: colors.white,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold as any,
+  },
+  errorContainer: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    zIndex: 5,
+  },
+  errorTitle: {
+    fontSize: typography.size.md,
+    fontWeight: typography.weight.bold as any,
+    color: colors.textMain,
+    marginTop: spacing.md,
+  },
+  errorDescription: {
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  errorDetails: {
+    fontSize: typography.size.xs,
+    color: colors.textLight,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  errorActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  retryBtn: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.radius.md,
+    marginRight: spacing.md,
+  },
+  retryBtnText: {
+    color: colors.white,
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.semibold as any,
+  },
+  cancelBtn: {
+    backgroundColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: spacing.radius.md,
+  },
+  cancelBtnText: {
+    color: colors.textMain,
     fontSize: typography.size.sm,
     fontWeight: typography.weight.semibold as any,
   },
