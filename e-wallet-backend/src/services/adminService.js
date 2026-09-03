@@ -353,24 +353,14 @@ exports.getFinancialDashboard = async (
   }
 
   // ------------------------------------------------------
-  // 3. Filter berdasarkan created_at / createdAt
+  // 3. Filter rentang waktu berdasarkan createdAt (B-Tree Indexing)
   // ------------------------------------------------------
 
   const timeBoundary = {
-    $or: [
-      {
-        created_at: {
-          $gte: startDate,
-          $lt: endDate,
-        },
-      },
-      {
-        createdAt: {
-          $gte: startDate,
-          $lt: endDate,
-        },
-      },
-    ],
+    createdAt: {
+      $gte: startDate,
+      $lt: endDate,
+    },
   };
 
   // ------------------------------------------------------
@@ -441,7 +431,7 @@ exports.getPendingTransfers = async () => {
   })
     .populate('sender_id', 'username email phone_number')
     .populate('receiver_id', 'username email phone_number')
-    .sort({ created_at: 1 })
+    .sort({ createdAt: 1 })
     .lean();
 };
 

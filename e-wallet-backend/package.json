@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "seed": "node src/utils/seeder.js",
     "seed:destroy": "node src/utils/seeder.js -d",
+    "migrate:timestamps": "node scripts/migrateTimestamps.js",
     "test": "jest --runInBand --detectOpenHandles --forceExit"
   },
   "jest": {
