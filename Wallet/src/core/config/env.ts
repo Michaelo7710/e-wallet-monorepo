@@ -1,37 +1,7 @@
-// // src/config/env.ts
-
-// // Kita mengambil nilai dari .env bawaan Expo
-// const API_URL = process.env.PUBLIC_API_URL;
-// const BASE_URL = process.env.EXPO_BASE_URL
-
-// export const ENV = {
-//   // Jika API_URL terbaca, gunakan itu. 
-//   // Jika undefined, GUNAKAN URL CADANGAN INI agar aplikasi tetap hidup!
-//   //http://192.168.1.101:3000/api/v1 || http://127.0.0.1:3000/api/v1
-//   //https://irritative-yuriko-knolly.ngrok-free.dev
-//   API_URL: API_URL || 'https://irritative-yuriko-knolly.ngrok-free.dev',
-// };
-
-// // [CLEAN CODE] Sistem Peringatan Dini di Terminal
-// if (!API_URL) {
-//   console.warn("⚠️ PERINGATAN: File .env tidak terbaca oleh Expo! Menggunakan URL cadangan bawaan dari src/config/env.ts");
-//   console.log(BASE_URL)
-// }
-
-// const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-// export const ENV = {
-//   API_URL: API_URL || 'http://127.0.0.1:3000/api/v1',
-// };
-
-// if (!API_URL) {
-//   console.warn(
-//     'PERINGATAN: File .env (EXPO_PUBLIC_API_URL) tidak terbaca! Menggunakan fallback localhost.'
-//   );
-// }
+import { z } from 'zod';
 
 // 1. Kamus Presets Target Server GreenPay
-const ENV_PRESETS = {
+export const ENV_PRESETS = {
   // Mode Development Lokal (Ubah IP '192.168.1.X' sesuai IPv4 Wi-Fi laptopmu)
   local: 'http://192.168.43.20:3000/api/v1',
 
@@ -42,29 +12,70 @@ const ENV_PRESETS = {
   vercel: 'https://e-wallet-monorepo-ohi0qz3xs-dev-mich.vercel.app/api/v1',
 } as const;
 
-type EnvMode = keyof typeof ENV_PRESETS;
+// 2. Definisi Zod Schema untuk Lingkungan Expo
+export const envModeSchema = z.enum(['local', 'ngrok', 'vercel']);
+export type EnvMode = z.infer<typeof envModeSchema>;
 
-// 2. Membaca Konfigurasi dari Environment Variable
-const ENV_MODE_FROM_ENV = process.env.EXPO_PUBLIC_ENV_MODE as EnvMode | undefined;
-const CUSTOM_API_URL = process.env.EXPO_PUBLIC_API_URL;
+// 3. Validasi Runtime Schema-First
+// A. Validasi Mode Lingkungan
+const rawEnvMode: string | undefined = process.env.EXPO_PUBLIC_ENV_MODE;
+const modeValidation = envModeSchema.safeParse(rawEnvMode);
 
-// 3. Sakelar Manual (Fallback jika .env tidak dibaca Expo)
-// Ubah variabel ini menjadi 'local' | 'ngrok' | 'vercel' untuk mengganti mode secara manual
-const MANUAL_DEFAULT_MODE: EnvMode = 'local';
+let ACTIVE_MODE: EnvMode;
 
-// 4. Penentuan Target URL Akhir
-const ACTIVE_MODE: EnvMode = ENV_MODE_FROM_ENV || MANUAL_DEFAULT_MODE;
+if (modeValidation.success) {
+  ACTIVE_MODE = modeValidation.data;
+} else {
+  if (rawEnvMode) {
+    console.warn(
+      `⚠️ [ENV_VALIDATION] Nilai EXPO_PUBLIC_ENV_MODE tidak valid ("${rawEnvMode}"). Fallback ke mode default 'local'. Pilihan valid: ${envModeSchema.options.join(', ')}`
+    );
+  } else {
+    console.warn(
+      "⚠️ [ENV_VALIDATION] EXPO_PUBLIC_ENV_MODE tidak didefinisikan. Menetapkan mode default 'local'."
+    );
+  }
+  ACTIVE_MODE = 'local';
+}
 
-export const ENV = {
+// B. Validasi Custom API URL (jika diset)
+const rawApiUrl = process.env.EXPO_PUBLIC_API_URL;
+let resolvedApiUrl: string;
+
+if (rawApiUrl && rawApiUrl.trim() !== '') {
+  const urlValidation = z.string().url().safeParse(rawApiUrl.trim());
+  if (urlValidation.success) {
+    resolvedApiUrl = urlValidation.data;
+  } else {
+    console.warn(
+      `⚠️ [ENV_VALIDATION] EXPO_PUBLIC_API_URL ("${rawApiUrl}") bukan URL HTTP/HTTPS yang valid. Fallback ke preset [${ACTIVE_MODE}]: ${ENV_PRESETS[ACTIVE_MODE]}`
+    );
+    resolvedApiUrl = ENV_PRESETS[ACTIVE_MODE];
+  }
+} else {
+  resolvedApiUrl = ENV_PRESETS[ACTIVE_MODE];
+}
+
+// 4. Struktur Objek ENV Teruji & Dibekukan (Object.freeze)
+export interface AppEnvironment {
+  readonly MODE: EnvMode;
+  readonly API_URL: string;
+  readonly IS_DEV: boolean;
+  readonly IS_PROD: boolean;
+}
+
+export const ENV: AppEnvironment = Object.freeze({
   MODE: ACTIVE_MODE,
-  API_URL: CUSTOM_API_URL || ENV_PRESETS[ACTIVE_MODE] || ENV_PRESETS.local,
+  API_URL: resolvedApiUrl,
   IS_DEV: ACTIVE_MODE !== 'vercel',
-};
+  IS_PROD: ACTIVE_MODE === 'vercel',
+});
 
 // 5. Diagnostic Logger Terminal Expo (Monitoring Server Target)
 console.log('==================================================');
-console.log(`🚀 GREENPAY MOBILE ENVIRONMENT ENGINE ACTIVE`);
+console.log('🚀 GREENPAY MOBILE ENVIRONMENT ENGINE ACTIVE');
 console.log(`📍 Mode Target : [ ${ENV.MODE.toUpperCase()} ]`);
 console.log(`🌐 Base API URL: ${ENV.API_URL}`);
+console.log(`🔒 Production  : ${ENV.IS_PROD ? 'YES' : 'NO'}`);
+console.log(`🛠️  Development : ${ENV.IS_DEV ? 'YES' : 'NO'}`);
 console.log('==================================================');
-

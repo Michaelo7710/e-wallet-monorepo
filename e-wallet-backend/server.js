@@ -1,21 +1,22 @@
 // server.js
-// 1. Inisialisasi Environment Variables Paling Atas
-require('dotenv').config();
+// 1. Fail-Fast Environment Validation di Baris Pertama (Sebelum app & db diimpor)
+const { validateEnv } = require('./src/config/envValidator');
+const ENV = validateEnv();
 
 const app = require('./app');
 const connectDB = require('./src/config/db');
 
-const PORT = process.env.PORT || 3000;
+const PORT = ENV.PORT;
 
 // 2. Jalankan Koneksi Database & Server Listener
 let server;
 
-if (process.env.NODE_ENV !== 'test') {
+if (ENV.NODE_ENV !== 'test') {
   // Buka koneksi ke MongoDB Lokal/Cloud HANYA jika tidak sedang testing
   connectDB();
 
   server = app.listen(PORT, () => {
-    console.log(`🚀 Server GreenPay berjalan aman di mode ${process.env.NODE_ENV || 'development'} pada port ${PORT}`);
+    console.log(`🚀 Server GreenPay berjalan aman di mode ${ENV.NODE_ENV} pada port ${PORT}`);
   });
 }
 
