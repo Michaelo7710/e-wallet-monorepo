@@ -90,8 +90,16 @@ export class AdminRemoteDataSource {
     return res.data;
   }
 
-  async getPendingWithdrawals(): Promise<{ data: RawPendingWithdrawalDTO[] | { withdrawals: RawPendingWithdrawalDTO[] } }> {
-    const res = await api.get('/admin/withdrawals/pending');
+  async getPendingWithdrawals(
+    cursor?: string,
+    limit?: number
+  ): Promise<{
+    data: RawPendingWithdrawalDTO[] | { withdrawals: RawPendingWithdrawalDTO[] };
+    meta?: { next_cursor: string | null; has_more: boolean; limit: number };
+  }> {
+    const res = await api.get('/admin/withdrawals/pending', {
+      params: { cursor, limit },
+    });
     return res.data;
   }
 
@@ -104,8 +112,16 @@ export class AdminRemoteDataSource {
   }
 
   // Top-Up
-  async getPendingTopUps(): Promise<{ data: RawPendingTopUpDTO[] }> {
-    const res = await api.get('/admin/topups/pending');
+  async getPendingTopUps(
+    cursor?: string,
+    limit?: number
+  ): Promise<{
+    data: RawPendingTopUpDTO[];
+    meta?: { next_cursor: string | null; has_more: boolean; limit: number };
+  }> {
+    const res = await api.get('/admin/topups/pending', {
+      params: { cursor, limit },
+    });
     return res.data;
   }
 
@@ -122,8 +138,16 @@ export class AdminRemoteDataSource {
   }
 
   // Transfer
-  async getPendingTransfers(): Promise<{ data: RawPendingTransferDTO[] }> {
-    const res = await api.get('/admin/transfers/pending');
+  async getPendingTransfers(
+    cursor?: string,
+    limit?: number
+  ): Promise<{
+    data: RawPendingTransferDTO[];
+    meta?: { next_cursor: string | null; has_more: boolean; limit: number };
+  }> {
+    const res = await api.get('/admin/transfers/pending', {
+      params: { cursor, limit },
+    });
     return res.data;
   }
 

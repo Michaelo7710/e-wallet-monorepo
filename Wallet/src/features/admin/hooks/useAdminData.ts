@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
 import { adminRepository } from '@core/di/container';
 import { queryClient } from '@core/network/queryClient';
 
@@ -21,29 +21,35 @@ export const useAdminStats = () => {
 };
 
 export const usePendingWithdrawals = () => {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ADMIN_QUERY_KEYS.PENDING_WITHDRAWALS,
-    queryFn: async () => {
-      return await adminRepository.getPendingWithdrawals();
+    queryFn: async ({ pageParam }) => {
+      return await adminRepository.getPendingWithdrawals(pageParam, 10);
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 };
 
 export const usePendingTopUps = () => {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ADMIN_QUERY_KEYS.PENDING_TOPUPS,
-    queryFn: async () => {
-      return await adminRepository.getPendingTopUps();
+    queryFn: async ({ pageParam }) => {
+      return await adminRepository.getPendingTopUps(pageParam, 10);
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 };
 
 export const usePendingTransfers = () => {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ADMIN_QUERY_KEYS.PENDING_TRANSFERS,
-    queryFn: async () => {
-      return await adminRepository.getPendingTransfers();
+    queryFn: async ({ pageParam }) => {
+      return await adminRepository.getPendingTransfers(pageParam, 10);
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 };
 

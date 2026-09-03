@@ -1,6 +1,7 @@
 import {
   IAdminRepository,
   AdminStats,
+  AdminPaginatedResult,
   PendingWithdrawal,
   PendingTopUp,
   PendingTransfer,
@@ -27,12 +28,15 @@ export class AdminRepositoryImpl implements IAdminRepository {
     };
   }
 
-  async getPendingWithdrawals(): Promise<PendingWithdrawal[]> {
-    const res = await this.remoteDataSource.getPendingWithdrawals();
+  async getPendingWithdrawals(
+    cursor?: string,
+    limit?: number
+  ): Promise<AdminPaginatedResult<PendingWithdrawal>> {
+    const res = await this.remoteDataSource.getPendingWithdrawals(cursor, limit);
     const rawList: RawPendingWithdrawalDTO[] = Array.isArray(res.data)
       ? res.data
       : (res.data as any)?.withdrawals || [];
-    return rawList.map((dto: RawPendingWithdrawalDTO) => ({
+    const items = rawList.map((dto: RawPendingWithdrawalDTO) => ({
       id: dto._id,
       referenceId: dto.reference_id,
       userId: dto.user_id?._id || '',
@@ -44,6 +48,12 @@ export class AdminRepositoryImpl implements IAdminRepository {
       status: dto.status,
       createdAt: dto.createdAt,
     }));
+
+    return {
+      items,
+      nextCursor: res.meta?.next_cursor || null,
+      hasMore: !!res.meta?.has_more,
+    };
   }
 
   async approveWithdrawal(transactionId: string): Promise<void> {
@@ -54,12 +64,15 @@ export class AdminRepositoryImpl implements IAdminRepository {
     await this.remoteDataSource.rejectWithdrawal(transactionId, reason);
   }
 
-  async getPendingTopUps(): Promise<PendingTopUp[]> {
-    const res = await this.remoteDataSource.getPendingTopUps();
+  async getPendingTopUps(
+    cursor?: string,
+    limit?: number
+  ): Promise<AdminPaginatedResult<PendingTopUp>> {
+    const res = await this.remoteDataSource.getPendingTopUps(cursor, limit);
     const rawList: RawPendingTopUpDTO[] = Array.isArray(res.data)
       ? res.data
       : (res.data as any)?.topups || [];
-    return rawList.map((dto: RawPendingTopUpDTO) => ({
+    const items = rawList.map((dto: RawPendingTopUpDTO) => ({
       id: dto._id,
       referenceNumber: dto.reference_number,
       amount: dto.amount,
@@ -80,6 +93,12 @@ export class AdminRepositoryImpl implements IAdminRepository {
         : undefined,
       createdAt: dto.createdAt,
     }));
+
+    return {
+      items,
+      nextCursor: res.meta?.next_cursor || null,
+      hasMore: !!res.meta?.has_more,
+    };
   }
 
   async approveTopUp(topUpId: string): Promise<void> {
@@ -94,12 +113,15 @@ export class AdminRepositoryImpl implements IAdminRepository {
     await this.remoteDataSource.deleteTopUpRecord(topUpId);
   }
 
-  async getPendingTransfers(): Promise<PendingTransfer[]> {
-    const res = await this.remoteDataSource.getPendingTransfers();
+  async getPendingTransfers(
+    cursor?: string,
+    limit?: number
+  ): Promise<AdminPaginatedResult<PendingTransfer>> {
+    const res = await this.remoteDataSource.getPendingTransfers(cursor, limit);
     const rawList: RawPendingTransferDTO[] = Array.isArray(res.data)
       ? res.data
       : (res.data as any)?.transfers || [];
-    return rawList.map((dto: RawPendingTransferDTO) => ({
+    const items = rawList.map((dto: RawPendingTransferDTO) => ({
       id: dto._id,
       referenceId: dto.reference_id,
       amount: dto.amount,
@@ -118,6 +140,12 @@ export class AdminRepositoryImpl implements IAdminRepository {
       },
       createdAt: dto.createdAt || dto.created_at || '',
     }));
+
+    return {
+      items,
+      nextCursor: res.meta?.next_cursor || null,
+      hasMore: !!res.meta?.has_more,
+    };
   }
 
   async approveTransfer(transactionId: string): Promise<void> {

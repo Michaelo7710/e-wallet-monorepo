@@ -76,6 +76,33 @@ const startMongoSession = async () => {
 };
 
 // ========================================================
+// HELPER: KEYSET CURSOR PAGINATION (FIFO VIA _id)
+// ========================================================
+
+const buildCursorPagination = (cursor, limit) => {
+  const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+  const cursorFilter = {};
+
+  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+    cursorFilter._id = { $gt: new mongoose.Types.ObjectId(cursor) };
+  }
+
+  return { limitNum, cursorFilter };
+};
+
+const formatCursorResults = (items, limitNum) => {
+  const hasMore = items.length > limitNum;
+  const results = hasMore ? items.slice(0, limitNum) : items;
+  const nextCursor = hasMore ? results[results.length - 1]._id.toString() : null;
+
+  return {
+    items: results,
+    next_cursor: nextCursor,
+    has_more: hasMore,
+  };
+};
+
+// ========================================================
 // A. MANAJEMEN REKENING PLATFORM (ADMIN BANK)
 // ========================================================
 
@@ -135,18 +162,24 @@ exports.deleteBank = async (bankId) => {
 // B. MANAJEMEN TOP UP USER
 // ========================================================
 
-exports.getPendingTopUps = async () => {
-  return TopUpRequest.find({
+exports.getPendingTopUps = async (cursor, limit) => {
+  const { limitNum, cursorFilter } = buildCursorPagination(cursor, limit);
+
+  const topups = await TopUpRequest.find({
     status: 'pending',
     deleted_at: null,
+    ...cursorFilter,
   })
     .populate('user_id', 'username email phone_number')
     .populate(
       'admin_bank_id',
       'bank_name account_number account_name'
     )
-    .sort({ createdAt: 1 })
+    .sort({ _id: 1 })
+    .limit(limitNum + 1)
     .lean();
+
+  return formatCursorResults(topups, limitNum);
 };
 
 exports.processTopUpDecision = async (
@@ -276,13 +309,19 @@ exports.deleteTopUpRecord = async (topUpId) => {
 // C. MONITORING WITHDRAWAL
 // ========================================================
 
-exports.getPendingWithdrawals = async () => {
-  return WithdrawalRequest.find({
+exports.getPendingWithdrawals = async (cursor, limit) => {
+  const { limitNum, cursorFilter } = buildCursorPagination(cursor, limit);
+
+  const withdrawals = await WithdrawalRequest.find({
     status: 'pending_approval',
+    ...cursorFilter,
   })
     .populate('user_id', 'username email phone_number')
-    .sort({ createdAt: 1 })
+    .sort({ _id: 1 })
+    .limit(limitNum + 1)
     .lean();
+
+  return formatCursorResults(withdrawals, limitNum);
 };
 
 exports.executeKliringDecision = async (
@@ -424,15 +463,21 @@ exports.getFinancialDashboard = async (
 // E. APPROVAL TRANSFER NOMINAL BESAR
 // ========================================================
 
-exports.getPendingTransfers = async () => {
-  return Transaction.find({
+exports.getPendingTransfers = async (cursor, limit) => {
+  const { limitNum, cursorFilter } = buildCursorPagination(cursor, limit);
+
+  const transfers = await Transaction.find({
     type: 'transfer',
     status: 'pending_approval',
+    ...cursorFilter,
   })
     .populate('sender_id', 'username email phone_number')
     .populate('receiver_id', 'username email phone_number')
-    .sort({ createdAt: 1 })
+    .sort({ _id: 1 })
+    .limit(limitNum + 1)
     .lean();
+
+  return formatCursorResults(transfers, limitNum);
 };
 
 exports.processTransferDecision = async (

@@ -76,16 +76,22 @@ export interface FinancialReport {
   };
 }
 
+export interface AdminPaginatedResult<T> {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 export interface IAdminRepository {
   getStats(): Promise<AdminStats>;
-  getPendingWithdrawals(): Promise<PendingWithdrawal[]>;
+  getPendingWithdrawals(cursor?: string, limit?: number): Promise<AdminPaginatedResult<PendingWithdrawal>>;
   approveWithdrawal(transactionId: string): Promise<void>;
   rejectWithdrawal(transactionId: string, reason?: string): Promise<void>;
-  getPendingTopUps(): Promise<PendingTopUp[]>;
+  getPendingTopUps(cursor?: string, limit?: number): Promise<AdminPaginatedResult<PendingTopUp>>;
   approveTopUp(topUpId: string): Promise<void>;
   cancelTopUp(topUpId: string): Promise<void>;
   deleteTopUpRecord(topUpId: string): Promise<void>;
-  getPendingTransfers(): Promise<PendingTransfer[]>;
+  getPendingTransfers(cursor?: string, limit?: number): Promise<AdminPaginatedResult<PendingTransfer>>;
   approveTransfer(transactionId: string): Promise<void>;
   rejectTransfer(transactionId: string, reason?: string): Promise<void>;
   getBanks(): Promise<AdminBank[]>;
