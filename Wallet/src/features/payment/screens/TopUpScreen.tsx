@@ -14,6 +14,7 @@ import { UserLayout } from '@shared/layouts';
 import { InputField, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useInitiateTopUpMutation } from '../hooks/usePaymentMutations';
+import { useFeatureFlagStore } from '@core/config/featureFlags';
 
 const PRESET_AMOUNTS = [20000, 50000, 100000, 200000, 500000, 1000000];
 
@@ -23,11 +24,19 @@ const TopUpScreen = () => {
   const [customAmount, setCustomAmount] = useState('');
   const { mutate: initiateTopUp, isPending } = useInitiateTopUpMutation();
 
+  const isTopUpEnabled = useFeatureFlagStore(
+    (state) => state.flags.topup_midtrans?.enabled ?? true
+  );
+  const topUpNotice =
+    useFeatureFlagStore((state) => state.flags.topup_midtrans?.maintenanceMessage) ||
+    'Layanan Ini Sedang Dalam Pemeliharaan Berkala. Untuk sementara waktu mutasi ini ditangguhkan demi keamanan dana Anda.';
+
   const finalAmount = customAmount
     ? parseInt(customAmount.replace(/[^0-9]/g, ''), 10) || 0
     : selectedAmount || 0;
 
   const handleSelectPreset = (amount: number) => {
+    if (!isTopUpEnabled) return;
     setSelectedAmount(amount);
     setCustomAmount('');
   };
@@ -38,6 +47,12 @@ const TopUpScreen = () => {
   };
 
   const handleTopUp = () => {
+    // Graceful Degradation Guard: Blokir eksekusi mutasi jika fitur dinonaktifkan
+    if (!isTopUpEnabled) {
+      Alert.alert('Fitur Sedang Pemeliharaan', topUpNotice);
+      return;
+    }
+
     if (finalAmount < 10000) {
       Alert.alert('Nominal Tidak Valid', 'Top Up saldo minimal Rp 10.000.');
       return;
@@ -68,6 +83,19 @@ const TopUpScreen = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
+        {/* Graceful Degradation Banner */}
+        {!isTopUpEnabled && (
+          <View
+            style={styles.degradationBanner}
+            accessible={true}
+            accessibilityRole="alert"
+            accessibilityLabel={topUpNotice}
+          >
+            <Ionicons name="warning-outline" size={20} color={colors.warning} />
+            <Text style={styles.degradationBannerText}>{topUpNotice}</Text>
+          </View>
+        )}
+
         <Text style={styles.sectionTitle}>Pilih Nominal Instan</Text>
         <View style={styles.presetGrid}>
           {PRESET_AMOUNTS.map((amt) => {
@@ -75,11 +103,22 @@ const TopUpScreen = () => {
             return (
               <TouchableOpacity
                 key={amt}
-                style={[styles.presetCard, isSelected && styles.presetCardActive]}
+                style={[
+                  styles.presetCard,
+                  isSelected && styles.presetCardActive,
+                  !isTopUpEnabled && styles.presetCardDisabled,
+                ]}
                 onPress={() => handleSelectPreset(amt)}
                 activeOpacity={0.7}
+                disabled={!isTopUpEnabled}
               >
-                <Text style={[styles.presetText, isSelected && styles.presetTextActive]}>
+                <Text
+                  style={[
+                    styles.presetText,
+                    isSelected && styles.presetTextActive,
+                    !isTopUpEnabled && styles.presetTextDisabled,
+                  ]}
+                >
                   Rp {amt.toLocaleString('id-ID')}
                 </Text>
               </TouchableOpacity>
@@ -93,6 +132,7 @@ const TopUpScreen = () => {
           keyboardType="numeric"
           value={customAmount}
           onChangeText={handleCustomChange}
+          editable={isTopUpEnabled}
         />
 
         <View style={styles.summaryCard}>
@@ -104,6 +144,7 @@ const TopUpScreen = () => {
           title="Konfirmasi & Bayar"
           onPress={handleTopUp}
           isLoading={isPending}
+          disabled={!isTopUpEnabled}
           style={styles.submitBtn}
         />
       </ScrollView>
@@ -128,6 +169,23 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: spacing.xxxl,
+  },
+  degradationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.warning}18`,
+    borderColor: `${colors.warning}50`,
+    borderWidth: 1,
+    padding: spacing.md,
+    borderRadius: spacing.radius.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  degradationBannerText: {
+    flex: 1,
+    fontSize: typography.size.xs,
+    color: colors.textMain,
+    lineHeight: 18,
   },
   sectionTitle: {
     fontSize: typography.size.sm,
@@ -155,6 +213,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primaryLight,
   },
+  presetCardDisabled: {
+    opacity: 0.5,
+  },
   presetText: {
     fontSize: typography.size.md,
     fontWeight: typography.weight.semibold as any,
@@ -162,6 +223,9 @@ const styles = StyleSheet.create({
   },
   presetTextActive: {
     color: colors.primaryDark,
+  },
+  presetTextDisabled: {
+    color: colors.textLight,
   },
   summaryCard: {
     backgroundColor: colors.surface,

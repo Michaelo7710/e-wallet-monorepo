@@ -15,6 +15,7 @@ import { InputField, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { useWithdrawalMutation } from '../hooks/usePaymentMutations';
+import { useFeatureFlagStore } from '@core/config/featureFlags';
 
 const POPULAR_BANKS = ['BCA', 'BRI', 'Mandiri', 'BNI', 'CIMB Niaga'];
 
@@ -24,6 +25,13 @@ const WithdrawScreen = () => {
   const currentBalance = user?.balance ?? 0;
   const { mutate: requestWithdrawal, isPending } = useWithdrawalMutation();
 
+  const isWithdrawEnabled = useFeatureFlagStore(
+    (state) => state.flags.bank_withdrawal?.enabled ?? true
+  );
+  const withdrawNotice =
+    useFeatureFlagStore((state) => state.flags.bank_withdrawal?.maintenanceMessage) ||
+    'Layanan Ini Sedang Dalam Pemeliharaan Berkala. Untuk sementara waktu mutasi ini ditangguhkan demi keamanan dana Anda.';
+
   const [selectedBank, setSelectedBank] = useState('BCA');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -32,6 +40,12 @@ const WithdrawScreen = () => {
   const numericAmount = parseInt(amount.replace(/[^0-9]/g, ''), 10) || 0;
 
   const handleWithdraw = () => {
+    // Graceful Degradation Guard: Blokir eksekusi penarikan saat partner bank offline
+    if (!isWithdrawEnabled) {
+      Alert.alert('Fitur Sedang Pemeliharaan', withdrawNotice);
+      return;
+    }
+
     if (!accountNumber || accountNumber.length < 6) {
       Alert.alert('Data Tidak Lengkap', 'Nomor rekening wajib diisi dengan benar.');
       return;
@@ -90,6 +104,19 @@ const WithdrawScreen = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
+        {/* Graceful Degradation Banner */}
+        {!isWithdrawEnabled && (
+          <View
+            style={styles.degradationBanner}
+            accessible={true}
+            accessibilityRole="alert"
+            accessibilityLabel={withdrawNotice}
+          >
+            <Ionicons name="warning-outline" size={20} color={colors.warning} />
+            <Text style={styles.degradationBannerText}>{withdrawNotice}</Text>
+          </View>
+        )}
+
         <View style={styles.balanceInfoBox}>
           <Text style={styles.balanceLabel}>Saldo Dapat Ditarik</Text>
           <Text style={styles.balanceValue}>Rp {currentBalance.toLocaleString('id-ID')}</Text>
@@ -102,11 +129,22 @@ const WithdrawScreen = () => {
             return (
               <TouchableOpacity
                 key={bank}
-                style={[styles.bankChip, isSelected && styles.bankChipActive]}
+                style={[
+                  styles.bankChip,
+                  isSelected && styles.bankChipActive,
+                  !isWithdrawEnabled && styles.bankChipDisabled,
+                ]}
                 onPress={() => setSelectedBank(bank)}
                 activeOpacity={0.7}
+                disabled={!isWithdrawEnabled}
               >
-                <Text style={[styles.bankChipText, isSelected && styles.bankChipTextActive]}>
+                <Text
+                  style={[
+                    styles.bankChipText,
+                    isSelected && styles.bankChipTextActive,
+                    !isWithdrawEnabled && styles.bankChipTextDisabled,
+                  ]}
+                >
                   {bank}
                 </Text>
               </TouchableOpacity>
@@ -120,6 +158,7 @@ const WithdrawScreen = () => {
           keyboardType="numeric"
           value={accountNumber}
           onChangeText={setAccountNumber}
+          editable={isWithdrawEnabled}
         />
 
         <InputField
@@ -128,6 +167,7 @@ const WithdrawScreen = () => {
           autoCapitalize="characters"
           value={accountName}
           onChangeText={setAccountName}
+          editable={isWithdrawEnabled}
         />
 
         <InputField
@@ -136,12 +176,14 @@ const WithdrawScreen = () => {
           keyboardType="numeric"
           value={amount}
           onChangeText={(val) => setAmount(val.replace(/[^0-9]/g, ''))}
+          editable={isWithdrawEnabled}
         />
 
         <ButtonCustom
           title="Ajukan Penarikan"
           onPress={handleWithdraw}
           isLoading={isPending}
+          disabled={!isWithdrawEnabled}
           style={styles.submitBtn}
         />
       </ScrollView>
@@ -166,6 +208,23 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: spacing.xxxl,
+  },
+  degradationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.warning}18`,
+    borderColor: `${colors.warning}50`,
+    borderWidth: 1,
+    padding: spacing.md,
+    borderRadius: spacing.radius.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  degradationBannerText: {
+    flex: 1,
+    fontSize: typography.size.xs,
+    color: colors.textMain,
+    lineHeight: 18,
   },
   balanceInfoBox: {
     backgroundColor: colors.primaryLight,
@@ -207,6 +266,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primaryLight,
   },
+  bankChipDisabled: {
+    opacity: 0.5,
+  },
   bankChipText: {
     fontSize: typography.size.sm,
     fontWeight: typography.weight.medium as any,
@@ -215,6 +277,9 @@ const styles = StyleSheet.create({
   bankChipTextActive: {
     color: colors.primaryDark,
     fontWeight: typography.weight.bold as any,
+  },
+  bankChipTextDisabled: {
+    color: colors.textLight,
   },
   submitBtn: {
     marginTop: spacing.xl,
