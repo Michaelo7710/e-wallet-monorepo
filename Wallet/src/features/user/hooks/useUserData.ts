@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
 import { userRepository, paymentRepository } from '@core/di/container';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { QUERY_KEYS } from '@core/network/queryKeys';
@@ -47,11 +47,19 @@ export const useUserProfile = () => {
   });
 };
 
-export const useTransactionHistory = (page = 1, type?: string) => {
-  return useQuery({
-    queryKey: QUERY_KEYS.PAYMENT.HISTORY(page, type),
-    queryFn: async () => {
-      return await paymentRepository.getHistory(page, 10, type);
+export const useTransactionHistory = (type?: string) => {
+  return useInfiniteQuery({
+    queryKey: ['payment', 'history', 'infinite', type],
+    queryFn: async ({ pageParam = 1 }) => {
+      return await paymentRepository.getHistory(pageParam as number, 10, type);
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const totalFetched = allPages.flatMap((page) => page.transactions).length;
+      if (totalFetched < lastPage.total) {
+        return allPages.length + 1;
+      }
+      return undefined;
     },
   });
 };

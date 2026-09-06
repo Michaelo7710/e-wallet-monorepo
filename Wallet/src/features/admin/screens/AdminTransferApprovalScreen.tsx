@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
   useApproveTransferMutation,
   useRejectTransferMutation,
 } from '../hooks/useAdminData';
+import AmlRejectionModal from '../components/AmlRejectionModal';
 
 const AdminTransferApprovalScreen = () => {
   const navigation = useNavigation();
@@ -36,6 +37,8 @@ const AdminTransferApprovalScreen = () => {
   const transfers = data?.pages.flatMap((page) => page.items) ?? [];
   const { mutate: approveTransfer, isPending: isApproving } = useApproveTransferMutation();
   const { mutate: rejectTransfer, isPending: isRejecting } = useRejectTransferMutation();
+
+  const [selectedRejectItem, setSelectedRejectItem] = useState<PendingTransfer | null>(null);
 
   const handleApprove = (item: PendingTransfer) => {
     Alert.alert(
@@ -59,27 +62,21 @@ const AdminTransferApprovalScreen = () => {
   };
 
   const handleReject = (item: PendingTransfer) => {
-    Alert.alert(
-      'Tolak & Refund Transfer',
-      `Tolak transaksi transfer ini dan pulangkan saldo Rp ${item.amount.toLocaleString('id-ID')} ke dompet ${item.sender.username}?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Tolak & Refund',
-          style: 'destructive',
-          onPress: () => {
-            rejectTransfer(
-              { transactionId: item.id, reason: 'Ditolak oleh kebijakan AML Administrator' },
-              {
-                onSuccess: () =>
-                  Alert.alert('Selesai', 'Transfer ditolak dan saldo telah dipulangkan ke pengirim.'),
-                onError: (err: any) =>
-                  Alert.alert('Gagal', err.response?.data?.message || err.message || 'Gagal menolak transfer'),
-              }
-            );
-          },
+    setSelectedRejectItem(item);
+  };
+
+  const handleConfirmReject = (structuredReason: string) => {
+    if (!selectedRejectItem) return;
+    rejectTransfer(
+      { transactionId: selectedRejectItem.id, reason: structuredReason },
+      {
+        onSuccess: () => {
+          setSelectedRejectItem(null);
+          Alert.alert('Selesai', 'Transfer ditolak dan saldo telah dipulangkan ke pengirim.');
         },
-      ]
+        onError: (err: any) =>
+          Alert.alert('Gagal', err.response?.data?.message || err.message || 'Gagal menolak transfer'),
+      }
     );
   };
 
@@ -199,6 +196,14 @@ const AdminTransferApprovalScreen = () => {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <AmlRejectionModal
+        visible={selectedRejectItem !== null}
+        onClose={() => setSelectedRejectItem(null)}
+        onSubmit={handleConfirmReject}
+        isLoading={isRejecting}
+        transactionReference={selectedRejectItem?.referenceId}
+      />
     </UserLayout>
   );
 };

@@ -36,9 +36,15 @@ const InputField = ({
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputContainer, { borderColor: getBorderColor() }]}>
+      <View
+        style={[
+          styles.inputContainer,
+          { borderColor: getBorderColor() },
+          rest.multiline && styles.multilineContainer,
+        ]}
+      >
         <TextInput
-          style={styles.input}
+          style={[styles.input, rest.multiline && styles.multilineInput]}
           placeholder={placeholder}
           placeholderTextColor={colors.textLight}
           secureTextEntry={isSecure}
@@ -109,6 +115,17 @@ const styles = StyleSheet.create({
     height: '100%',
     color: colors.textMain,
     fontSize: typography.size.md,
+  },
+  multilineContainer: {
+    height: 'auto',
+    minHeight: 80,
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+  },
+  multilineInput: {
+    height: 'auto',
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   eyeIcon: {
     paddingLeft: 10,
