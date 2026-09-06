@@ -42,6 +42,21 @@ const MIGRATIONS_DDL = `
   );
 
   CREATE INDEX IF NOT EXISTS idx_contacts_last_tx ON saved_contacts(last_transacted_at DESC);
+
+  CREATE TABLE IF NOT EXISTS user_profile (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    role TEXT NOT NULL,
+    is_verified INTEGER NOT NULL DEFAULT 0,
+    is_suspended INTEGER NOT NULL DEFAULT 0,
+    two_factor_enabled INTEGER NOT NULL DEFAULT 0,
+    avatar TEXT,
+    nik TEXT,
+    balance REAL NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL
+  );
 `;
 
 /**

@@ -3,6 +3,7 @@ import { User } from '@domain/entities/user';
 import { STORAGE_KEYS } from '@core/network/api';
 import { secureStorageService } from '@core/security/secureStorage.service';
 import { BiometricsService } from '@core/security/biometrics.service';
+import { userLocalDataSource, paymentLocalDataSource } from '@core/di/container';
 
 interface AuthState {
   user: User | null;
@@ -63,6 +64,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   logoutSession: async () => {
     try {
       await secureStorageService.clearSession();
+      await Promise.allSettled([
+        userLocalDataSource.clearProfile(),
+        paymentLocalDataSource.clearAll(),
+      ]);
     } catch (error) {
       console.warn('[AUTH_STORE] Gagal membersihkan secure storage saat logout:', error);
     } finally {

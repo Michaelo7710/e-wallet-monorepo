@@ -16,6 +16,12 @@ jest.mock('@core/di/container', () => ({
   },
   userRepository: {},
   adminRepository: {},
+  userLocalDataSource: {
+    clearProfile: jest.fn(),
+  },
+  paymentLocalDataSource: {
+    clearAll: jest.fn(),
+  },
 }));
 
 jest.mock('@core/storage/useAuthStore', () => ({
