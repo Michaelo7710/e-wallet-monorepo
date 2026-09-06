@@ -37,16 +37,38 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-// 1. Interceptor Request: Injeksi Access Token, Correlation ID & Breadcrumbs
+// 1. Interceptor Request: Injeksi Access Token, Correlation ID, Keamanan Host & Breadcrumbs
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // A. Sisipkan Correlation ID aktif ke header request keluar jika tersedia
+    // A. Validasi Protokol HTTPS: Tolak HTTP mentah saat mode produksi
+    const targetUrl = config.url || '';
+    const fullUrl = targetUrl.startsWith('http://') || targetUrl.startsWith('https://')
+      ? targetUrl
+      : `${config.baseURL || ''}/${targetUrl.replace(/^\//, '')}`;
+
+    if (ENV.IS_PROD && fullUrl.startsWith('http://')) {
+      const insecureError = new Error(
+        `[SECURITY] Permintaan HTTP tidak aman ditolak pada mode produksi: ${fullUrl}`
+      );
+      telemetryService.captureException(insecureError, {
+        tag: 'SECURITY_ALERT_INSECURE_HTTP',
+        url: fullUrl,
+      });
+      return Promise.reject(insecureError);
+    }
+
+    // B. Sematkan Header Anti-Tamper Client Integrity
+    if (config.headers) {
+      config.headers['X-Client-Integrity'] = 'verified';
+    }
+
+    // C. Sisipkan Correlation ID aktif ke header request keluar jika tersedia
     const activeCorrelationId = telemetryService.getCorrelationId();
     if (activeCorrelationId && config.headers) {
       config.headers['X-Correlation-ID'] = activeCorrelationId;
     }
 
-    // B. Ambil dan sematkan Access Token
+    // D. Ambil dan sematkan Access Token
     let token = useAuthStore.getState().token;
     if (!token) {
       token = await secureStorageService.getItem<string>(STORAGE_KEYS.ACCESS_TOKEN);
@@ -114,7 +136,30 @@ api.interceptors.response.use(
       telemetryService.setCorrelationId(errCorrelationId);
     }
 
-    // B. Rekam Breadcrumb HTTP Error
+    // B. Deteksi Insiden SSL Pinning / TLS MITM Tamper
+    const errorCode = (error.code || '').toUpperCase();
+    const errorMessage = (error.message || '').toUpperCase();
+    const isMitmIncident =
+      errorCode === 'CERT_HAS_EXPIRED' ||
+      errorCode === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
+      errorMessage.includes('CERT_HAS_EXPIRED') ||
+      errorMessage.includes('UNABLE_TO_VERIFY_LEAF_SIGNATURE') ||
+      errorMessage.includes('DEPTH_ZERO_SELF_SIGNED_CERT') ||
+      errorMessage.includes('SELF_SIGNED_CERT_IN_CHAIN') ||
+      errorMessage.includes('SSL PINNING') ||
+      errorMessage.includes('CERTIFICATE VERIFICATION FAILED') ||
+      errorMessage.includes('TLS HANDSHAKE');
+
+    if (isMitmIncident) {
+      telemetryService.captureException(error, {
+        tag: 'SECURITY_ALERT_MITM',
+        url: error.config?.url,
+        code: error.code,
+        message: error.message,
+      });
+    }
+
+    // C. Rekam Breadcrumb HTTP Error
     telemetryService.addBreadcrumb({
       category: 'network',
       level: 'error',
