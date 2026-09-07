@@ -9,7 +9,11 @@
     "seed": "node src/utils/seeder.js",
     "seed:destroy": "node src/utils/seeder.js -d",
     "migrate:timestamps": "node scripts/migrateTimestamps.js",
-    "test": "jest --runInBand --detectOpenHandles --forceExit"
+    "test": "jest --runInBand --detectOpenHandles --forceExit",
+    "security:sbom": "node scripts/security/generateSbom.js",
+    "security:license": "node scripts/security/auditLicenses.js",
+    "security:audit": "npm audit --audit-level=high",
+    "security:check-all": "npm run security:license && npm run security:sbom && npm run security:audit"
   },
   "jest": {
     "testEnvironment": "node",
