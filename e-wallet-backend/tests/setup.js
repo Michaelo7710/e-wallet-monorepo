@@ -19,6 +19,9 @@ beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   process.env.JWT_SECRET = 'test-jwt-secret-key-2026';
   process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key-2026';
+  process.env.MIDTRANS_SERVER_KEY = 'mock-sandbox-server-key-test-99999';
+  process.env.MIDTRANS_CLIENT_KEY = 'mock-sandbox-client-key-test-99999';
+  process.env.MIDTRANS_IS_PRODUCTION = 'false';
 
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();

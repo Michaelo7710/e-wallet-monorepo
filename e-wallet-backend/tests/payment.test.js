@@ -115,4 +115,144 @@ describe('🧪 [PAYMENT & TRANSACTION INTEGRATION TEST]', () => {
     expect(res.body.status).toBe('success');
     expect(res.body.data).toHaveProperty('snap_token');
   });
+
+  it('7. Simulator/Webhook Midtrans legacy path /api/transactions/midtrans-notification harus mengembalikan 200 OK dan menambah saldo dompet di MongoDB', async () => {
+    const crypto = require('crypto');
+    const { Wallet, TopUpRequest } = require('../src/models');
+    const { accessToken, user } = await createTestUser({ balance: 50000 });
+
+    const initRes = await request(app)
+      .post('/api/v1/payments/topup/initiate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ amount: 100000 });
+
+    expect(initRes.statusCode).toEqual(201);
+    const orderId = initRes.body.data.reference_number;
+    const statusCode = '200';
+    const grossAmount = '100000.00';
+    const MOCK_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || 'mock-sandbox-server-key-test-99999';
+    const signatureKey = crypto
+      .createHash('sha512')
+      .update(orderId + statusCode + grossAmount + MOCK_SERVER_KEY)
+      .digest('hex');
+
+    const webhookRes = await request(app)
+      .post('/api/transactions/midtrans-notification')
+      .send({
+        order_id: orderId,
+        status_code: statusCode,
+        gross_amount: grossAmount,
+        signature_key: signatureKey,
+        transaction_status: 'settlement',
+        fraud_status: 'accept',
+        transaction_id: 'midtrans-trx-mock-001',
+        payment_type: 'gopay',
+        settlement_time: '2026-09-07 10:00:00',
+      });
+
+    expect(webhookRes.statusCode).toEqual(200);
+    expect(webhookRes.body.status).toBe('success');
+
+    const updatedWallet = await Wallet.findOne({ user_id: user._id });
+    expect(updatedWallet.balance).toBe(150000);
+
+    const updatedTopUp = await TopUpRequest.findOne({ reference_number: orderId });
+    expect(updatedTopUp.status).toBe('success');
+  });
+
+  it('8. Simulator/Webhook Midtrans path /api/v1/transactions/midtrans-notification harus mengembalikan 200 OK dan menambah saldo dompet', async () => {
+    const crypto = require('crypto');
+    const { Wallet } = require('../src/models');
+    const { accessToken, user } = await createTestUser({ balance: 25000 });
+
+    const initRes = await request(app)
+      .post('/api/v1/payments/topup/initiate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ amount: 75000 });
+
+    expect(initRes.statusCode).toEqual(201);
+    const orderId = initRes.body.data.reference_number;
+    const statusCode = '200';
+    const grossAmount = '75000.00';
+    const MOCK_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || 'mock-sandbox-server-key-test-99999';
+    const signatureKey = crypto
+      .createHash('sha512')
+      .update(orderId + statusCode + grossAmount + MOCK_SERVER_KEY)
+      .digest('hex');
+
+    const webhookRes = await request(app)
+      .post('/api/v1/transactions/midtrans-notification')
+      .send({
+        order_id: orderId,
+        status_code: statusCode,
+        gross_amount: grossAmount,
+        signature_key: signatureKey,
+        transaction_status: 'settlement',
+        fraud_status: 'accept',
+        transaction_id: 'midtrans-trx-mock-002',
+        payment_type: 'bank_transfer',
+        settlement_time: '2026-09-07 10:00:00',
+      });
+
+    expect(webhookRes.statusCode).toEqual(200);
+    expect(webhookRes.body.status).toBe('success');
+
+    const updatedWallet = await Wallet.findOne({ user_id: user._id });
+    expect(updatedWallet.balance).toBe(100000);
+  });
+
+  it('9. Webhook Midtrans route alias /api/v1/payments/midtrans-notification harus mengembalikan 200 OK', async () => {
+    const crypto = require('crypto');
+    const { Wallet } = require('../src/models');
+    const { accessToken, user } = await createTestUser({ balance: 0 });
+
+    const initRes = await request(app)
+      .post('/api/v1/payments/topup/initiate')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ amount: 50000 });
+
+    expect(initRes.statusCode).toEqual(201);
+    const orderId = initRes.body.data.reference_number;
+    const statusCode = '200';
+    const grossAmount = '50000.00';
+    const MOCK_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || 'mock-sandbox-server-key-test-99999';
+    const signatureKey = crypto
+      .createHash('sha512')
+      .update(orderId + statusCode + grossAmount + MOCK_SERVER_KEY)
+      .digest('hex');
+
+    const webhookRes = await request(app)
+      .post('/api/v1/payments/midtrans-notification')
+      .send({
+        order_id: orderId,
+        status_code: statusCode,
+        gross_amount: grossAmount,
+        signature_key: signatureKey,
+        transaction_status: 'settlement',
+        fraud_status: 'accept',
+        transaction_id: 'midtrans-trx-mock-003',
+        payment_type: 'qris',
+        settlement_time: '2026-09-07 10:00:00',
+      });
+
+    expect(webhookRes.statusCode).toEqual(200);
+    expect(webhookRes.body.status).toBe('success');
+
+    const updatedWallet = await Wallet.findOne({ user_id: user._id });
+    expect(updatedWallet.balance).toBe(50000);
+  });
+
+  it('10. Endpoint Remote Config GET /api/v1/config/feature-flags harus mengembalikan 200 OK dengan status success dan daftar feature flags', async () => {
+    const res = await request(app).get('/api/v1/config/feature-flags');
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data).toEqual({
+      p2p_transfer: { enabled: true },
+      topup_midtrans: { enabled: true },
+      bank_withdrawal: { enabled: true },
+      kyc_submission: { enabled: true },
+      biometric_login: { enabled: true },
+    });
+  });
 });

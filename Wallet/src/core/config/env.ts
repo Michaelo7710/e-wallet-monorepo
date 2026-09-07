@@ -3,7 +3,7 @@ import { z } from 'zod';
 // 1. Kamus Presets Target Server GreenPay
 export const ENV_PRESETS = {
   // Mode Development Lokal (Ubah IP '192.168.1.X' sesuai IPv4 Wi-Fi laptopmu)
-  local: 'http://192.168.43.20:3000/api/v1',
+  local: 'http://192.168.1.100:3000/api/v1',
 
   // Mode Tunneling Ngrok (Aktif jika laptop & HP beda jaringan / remote)
   ngrok: 'https://irritative-yuriko-knolly.ngrok-free.dev/api/v1',

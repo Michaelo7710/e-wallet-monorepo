@@ -211,7 +211,14 @@ api.interceptors.response.use(
           telemetryService.setCorrelationId(refreshCorrelationId);
         }
 
-        const { token: newAccessToken } = response.data;
+        const newAccessToken =
+          response.data?.data?.access_token ||
+          response.data?.access_token ||
+          response.data?.token;
+
+        if (!newAccessToken || typeof newAccessToken !== 'string') {
+          throw new Error('Respon refresh token tidak valid: payload access_token kosong.');
+        }
 
         await secureStorageService.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
         useAuthStore.getState().setAccessToken(newAccessToken);
@@ -225,7 +232,11 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        await useAuthStore.getState().logoutSession();
+        try {
+          await useAuthStore.getState().logoutSession();
+        } catch (logoutError) {
+          console.warn('[NETWORK] Gagal membersihkan sesi saat refresh token gagal:', logoutError);
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
