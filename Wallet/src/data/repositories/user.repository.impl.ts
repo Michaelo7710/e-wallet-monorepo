@@ -13,15 +13,27 @@ export class UserRepositoryImpl implements IUserRepository {
   async getProfile(): Promise<User> {
     try {
       const raw = await this.remoteDataSource.getProfile();
-      const user = UserMapper.toDomain(raw.data.user);
-      this.localDataSource
-        .upsertProfile(user)
-        .catch((err) => console.warn('[UserRepo] Gagal cache profile ke SQLite:', err));
+      const profileDto = raw.data?.profile || (raw.data as any)?.user;
+      const walletBalance = raw.data?.wallet?.balance ?? (profileDto as any)?.balance ?? 0;
+
+      // Suntikkan balance dari wallet ke entitas User
+      const user = UserMapper.toDomain({
+        ...profileDto,
+        balance: walletBalance,
+      });
+
+      // Simpan ke SQLite sebagai Single Source of Truth
+      if (this.localDataSource) {
+        this.localDataSource.upsertProfile(user).catch((err) => {
+          console.warn('[UserRepo] Gagal cache profile ke SQLite:', err);
+        });
+      }
+
       return user;
     } catch (error) {
-      const localUser = await this.localDataSource.getProfile();
-      if (localUser) {
-        return localUser;
+      if (this.localDataSource) {
+        const localUser = await this.localDataSource.getProfile();
+        if (localUser) return localUser;
       }
       throw error;
     }

@@ -128,7 +128,7 @@ exports.updateBank = async (bankId, updateData) => {
     bankId,
     updateData,
     {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }
   );
@@ -227,7 +227,7 @@ exports.processTopUpDecision = async (
       const wallet = await Wallet.findOneAndUpdate(
         { user_id: request.user_id },
         { $inc: { balance: request.amount } },
-        { new: true, ...options }
+        { returnDocument: 'after', ...options }
       );
 
       if (!wallet) {
@@ -522,7 +522,7 @@ exports.processTransferDecision = async (
       const receiverWallet = await Wallet.findOneAndUpdate(
         { user_id: transaction.receiver_id },
         { $inc: { balance: transaction.amount } },
-        { new: true, ...options }
+        { returnDocument: 'after', ...options }
       );
 
       if (!receiverWallet) {
@@ -541,7 +541,7 @@ exports.processTransferDecision = async (
       const senderWallet = await Wallet.findOneAndUpdate(
         { user_id: transaction.sender_id },
         { $inc: { balance: transaction.amount } },
-        { new: true, ...options }
+        { returnDocument: 'after', ...options }
       );
 
       if (!senderWallet) {

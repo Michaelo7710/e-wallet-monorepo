@@ -1,9 +1,17 @@
 import api from '@core/network/api';
 import { UserDTO } from '../../models/userDTO';
 
+export interface RawUserProfilePayload {
+  profile: UserDTO;
+  wallet: {
+    balance: number;
+    currency: string;
+  };
+}
+
 export class UserRemoteDataSource {
-  async getProfile(): Promise<{ status: string; data: { user: UserDTO } }> {
-    const response = await api.get<{ status: string; data: { user: UserDTO } }>('/users/me');
+  async getProfile(): Promise<{ status: string; data: RawUserProfilePayload }> {
+    const response = await api.get<{ status: string; data: RawUserProfilePayload }>('/users/me');
     return response.data;
   }
 

@@ -401,7 +401,7 @@ exports.handleMidtransWebhook = async (notificationBody) => {
       const wallet = await Wallet.findOneAndUpdate(
         { user_id: topUpRequest.user_id },
         { $inc: { balance: parseFloat(gross_amount) } },
-        { new: true, session: session || undefined }
+        { returnDocument: 'after', session: session || undefined }
       );
       if (!wallet) throw new Error(`Wallet not found for user ${topUpRequest.user_id}`);
 
@@ -489,7 +489,7 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
     const wallet = await Wallet.findOneAndUpdate(
       { user_id: userId, balance: { $gte: parseFloat(amount) } },
       { $inc: { balance: -parseFloat(amount) } },
-      { new: true, ...options }
+      { returnDocument: 'after', ...options }
     );
 
     if (!wallet) {
@@ -598,7 +598,7 @@ exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedR
       const wallet = await Wallet.findOneAndUpdate(
         { user_id: request.user_id },
         { $inc: { balance: request.amount } },
-        { new: true, ...options }
+        { returnDocument: 'after', ...options }
       );
       if (!wallet) throw new Error('Dompet Wallet pengguna tidak ditemukan saat proses refund.');
       
@@ -697,7 +697,7 @@ exports.transferP2P = async (senderId, transferData) => {
     const senderWallet = await Wallet.findOneAndUpdate(
       { user_id: senderId, balance: { $gte: parseFloat(amount) } },
       { $inc: { balance: -parseFloat(amount) } },
-      { new: true, ...options }
+      { returnDocument: 'after', ...options }
     );
 
     if (!senderWallet) {
@@ -712,7 +712,7 @@ exports.transferP2P = async (senderId, transferData) => {
       await Wallet.findOneAndUpdate(
         { user_id: receiver._id },
         { $inc: { balance: parseFloat(amount) } },
-        { new: true, ...options }
+        { returnDocument: 'after', ...options }
       );
 
       await Transaction.create([{

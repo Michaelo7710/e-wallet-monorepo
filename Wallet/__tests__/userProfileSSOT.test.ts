@@ -194,7 +194,7 @@ describe('TASK-B3-02: UserRepositoryImpl Offline-First Integration', () => {
     const rawRemoteData = {
       status: 'success',
       data: {
-        user: {
+        profile: {
           _id: 'usr-123',
           username: 'budi_santoso',
           email: 'budi@example.com',
@@ -205,7 +205,11 @@ describe('TASK-B3-02: UserRepositoryImpl Offline-First Integration', () => {
           two_factor_enabled: true,
           avatar: null,
           nik: null,
+          balance: 0,
+        },
+        wallet: {
           balance: 10000000,
+          currency: 'IDR',
         },
       },
     };
