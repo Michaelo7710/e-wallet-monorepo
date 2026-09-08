@@ -1,8 +1,19 @@
 {
+  "expo": {
+    "name": "Wallet",
+    "slug": "wallet",
+    "android": {
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "plugins": [
+      "expo-image",
+      "expo-status-bar"
+    ]
+  },
   "name": "Wallet",
-  "displayName": "Wallet",
-  "plugins": [
-    "expo-image",
-    "expo-status-bar"
-  ]
+  "displayName": "Wallet"
 }
