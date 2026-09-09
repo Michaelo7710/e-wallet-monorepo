@@ -810,22 +810,33 @@ exports.getTransactionHistory = async (userId, queryFilters) => {
     // 5. TRANSFORMASI DATA DINAMIS (MAPPING FOR MOBILE FLATLIST)
     // React Native membutuhkan kepastian mutasi: Uang Masuk (+) atau Uang Keluar (-) secara visual
     const records = transactions.map((tx) => {
-      // Deteksi arah arus keuangan secara real-time terhadap user yang sedang me-request
       const isSender = tx.sender_id && tx.sender_id._id.toString() === userId.toString();
       const flow = isSender ? 'out' : 'in';
+
+      let counterpartyName = 'External System';
+      if (flow === 'out') {
+        counterpartyName = tx.receiver_id ? tx.receiver_id.username : tx.reference_model;
+      } else {
+        counterpartyName = tx.sender_id ? tx.sender_id.username : 'External System';
+      }
 
       return {
         _id: tx._id,
         reference_id: tx.reference_id,
         reference_model: tx.reference_model,
-        type: tx.type, // topup, transfer, atau withdrawal
+        type: tx.type,
+        status: tx.status || 'success',
         amount: tx.amount,
-        flow, // Menghasilkan string 'in' atau 'out' untuk pewarnaan Hijau/Merah di HP
-        // Counterparty: Menampilkan identitas lawan transaksi (siapa pengirimnya atau siapa penerimanya)
-        counterparty: flow === 'out' 
-          ? (tx.receiver_id ? tx.receiver_id.username : tx.reference_model) 
-          : (tx.sender_id ? tx.sender_id.username : 'External System'),
-        createdAt: tx.createdAt
+        flow,
+        counterparty: counterpartyName,
+        description:
+          tx.description ||
+          (tx.type === 'topup'
+            ? 'Top Up Saldo'
+            : tx.type === 'withdrawal'
+            ? 'Penarikan Dana'
+            : 'Transfer P2P'),
+        createdAt: tx.createdAt,
       };
     });
 

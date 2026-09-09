@@ -9,6 +9,7 @@ import { Transaction, SavedContact } from '@domain/entities/transaction';
 import { PaymentRemoteDataSource } from '../datasources/remote/payment.remote-datasource';
 import { PaymentLocalDataSource } from '../datasources/local/payment.local-datasource';
 import { TransactionMapper } from '../mappers/transactionMapper';
+import { TransactionDTO } from '../models/transactionDTO';
 
 export class PaymentRepositoryImpl implements IPaymentRepository {
   constructor(
@@ -63,21 +64,28 @@ export class PaymentRepositoryImpl implements IPaymentRepository {
   ): Promise<{ transactions: Transaction[]; total: number }> {
     try {
       const raw = await this.remoteDataSource.getHistory(page, limit, type);
-      const transactions = raw.data.transactions.map(TransactionMapper.toDomain);
+      // Ekstraksi defensif: dukung jika data berupa array langsung ataupun nested di transactions
+      const rawList: TransactionDTO[] = Array.isArray(raw.data)
+        ? raw.data
+        : (raw.data as any)?.transactions || [];
 
-      // Simpan transaksi ke SQLite secara persisten sebagai SSOT
+      const transactions = rawList.map(TransactionMapper.toDomain);
+
+      // Simpan transaksi remote ke SQLite lokal sebagai SSOT
       try {
         await this.localDataSource.upsertTransactions(transactions);
       } catch (dbError) {
         console.warn('⚠️ [PaymentRepository] Gagal menyinkronkan transaksi ke SQLite:', dbError);
       }
 
+      const totalCount = raw.metadata?.total_records ?? (raw as any).results ?? transactions.length;
+
       return {
         transactions,
-        total: raw.results,
+        total: totalCount,
       };
     } catch (error) {
-      // Jalur Pemulihan Offline-First: Ambil dari basis data SQLite lokal
+      // Jalur Pemulihan Offline-First dari SQLite
       const localTx = await this.localDataSource.getTransactions(page, limit, type);
       const localCount = await this.localDataSource.countTransactions(type);
 
@@ -87,8 +95,6 @@ export class PaymentRepositoryImpl implements IPaymentRepository {
           total: localCount,
         };
       }
-
-      // Jika SQLite lokal kosong dan terjadi network error, barulah teruskan error
       throw error;
     }
   }

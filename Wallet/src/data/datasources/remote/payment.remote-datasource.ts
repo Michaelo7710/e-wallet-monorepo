@@ -1,16 +1,18 @@
 import api from '@core/network/api';
 import { TransactionDTO, SavedContactDTO } from '../../models/transactionDTO';
 
+export interface RawHistoryMetadata {
+  total_records: number;
+  current_page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface RawHistoryResponse {
   status: string;
-  results: number;
-  pagination: {
-    page: number;
-    limit: number;
-  };
-  data: {
-    transactions: TransactionDTO[];
-  };
+  message: string;
+  metadata: RawHistoryMetadata;
+  data: TransactionDTO[];
 }
 
 export class PaymentRemoteDataSource {
