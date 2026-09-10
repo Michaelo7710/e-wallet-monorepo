@@ -126,6 +126,17 @@ const ProfileScreen = () => {
     }
   };
 
+  const handleTwoFactorPress = () => {
+    if (user?.twoFactorEnabled) {
+      Alert.alert(
+        'Proteksi 2FA Aktif',
+        'Akun Anda telah diamankan dengan autentikator dua faktor berbasis TOTP.'
+      );
+    } else {
+      navigation.navigate('TwoFactorSetup');
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert(
       'Keluar dari Akun',
@@ -283,6 +294,74 @@ const ProfileScreen = () => {
                 />
               </View>
             )}
+
+            {/* Opsi Autentikasi Dua Faktor (2FA) */}
+            <TouchableOpacity
+              style={styles.menuRow}
+              activeOpacity={0.7}
+              onPress={handleTwoFactorPress}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Autentikasi Dua Faktor (2FA)"
+            >
+              <View style={styles.menuLeft}>
+                <View
+                  style={[
+                    styles.iconBox,
+                    {
+                      backgroundColor: `${
+                        user?.twoFactorEnabled ? colors.success : colors.warning
+                      }15`,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="shield-checkmark-outline"
+                    size={22}
+                    color={user?.twoFactorEnabled ? colors.success : colors.warning}
+                  />
+                </View>
+                <View style={{ flex: 1, marginRight: spacing.sm }}>
+                  <Text style={styles.menuTitle}>Autentikasi Dua Faktor (2FA)</Text>
+                  <Text style={styles.menuSubtitle}>
+                    {user?.twoFactorEnabled
+                      ? 'Aktif (Terkunci demi keamanan akun)'
+                      : 'Belum Aktif (Ketuk untuk mengaktifkan)'}
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.twoFactorBadge,
+                  user?.twoFactorEnabled
+                    ? styles.twoFactorBadgeActive
+                    : styles.twoFactorBadgeInactive,
+                ]}
+              >
+                <Ionicons
+                  name={
+                    user?.twoFactorEnabled
+                      ? 'checkmark-circle'
+                      : 'alert-circle-outline'
+                  }
+                  size={12}
+                  color={user?.twoFactorEnabled ? colors.success : colors.warning}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.twoFactorBadgeText,
+                    {
+                      color: user?.twoFactorEnabled
+                        ? colors.success
+                        : colors.warning,
+                    },
+                  ]}
+                >
+                  {user?.twoFactorEnabled ? 'Aktif' : 'Belum Aktif'}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             {PROFILE_MENUS.map(renderMenuRow)}
           </View>
@@ -464,6 +543,23 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  twoFactorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: spacing.radius.sm,
+  },
+  twoFactorBadgeActive: {
+    backgroundColor: `${colors.success}15`,
+  },
+  twoFactorBadgeInactive: {
+    backgroundColor: `${colors.warning}15`,
+  },
+  twoFactorBadgeText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.semibold as any,
   },
   logoutContainer: {
     marginTop: 'auto',

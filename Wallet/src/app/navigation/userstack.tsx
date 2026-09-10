@@ -9,6 +9,7 @@ import ChangePinScreen from '@features/user/screens/ChangePinScreen';
 import ChangePasswordScreen from '@features/user/screens/ChangePasswordScreen';
 import ChangeEmailScreen from '@features/user/screens/ChangeEmailScreen';
 import KycVerificationScreen from '@features/user/screens/KycVerificationScreen';
+import TwoFactorSetupScreen from '@features/user/screens/TwoFactorSetupScreen';
 import SnapPaymentWebViewScreen from '@features/payment/screens/SnapPaymentWebViewScreen';
 
 export type UserStackParamList = {
@@ -21,6 +22,7 @@ export type UserStackParamList = {
   ChangePassword: undefined;
   ChangeEmail: undefined;
   KycVerification: undefined;
+  TwoFactorSetup: undefined;
   SnapPaymentWebView: { redirectUrl: string; referenceId?: string; amount?: number };
 };
 
@@ -38,6 +40,7 @@ const UserStack = () => {
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="ChangeEmail" component={ChangeEmailScreen} />
       <Stack.Screen name="KycVerification" component={KycVerificationScreen} />
+      <Stack.Screen name="TwoFactorSetup" component={TwoFactorSetupScreen} />
       <Stack.Screen name="SnapPaymentWebView" component={SnapPaymentWebViewScreen} />
     </Stack.Navigator>
   );
