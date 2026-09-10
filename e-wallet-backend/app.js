@@ -4,5 +4,9 @@
 // app.post('/api/transactions/midtrans-notification', paymentController.handleMidtransWebhook);
 // app.post('/api/v1/transactions/midtrans-notification', paymentController.handleMidtransWebhook);
 // app.use('/api/v1/config', require('./routes/configRoutes'));
+const app = require('./src/app');
 
-module.exports = require('./src/app');
+// Konfigurasi Reverse Proxy (ngrok) - menyelesaikan ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+app.set('trust proxy', 1);
+
+module.exports = app;

@@ -6,7 +6,7 @@ export type EnvMode = z.infer<typeof envModeSchema>;
 
 const rawEnvMode = process.env.EXPO_PUBLIC_ENV_MODE;
 const parsedMode = envModeSchema.safeParse(rawEnvMode);
-export const ACTIVE_MODE: EnvMode = parsedMode.success ? parsedMode.data : 'local';
+export const ACTIVE_MODE: EnvMode = parsedMode.success ? parsedMode.data : 'ngrok';
 
 // 2. Baca Langsung URL dari EXPO_PUBLIC_API_URL (Akses Statis Murni untuk Babel AST Inliner)
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL;

@@ -258,6 +258,17 @@ const base32Decode = (str) => {
 // ==========================================
 exports.registerUser = async (userData) => {
   console.log('🔍 [FORENSIK INTERN] Memulai proses registrasi untuk email:', userData.email);
+
+  // Benteng 1 (Early Duplicate Validation):
+  const existingUser = await User.findOne({
+    $or: userData.phone_number
+      ? [{ email: userData.email }, { phone_number: userData.phone_number }]
+      : [{ email: userData.email }]
+  });
+  if (existingUser) {
+    const field = existingUser.email === userData.email ? 'Email' : 'Nomor Handphone';
+    throw new AppError(`${field} tersebut sudah terdaftar pada akun lain. Silakan gunakan yang lain atau masuk.`, StatusCodes.BAD_REQUEST, 'DUPLICATE_RESOURCE');
+  }
   
   const isAtomic = useTransaction();
   let session = null;
@@ -304,15 +315,17 @@ exports.registerUser = async (userData) => {
     }], options);
     console.log('✅ [LANGKAH 4] Kode OTP berhasil diamankan di database.');
 
-    // Langkah 5: Terbangkan Paket Notifikasi via Nodemailer + Mailtrap
+    // Langkah 5 (Non-Blocking Fast Dispatch):
     console.log('⚡ [LANGKAH 5] Mempersiapkan payload dan menembak Mailtrap...');
     const emailOptions = {
       email: newUser.email,
       subject: 'GreenPay - Kode Verifikasi Registrasi Akun Anda',
       message: `Selamat datang di GreenPay, ${newUser.username}!\n\nKode OTP Anda adalah: ${otpCode}`
     };
-    await sendEmail(emailOptions);
-    console.log('✅ [LANGKAH 5] Paket SMTP diterima oleh server kurir Mailtrap.');
+    sendEmail(emailOptions)
+      .then((info) => console.log(`✉️ Email OTP terkirim ke Mailtrap. ID: ${info?.messageId || 'N/A'}`))
+      .catch((err) => console.error('💥 Gagal mengirim paket SMTP di background:', err.message));
+
 
     // 🚀 LANGKAH 6: PRODUKSI DUAL-TOKEN ENTERPRISE & KUNCI REFRESH TOKEN
     console.log('⚡ [LANGKAH 6] Memproduksi Dual-Token Enterprise & mengunci Refresh Token...');

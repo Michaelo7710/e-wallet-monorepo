@@ -11,7 +11,9 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg ? err.errmsg.match(/(["'])(\\?.)*?\1/)[0] : 'Nilai';
+  const rawMsg = err.errmsg || err.message || '';
+  const match = rawMsg.match(/(["'])(\\?.)*?\1/);
+  const value = match ? match[0] : (err.keyValue ? JSON.stringify(err.keyValue) : 'Nilai');
   const message = `Data duplikat terdeteksi: ${value}. Silakan gunakan data lain.`;
   return new AppError(message, StatusCodes.BAD_REQUEST, 'DUPLICATE_RESOURCE');
 };
@@ -94,6 +96,11 @@ module.exports = (err, req, res, next) => {
     error = new AppError('Sesi Anda telah berakhir. Silakan login kembali.', StatusCodes.UNAUTHORIZED, 'TOKEN_EXPIRED');
   }
 
+  // Normalisasi error database di SEMUA environment
+  if (error.name === 'CastError') error = handleCastErrorDB(error);
+  if (error.code === 11000) error = handleDuplicateFieldsDB(error);
+  if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
+
   // Set default status jika tidak tersentuh transformasi
   error.statusCode = error.statusCode || err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
   error.status = error.status || err.status || 'error';
@@ -115,13 +122,10 @@ module.exports = (err, req, res, next) => {
     logger.warn(logPayload, `[API WARN] ${error.message}`);
   }
 
+  // Logging & Kirim Response
   if (process.env.NODE_ENV === 'development') {
     sendErrorDev(error, req, res);
   } else {
-    if (error.name === 'CastError') error = handleCastErrorDB(error);
-    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-
     sendErrorProd(error, req, res);
   }
 };

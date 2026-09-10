@@ -22,6 +22,9 @@ const paymentController = require('./controllers/paymentController');
 
 const app = express();
 
+// Konfigurasi Reverse Proxy (ngrok) - menyelesaikan ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+app.set('trust proxy', 1);
+
 // ==========================================
 // LAPISAN 0: OBSERVABILITY & DISTRIBUTED TRACING (BARIS PERTAMA)
 // ==========================================

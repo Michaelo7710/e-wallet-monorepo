@@ -47,6 +47,54 @@ describe('🧪 [AUTH ENGINE INTEGRATION TEST]', () => {
     expect(otp).not.toBeNull();
   });
 
+  it('1b. Harus menolak pendaftaran ulang jika email sudah terdaftar (400 Bad Request)', async () => {
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Ahmad Duplikat',
+        email: 'ahmad_dup@test.com',
+        password: 'Password123!',
+        phone_number: '081234567891',
+      });
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Ahmad Kembar',
+        email: 'ahmad_dup@test.com',
+        password: 'Password123!',
+        phone_number: '081234567892',
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.message).toMatch(/Email tersebut sudah terdaftar/i);
+    expect(res.body.error_code).toBe('DUPLICATE_RESOURCE');
+  });
+
+  it('1c. Harus menolak pendaftaran ulang jika nomor telepon sudah terdaftar (400 Bad Request)', async () => {
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Phone User',
+        email: 'phone1@test.com',
+        password: 'Password123!',
+        phone_number: '08999888777',
+      });
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Phone User 2',
+        email: 'phone2@test.com',
+        password: 'Password123!',
+        phone_number: '08999888777',
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.message).toMatch(/Nomor Handphone tersebut sudah terdaftar/i);
+    expect(res.body.error_code).toBe('DUPLICATE_RESOURCE');
+  });
+
   it('2. Harus sukses verifikasi email OTP dan login (Dual-Token Check)', async () => {
     const user = await User.create({
       username: 'Budi Test',
