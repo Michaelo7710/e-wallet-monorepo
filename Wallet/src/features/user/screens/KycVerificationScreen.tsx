@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import * as ImagePicker from 'expo-image-picker';
 
 import { UserLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
+import { useAuthStore } from '@core/storage/useAuthStore';
 import { useUpdateKycMutation } from '../hooks/useUserData';
 
 const kycSchema = z.object({
@@ -24,39 +26,122 @@ const kycSchema = z.object({
     .string()
     .length(16, { message: 'NIK harus tepat 16 digit angka' })
     .regex(/^\d+$/, { message: 'NIK hanya boleh berisi angka' }),
+  bio: z
+    .string()
+    .min(10, { message: 'Deskripsi profil/tujuan transaksi minimal 10 karakter' }),
+  idCardPhoto: z
+    .string()
+    .min(1, { message: 'Foto fisik KTP wajib dilampirkan' }),
 });
 
 type KycFormValues = z.infer<typeof kycSchema>;
 
 const KycVerificationScreen = () => {
   const navigation = useNavigation<any>();
+  const user = useAuthStore((state) => state.user);
   const { mutate: updateKyc, isPending } = useUpdateKycMutation();
 
-  const [avatarSeed, setAvatarSeed] = useState(() =>
-    Math.random().toString(36).substring(2, 8)
-  );
-
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/png?seed=${avatarSeed}`;
-
-  const { control, handleSubmit } = useForm<KycFormValues>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<KycFormValues>({
     resolver: zodResolver(kycSchema),
     defaultValues: {
-      nik: '',
+      nik: user?.nik || '',
+      bio: user?.bio || '',
+      idCardPhoto: user?.idCardPhoto || '',
     },
   });
 
-  const handleRandomizeAvatar = () => {
-    setAvatarSeed(Math.random().toString(36).substring(2, 8));
+  const selectedPhoto = watch('idCardPhoto');
+
+  const handlePickImage = async () => {
+    Alert.alert(
+      'Unggah Foto KTP',
+      'Pilih metode pengambilan dokumen fisik identitas Anda',
+      [
+        {
+          text: 'Kamera',
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert(
+                  'Izin Kamera Ditolak',
+                  'Aplikasi membutuhkan izin kamera untuk memotret fisik KTP Anda.'
+                );
+                return;
+              }
+
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                quality: 0.7,
+                base64: true,
+              });
+
+              if (!result.canceled && result.assets && result.assets[0]) {
+                const asset = result.assets[0];
+                const photoString = asset.base64
+                  ? `data:image/jpeg;base64,${asset.base64}`
+                  : asset.uri;
+                setValue('idCardPhoto', photoString, { shouldValidate: true });
+              }
+            } catch (err: any) {
+              Alert.alert('Gagal Mengakses Kamera', err.message || 'Terjadi kesalahan sistem.');
+            }
+          },
+        },
+        {
+          text: 'Galeri Foto',
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert(
+                  'Izin Galeri Ditolak',
+                  'Aplikasi membutuhkan izin galeri untuk memilih foto dokumen KTP.'
+                );
+                return;
+              }
+
+              const result = await ImagePicker.launchImageLibraryAsync({
+                allowsEditing: true,
+                quality: 0.7,
+                base64: true,
+              });
+
+              if (!result.canceled && result.assets && result.assets[0]) {
+                const asset = result.assets[0];
+                const photoString = asset.base64
+                  ? `data:image/jpeg;base64,${asset.base64}`
+                  : asset.uri;
+                setValue('idCardPhoto', photoString, { shouldValidate: true });
+              }
+            } catch (err: any) {
+              Alert.alert('Gagal Membuka Galeri', err.message || 'Terjadi kesalahan sistem.');
+            }
+          },
+        },
+        { text: 'Batal', style: 'cancel' },
+      ]
+    );
   };
 
   const onSubmit = (data: KycFormValues) => {
     updateKyc(
-      { nik: data.nik },
+      {
+        nik: data.nik,
+        idCardPhoto: data.idCardPhoto,
+        bio: data.bio,
+      },
       {
         onSuccess: () => {
           Alert.alert(
-            'Verifikasi Berhasil',
-            'Selamat! Akun Anda kini berstatus Terverifikasi Premium dengan limit saldo Rp 50.000.000.',
+            'Verifikasi Berhasil!',
+            'Akun Anda resmi ditingkatkan ke status Premium dengan limit saldo Rp 50.000.000.',
             [{ text: 'Selesai', onPress: () => navigation.goBack() }]
           );
         },
@@ -71,10 +156,58 @@ const KycVerificationScreen = () => {
     );
   };
 
+  // Pintu Gerbang 1: 2FA Security Gate
+  if (!user?.twoFactorEnabled) {
+    return (
+      <UserLayout noPadding={false}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textMain} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Verifikasi KYC</Text>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.gateContentContainer}
+        >
+          <View style={styles.gateCard}>
+            <View style={styles.gateIconCircle}>
+              <Ionicons name="shield-outline" size={48} color={colors.warning} />
+            </View>
+            <Text style={styles.gateTitle}>Aktivasi 2FA Diperlukan</Text>
+            <Text style={styles.gateDescription}>
+              Sesuai standar kepatuhan perbankan, akun Anda wajib mengaktifkan Autentikasi Dua Faktor (2FA) sebelum dapat mengajukan kenaikan limit saldo Premium Rp 50.000.000.
+            </Text>
+
+            <ButtonCustom
+              title="Aktifkan 2FA Sekarang"
+              onPress={() => navigation.navigate('TwoFactorSetup')}
+              style={styles.gateButton}
+            />
+          </View>
+        </ScrollView>
+      </UserLayout>
+    );
+  }
+
+  // Pintu Gerbang 2: Formulir Verifikasi Otentik (Jika 2FA Aktif)
   return (
     <UserLayout noPadding={false}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <Ionicons name="arrow-back" size={24} color={colors.textMain} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Upgrade Akun Premium</Text>
@@ -117,30 +250,64 @@ const KycVerificationScreen = () => {
           </View>
         </View>
 
-        {/* Generator Avatar Interaktif */}
-        <View style={styles.avatarSection}>
-          <Text style={styles.sectionTitle}>Pilih Foto Profil Premium</Text>
-          <View style={styles.avatarWrapper}>
-            <Image
-              source={{ uri: avatarUrl }}
-              style={styles.avatarPreview}
-              contentFit="cover"
-              transition={300}
-            />
+        {/* Modul Pengambilan Foto KTP */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Dokumen Fisik Identitas (KTP)</Text>
+          <Text style={styles.sectionSubtitle}>
+            Unggah foto fisik KTP asli Anda untuk verifikasi identitas resmi.
+          </Text>
+
+          {selectedPhoto ? (
+            <View style={styles.idCardFrame}>
+              <Image
+                source={{ uri: selectedPhoto }}
+                style={styles.idCardImage}
+                contentFit="cover"
+                transition={300}
+              />
+              <TouchableOpacity
+                style={styles.changePhotoButton}
+                onPress={handlePickImage}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Ganti Foto KTP"
+              >
+                <Ionicons name="camera-reverse-outline" size={18} color={colors.white} />
+                <Text style={styles.changePhotoText}>Ganti Foto KTP</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
             <TouchableOpacity
-              style={styles.randomizeButton}
-              activeOpacity={0.8}
-              onPress={handleRandomizeAvatar}
+              style={[
+                styles.idCardPlaceholder,
+                errors.idCardPhoto && styles.idCardPlaceholderError,
+              ]}
+              onPress={handlePickImage}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Ambil Foto KTP"
             >
-              <Ionicons name="shuffle" size={16} color={colors.primary} />
-              <Text style={styles.randomizeText}>Acak Avatar</Text>
+              <View style={styles.idCardIconCircle}>
+                <Ionicons name="camera-outline" size={32} color={colors.primary} />
+              </View>
+              <Text style={styles.idCardPlaceholderTitle}>Ambil Foto KTP</Text>
+              <Text style={styles.idCardPlaceholderSubtitle}>
+                Ketuk di sini untuk mengambil foto melalui kamera atau galeri
+              </Text>
             </TouchableOpacity>
-          </View>
+          )}
+
+          {errors.idCardPhoto && (
+            <Text style={styles.fieldErrorText}>{errors.idCardPhoto.message}</Text>
+          )}
         </View>
 
-        {/* Form NIK */}
-        <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Data Identitas Kependudukan</Text>
+        {/* Form NIK & Bio */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Data & Deklarasi Nasabah</Text>
+
           <ControlledInput
             control={control}
             name="nik"
@@ -148,10 +315,21 @@ const KycVerificationScreen = () => {
             placeholder="Contoh: 3201123456780001"
             keyboardType="number-pad"
             maxLength={16}
+            accessibilityLabel="Nomor Induk Kependudukan 16 Digit"
+          />
+
+          <ControlledInput
+            control={control}
+            name="bio"
+            label="Deskripsi Profil / Sumber Dana"
+            placeholder="Contoh: Wiraswasta, keperluan transaksi bisnis harian"
+            multiline
+            numberOfLines={3}
+            accessibilityLabel="Deskripsi Profil dan Sumber Dana"
           />
 
           <ButtonCustom
-            title="Ajukan Verifikasi Sekarang"
+            title="Kirim Berkas Verifikasi Premium"
             onPress={handleSubmit(onSubmit)}
             isLoading={isPending}
             style={styles.submitButton}
@@ -181,11 +359,55 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: spacing.xxxl,
   },
+  gateContentContainer: {
+    paddingBottom: spacing.xxxl,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  gateCard: {
+    backgroundColor: colors.surface,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    shadowColor: colors.textMain,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    marginVertical: spacing.lg,
+  },
+  gateIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: spacing.radius.full,
+    backgroundColor: `${colors.warning}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  gateTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold as any,
+    color: colors.textMain,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  gateDescription: {
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.sm,
+  },
+  gateButton: {
+    width: '100%',
+  },
   limitCard: {
     backgroundColor: colors.surface,
     borderRadius: spacing.radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: colors.textMain,
@@ -254,50 +476,98 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.textLight,
   },
-  avatarSection: {
+  sectionCard: {
     backgroundColor: colors.surface,
     borderRadius: spacing.radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
   sectionTitle: {
     fontSize: typography.size.md,
-    fontWeight: typography.weight.semibold as any,
+    fontWeight: typography.weight.bold as any,
     color: colors.textMain,
+    marginBottom: spacing.xs,
+  },
+  sectionSubtitle: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
     marginBottom: spacing.md,
+    lineHeight: 18,
   },
-  avatarWrapper: {
-    alignItems: 'center',
+  idCardFrame: {
+    width: '100%',
+    height: 200,
+    borderRadius: spacing.radius.md,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.xs,
   },
-  avatarPreview: {
-    width: 80,
-    height: 80,
-    borderRadius: spacing.radius.full,
-    backgroundColor: colors.primaryLight,
-    marginBottom: spacing.md,
+  idCardImage: {
+    width: '100%',
+    height: '100%',
   },
-  randomizeButton: {
+  changePhotoButton: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: 'rgba(0,0,0,0.65)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: spacing.radius.full,
+    gap: 4,
   },
-  randomizeText: {
-    color: colors.primary,
-    fontSize: typography.size.sm,
+  changePhotoText: {
+    color: colors.white,
+    fontSize: typography.size.xs,
     fontWeight: typography.weight.medium as any,
-    marginLeft: 4,
   },
-  formContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: spacing.radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+  idCardPlaceholder: {
+    width: '100%',
+    height: 180,
+    borderRadius: spacing.radius.md,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}08`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  idCardPlaceholderError: {
+    borderColor: colors.error,
+    backgroundColor: `${colors.error}08`,
+  },
+  idCardIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: spacing.radius.full,
+    backgroundColor: `${colors.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  idCardPlaceholderTitle: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold as any,
+    color: colors.textMain,
+    marginBottom: 4,
+  },
+  idCardPlaceholderSubtitle: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  fieldErrorText: {
+    fontSize: typography.size.xs,
+    color: colors.error,
+    marginTop: 6,
   },
   submitButton: {
     marginTop: spacing.md,

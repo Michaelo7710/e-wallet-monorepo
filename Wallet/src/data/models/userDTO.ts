@@ -20,4 +20,7 @@ export interface UserDTO {
   accountTier?: 'basic' | 'premium';
   has_pin?: boolean;
   hasPin?: boolean;
+  id_card_photo?: string | null;
+  idCardPhoto?: string | null;
+  bio?: string | null;
 }

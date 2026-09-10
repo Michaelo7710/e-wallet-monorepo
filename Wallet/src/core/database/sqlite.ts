@@ -56,6 +56,8 @@ const MIGRATIONS_DDL = `
     nik TEXT,
     balance REAL NOT NULL DEFAULT 0,
     has_pin INTEGER NOT NULL DEFAULT 0,
+    id_card_photo TEXT,
+    bio TEXT,
     updated_at TEXT NOT NULL
   );
 `;
@@ -75,11 +77,23 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
         await db.execAsync(MIGRATIONS_DDL);
 
-        // Migrasi adaptif: Pastikan kolom has_pin ada pada database yang sudah eksis
+        // Migrasi adaptif: Pastikan kolom has_pin, id_card_photo, dan bio ada pada database yang sudah eksis
         try {
           await db.execAsync('ALTER TABLE user_profile ADD COLUMN has_pin INTEGER NOT NULL DEFAULT 0;');
         } catch {
           // Kolom has_pin sudah ada dari inisialisasi awal, abaikan
+        }
+
+        try {
+          await db.execAsync('ALTER TABLE user_profile ADD COLUMN id_card_photo TEXT;');
+        } catch {
+          // Kolom id_card_photo sudah ada, abaikan
+        }
+
+        try {
+          await db.execAsync('ALTER TABLE user_profile ADD COLUMN bio TEXT;');
+        } catch {
+          // Kolom bio sudah ada, abaikan
         }
 
         databaseInstance = db;

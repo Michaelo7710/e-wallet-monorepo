@@ -266,14 +266,26 @@ describe('TASK-B3-02: UserRepositoryImpl Offline-First Integration', () => {
         avatar: null,
         nik: '3171099988880002',
         balance: 15000000,
+        id_card_photo: 'data:image/jpeg;base64,mockphoto',
+        bio: 'Wiraswasta transaksi harian',
       },
     };
 
     mockRemoteDataSource.updateKyc.mockResolvedValueOnce(updatedRaw);
 
-    const result = await repository.updateKyc('3171099988880002');
+    const payload = {
+      nik: '3171099988880002',
+      idCardPhoto: 'data:image/jpeg;base64,mockphoto',
+      bio: 'Wiraswasta transaksi harian',
+    };
 
-    expect(mockRemoteDataSource.updateKyc).toHaveBeenCalledWith('3171099988880002');
+    const result = await repository.updateKyc(payload);
+
+    expect(mockRemoteDataSource.updateKyc).toHaveBeenCalledWith({
+      nik: payload.nik,
+      id_card_photo: payload.idCardPhoto,
+      bio: payload.bio,
+    });
     expect(mockLocalDataSource.upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({ nik: '3171099988880002' })
     );

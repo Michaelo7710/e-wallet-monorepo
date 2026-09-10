@@ -232,4 +232,108 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(resPinWrong.statusCode).toEqual(401);
     expect(resPinWrong.body.message).toMatch(/Token otentikasi 2FA tidak valid atau telah kedaluwarsa/i);
   });
+
+  it('9. Harus menolak pengajuan KYC jika akun belum mengaktifkan 2FA (400 Bad Request)', async () => {
+    const { accessToken } = await createTestUser({
+      two_factor_enabled: false,
+      is_verified: false,
+      account_tier: 'basic',
+      is_kyc_verified: false,
+    });
+
+    const res = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        nik: '3171012345670001',
+        id_card_photo: 'data:image/jpeg;base64,samplektpimage',
+        bio: 'Wiraswasta transaksi harian bisnis',
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.message).toMatch(/Akun Anda wajib mengaktifkan proteksi 2FA/i);
+  });
+
+  it('10. Harus menolak pengajuan KYC jika parameter NIK, foto KTP, atau Bio tidak valid (400 Bad Request)', async () => {
+    const { accessToken } = await createTestUser({
+      two_factor_enabled: true,
+      is_verified: false,
+      account_tier: 'basic',
+      is_kyc_verified: false,
+    });
+
+    // NIK salah (kurang dari 16 digit)
+    const resNik = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        nik: '12345',
+        id_card_photo: 'data:image/jpeg;base64,samplektpimage',
+        bio: 'Wiraswasta transaksi harian bisnis',
+      });
+    expect(resNik.statusCode).toEqual(400);
+    expect(resNik.body.message).toMatch(/NIK wajib diisi dengan 16 digit/i);
+
+    // Foto KTP kosong
+    const resFoto = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        nik: '3171012345670001',
+        id_card_photo: '',
+        bio: 'Wiraswasta transaksi harian bisnis',
+      });
+    expect(resFoto.statusCode).toEqual(400);
+    expect(resFoto.body.message).toMatch(/Foto identitas KTP wajib dilampirkan/i);
+
+    // Bio kurang dari 10 karakter
+    const resBio = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        nik: '3171012345670001',
+        id_card_photo: 'data:image/jpeg;base64,samplektpimage',
+        bio: 'Pendek',
+      });
+    expect(resBio.statusCode).toEqual(400);
+    expect(resBio.body.message).toMatch(/minimal 10 karakter/i);
+  });
+
+  it('11. Harus sukses memproses KYC dan mempromosikan akun ke Premium saat 2FA aktif dan data lengkap (200 OK)', async () => {
+    const { accessToken, user } = await createTestUser({
+      two_factor_enabled: true,
+      is_verified: false,
+      account_tier: 'basic',
+      is_kyc_verified: false,
+    });
+
+    const kycPayload = {
+      nik: '3171012345670001',
+      id_card_photo: 'data:image/jpeg;base64,samplevalidktp',
+      bio: 'Wiraswasta kebutuhan transaksi grosir',
+    };
+
+    const res = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(kycPayload);
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data.nik).toBe(kycPayload.nik);
+    expect(res.body.data.id_card_photo).toBe(kycPayload.id_card_photo);
+    expect(res.body.data.bio).toBe(kycPayload.bio);
+    expect(res.body.data.is_kyc_verified).toBe(true);
+    expect(res.body.data.account_tier).toBe('premium');
+    expect(res.body.data.is_verified).toBe(true);
+
+    // Cek idempotensi: Pengajuan ulang setelah premium harus ditolak
+    const resRepeat = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send(kycPayload);
+
+    expect(resRepeat.statusCode).toEqual(400);
+    expect(resRepeat.body.message).toMatch(/sudah berstatus terverifikasi premium/i);
+  });
 });

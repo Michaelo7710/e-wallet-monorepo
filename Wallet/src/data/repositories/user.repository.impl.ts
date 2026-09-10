@@ -1,4 +1,4 @@
-import { IUserRepository } from '@domain/repositories/user.repository.interface';
+import { IUserRepository, UpdateKycPayload } from '@domain/repositories/user.repository.interface';
 import { User } from '@domain/entities/user';
 import { UserRemoteDataSource } from '../datasources/remote/user.remote-datasource';
 import { UserLocalDataSource } from '../datasources/local/user.local-datasource';
@@ -56,8 +56,12 @@ export class UserRepositoryImpl implements IUserRepository {
     await this.remoteDataSource.updatePin(oldPin, otp, newPin, confirmNewPin);
   }
 
-  async updateKyc(nik: string): Promise<User> {
-    const raw = await this.remoteDataSource.updateKyc(nik);
+  async updateKyc(payload: UpdateKycPayload): Promise<User> {
+    const raw = await this.remoteDataSource.updateKyc({
+      nik: payload.nik,
+      id_card_photo: payload.idCardPhoto,
+      bio: payload.bio,
+    });
     const updatedUser = UserMapper.toDomain(raw.data);
     await this.localDataSource.upsertProfile(updatedUser);
     return updatedUser;

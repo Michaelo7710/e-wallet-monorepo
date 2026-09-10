@@ -21,6 +21,8 @@ interface UserProfileSqliteRow {
   nik: string | null;
   balance: number;
   has_pin?: number;
+  id_card_photo?: string | null;
+  bio?: string | null;
   updated_at: string;
 }
 
@@ -48,8 +50,10 @@ export class UserLocalDataSource {
         nik,
         balance,
         has_pin,
+        id_card_photo,
+        bio,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `;
 
     await db.runAsync(
@@ -66,6 +70,8 @@ export class UserLocalDataSource {
       user.nik ?? null,
       user.balance ?? 0,
       user.hasPin ? 1 : 0,
+      user.idCardPhoto ?? null,
+      user.bio ?? null,
       new Date().toISOString()
     );
   }
@@ -99,6 +105,8 @@ export class UserLocalDataSource {
       isKycVerified: Boolean(row.is_verified),
       accountTier: Boolean(row.is_verified) ? 'premium' : 'basic',
       hasPin: Boolean(row.has_pin),
+      idCardPhoto: row.id_card_photo ?? null,
+      bio: row.bio ?? null,
     };
   }
 

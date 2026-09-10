@@ -16,4 +16,6 @@ export interface User {
   isKycVerified: boolean;
   accountTier: 'basic' | 'premium';
   hasPin: boolean;
+  idCardPhoto?: string | null;
+  bio?: string | null;
 }

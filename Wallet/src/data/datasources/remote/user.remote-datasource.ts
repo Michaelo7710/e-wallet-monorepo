@@ -48,8 +48,12 @@ export class UserRemoteDataSource {
     return response.data;
   }
 
-  async updateKyc(nik: string): Promise<{ status: string; data: UserDTO }> {
-    const response = await api.patch<{ status: string; data: UserDTO }>('/users/update-kyc', { nik });
+  async updateKyc(payload: {
+    nik: string;
+    id_card_photo: string;
+    bio: string;
+  }): Promise<{ status: string; data: UserDTO }> {
+    const response = await api.patch<{ status: string; data: UserDTO }>('/users/update-kyc', payload);
     return response.data;
   }
 }

@@ -30,6 +30,8 @@ export interface UpdatePinPayload {
 
 export interface UpdateKycPayload {
   nik: string;
+  idCardPhoto: string;
+  bio: string;
 }
 
 export const useUserProfile = () => {
@@ -127,8 +129,8 @@ export const useUpdateKycMutation = () => {
   const setUser = useAuthStore((state) => state.setUser);
 
   return useMutation({
-    mutationFn: async ({ nik }: UpdateKycPayload) => {
-      return await userRepository.updateKyc(nik);
+    mutationFn: async (payload: UpdateKycPayload) => {
+      return await userRepository.updateKyc(payload);
     },
     onSuccess: (updatedUser) => {
       setUser(updatedUser);

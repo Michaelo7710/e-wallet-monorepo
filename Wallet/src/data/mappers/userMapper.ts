@@ -25,6 +25,8 @@ export class UserMapper {
       isKycVerified: isKyc,
       accountTier: tier,
       hasPin: Boolean(dto.has_pin ?? dto.hasPin ?? false),
+      idCardPhoto: dto.id_card_photo ?? dto.idCardPhoto ?? null,
+      bio: dto.bio ?? null,
     };
   }
 
@@ -49,6 +51,9 @@ export class UserMapper {
       accountTier: domain.accountTier,
       has_pin: domain.hasPin,
       hasPin: domain.hasPin,
+      id_card_photo: domain.idCardPhoto ?? null,
+      idCardPhoto: domain.idCardPhoto ?? null,
+      bio: domain.bio ?? null,
     };
   }
 }

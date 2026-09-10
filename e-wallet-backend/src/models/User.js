@@ -146,6 +146,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  id_card_photo: {
+    type: String,
+    default: null
+  },
+  bio: {
+    type: String,
+    default: null
+  },
   nik: {
     type: String,
     default: null

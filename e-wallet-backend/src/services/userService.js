@@ -230,18 +230,47 @@ exports.updatePinSecurely = async (userId, pinData) => {
 };
 
 // ========================================================
-// 6. SERVICE LAYER: SIMULASI KYC VERIFIED PREMIUM
+// 6. SERVICE LAYER: MULTI-FACTOR KYC VERIFICATION ENGINE
 // ========================================================
-exports.updateKYC = async (userId, nik) => {
-  if (!nik || nik.length !== 16 || isNaN(nik)) {
+exports.updateKYC = async (userId, kycData) => {
+  const data = typeof kycData === 'object' && kycData !== null ? kycData : { nik: kycData };
+  const { nik, id_card_photo, bio } = data;
+
+  // Benteng 1 (Kelengkapan Data):
+  if (!nik || typeof nik !== 'string' || nik.length !== 16 || !/^\d{16}$/.test(nik)) {
     throw new AppError('NIK wajib diisi dengan 16 digit angka valid.', StatusCodes.BAD_REQUEST);
   }
 
-  const user = await User.findById(userId);
-  if (!user) throw new AppError('Pengguna tidak terdaftar.', StatusCodes.NOT_FOUND);
-  if (user.is_verified) throw new AppError('Akun Anda sudah berstatus terverifikasi premium.', StatusCodes.BAD_REQUEST);
+  if (!id_card_photo || typeof id_card_photo !== 'string' || !id_card_photo.trim()) {
+    throw new AppError('Foto identitas KTP wajib dilampirkan.', StatusCodes.BAD_REQUEST);
+  }
 
+  if (!bio || typeof bio !== 'string' || bio.trim().length < 10) {
+    throw new AppError('Deskripsi profil/tujuan transaksi nasabah (bio) minimal 10 karakter.', StatusCodes.BAD_REQUEST);
+  }
+
+  // Benteng 2 (Prasyarat Keamanan 2FA):
+  const user = await User.findById(userId).select('+two_factor_enabled');
+  if (!user) throw new AppError('Pengguna tidak terdaftar.', StatusCodes.NOT_FOUND);
+
+  if (!user.two_factor_enabled) {
+    throw new AppError(
+      'Pengajuan KYC Premium ditolak. Akun Anda wajib mengaktifkan proteksi 2FA (Two-Factor Authentication) terlebih dahulu demi keamanan transaksi berlimit besar.',
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
+  // Benteng 3 (Idempotensi):
+  if (user.is_kyc_verified === true || user.account_tier === 'premium') {
+    throw new AppError('Akun Anda sudah berstatus terverifikasi premium.', StatusCodes.BAD_REQUEST);
+  }
+
+  // Mutasi Akun Premium:
   user.nik = nik;
+  user.id_card_photo = id_card_photo;
+  user.bio = bio.trim();
+  user.is_kyc_verified = true;
+  user.account_tier = 'premium';
   user.is_verified = true;
   await user.save();
 
