@@ -55,6 +55,7 @@ const MIGRATIONS_DDL = `
     avatar TEXT,
     nik TEXT,
     balance REAL NOT NULL DEFAULT 0,
+    has_pin INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL
   );
 `;
@@ -73,6 +74,14 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       try {
         const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
         await db.execAsync(MIGRATIONS_DDL);
+
+        // Migrasi adaptif: Pastikan kolom has_pin ada pada database yang sudah eksis
+        try {
+          await db.execAsync('ALTER TABLE user_profile ADD COLUMN has_pin INTEGER NOT NULL DEFAULT 0;');
+        } catch {
+          // Kolom has_pin sudah ada dari inisialisasi awal, abaikan
+        }
+
         databaseInstance = db;
         return db;
       } catch (error) {

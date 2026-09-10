@@ -55,13 +55,18 @@ const verifyTOTP = (token, secret) => {
 exports.getUserProfile = async (userId) => {
   console.log(`👤 [USER SERVICE] Menarik dashboard data untuk User ID: ${userId}`);
   
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select('+pin');
   if (!user) throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
+
+  const hasPin = Boolean(user && user.pin);
+  const userObj = user.toObject();
+  delete userObj.pin;
+  userObj.has_pin = hasPin;
 
   const wallet = await Wallet.findOne({ user_id: userId });
 
   return {
-    profile: user,
+    profile: userObj,
     wallet: {
       balance: wallet ? wallet.balance : 0,
       currency: 'IDR'

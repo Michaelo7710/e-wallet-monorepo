@@ -15,4 +15,5 @@ export interface User {
   isEmailVerified: boolean;
   isKycVerified: boolean;
   accountTier: 'basic' | 'premium';
+  hasPin: boolean;
 }

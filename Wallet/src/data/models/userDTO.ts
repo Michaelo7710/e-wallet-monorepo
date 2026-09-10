@@ -18,4 +18,6 @@ export interface UserDTO {
   isEmailVerified?: boolean;
   isKycVerified?: boolean;
   accountTier?: 'basic' | 'premium';
+  has_pin?: boolean;
+  hasPin?: boolean;
 }

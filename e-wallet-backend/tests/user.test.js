@@ -40,7 +40,15 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(res.statusCode).toEqual(200);
     expect(res.body.status).toBe('success');
     expect(res.body.data.profile.email).toBe(user.email);
+    expect(res.body.data.profile.has_pin).toBe(true);
     expect(res.body.data.wallet.balance).toBe(5000000);
+
+    // Verifikasi pengguna baru tanpa PIN menghasilkan has_pin: false
+    const noPinUser = await createTestUser({ pin: null });
+    const noPinRes = await request(app)
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${noPinUser.accessToken}`);
+    expect(noPinRes.body.data.profile.has_pin).toBe(false);
   });
 
   it('2. Harus menolak akses dasbor jika request tidak membawa Bearer Token (401)', async () => {

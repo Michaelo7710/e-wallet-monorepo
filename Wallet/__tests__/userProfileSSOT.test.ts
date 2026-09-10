@@ -62,6 +62,7 @@ const mockUser: User = {
   isEmailVerified: true,
   isKycVerified: true,
   accountTier: 'premium',
+  hasPin: true,
 };
 
 describe('TASK-B3-02: UserLocalDataSource (SQLite SSOT)', () => {
@@ -86,6 +87,7 @@ describe('TASK-B3-02: UserLocalDataSource (SQLite SSOT)', () => {
           avatar,
           nik,
           balance,
+          has_pin,
           updated_at,
         ] = params;
 
@@ -102,6 +104,7 @@ describe('TASK-B3-02: UserLocalDataSource (SQLite SSOT)', () => {
           avatar,
           nik,
           balance,
+          has_pin,
           updated_at,
         };
 
@@ -138,6 +141,7 @@ describe('TASK-B3-02: UserLocalDataSource (SQLite SSOT)', () => {
     expect(saved.is_suspended).toBe(0);
     expect(saved.two_factor_enabled).toBe(1);
     expect(saved.balance).toBe(15000000);
+    expect(saved.has_pin).toBe(1);
     expect(saved.updated_at).toBeDefined();
   });
 
@@ -153,6 +157,7 @@ describe('TASK-B3-02: UserLocalDataSource (SQLite SSOT)', () => {
     expect(result?.twoFactorEnabled).toBe(true);
     expect(result?.balance).toBe(15000000);
     expect(result?.nik).toBe(mockUser.nik);
+    expect(result?.hasPin).toBe(true);
   });
 
   it('harus mengembalikan null jika tabel user_profile kosong', async () => {

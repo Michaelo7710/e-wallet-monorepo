@@ -15,13 +15,16 @@ import { UserLayout } from '@shared/layouts';
 import { InputField, ButtonCustom, PinModal } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { useUserProfile } from '@features/user/hooks/useUserData';
 import { useTransferMutation, useRecentContacts } from '../hooks/usePaymentMutations';
 import { useFeatureFlagStore } from '@core/config/featureFlags';
 import defaultAvatar from '@assets/images/avatar-default.png';
 
 const TransferScreen = () => {
   const navigation = useNavigation<any>();
-  const user = useAuthStore((state) => state.user);
+  const authUser = useAuthStore((state) => state.user);
+  const { data: profileUser } = useUserProfile();
+  const user = profileUser || authUser;
   const { data: contacts } = useRecentContacts();
   const { mutate: transfer, isPending } = useTransferMutation();
 
@@ -43,6 +46,21 @@ const TransferScreen = () => {
     // Graceful Degradation Guard: Cegah pemunculan modal PIN saat fitur dinonaktifkan
     if (!isTransferEnabled) {
       Alert.alert('Fitur Sedang Pemeliharaan', transferNotice);
+      return;
+    }
+
+    if (!user?.hasPin) {
+      Alert.alert(
+        'Aktivasi Keamanan Diperlukan',
+        'Anda belum memiliki PIN transaksi. Silakan buat PIN 6 digit terlebih dahulu untuk mengamankan transfer dana Anda.',
+        [
+          { text: 'Batal', style: 'cancel' },
+          {
+            text: 'Buat PIN Sekarang',
+            onPress: () => navigation.navigate('SetupPin'),
+          },
+        ]
+      );
       return;
     }
 
@@ -192,7 +210,7 @@ const TransferScreen = () => {
       </ScrollView>
 
       <PinModal
-        visible={isPinVisible}
+        visible={isPinVisible && Boolean(user?.hasPin)}
         onClose={() => setIsPinVisible(false)}
         onSubmit={handleConfirmPin}
         isLoading={isPending}

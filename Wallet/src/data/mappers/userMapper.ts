@@ -24,6 +24,7 @@ export class UserMapper {
       isEmailVerified: isEmail,
       isKycVerified: isKyc,
       accountTier: tier,
+      hasPin: Boolean(dto.has_pin ?? dto.hasPin ?? false),
     };
   }
 
@@ -46,6 +47,8 @@ export class UserMapper {
       isEmailVerified: domain.isEmailVerified,
       isKycVerified: domain.isKycVerified,
       accountTier: domain.accountTier,
+      has_pin: domain.hasPin,
+      hasPin: domain.hasPin,
     };
   }
 }

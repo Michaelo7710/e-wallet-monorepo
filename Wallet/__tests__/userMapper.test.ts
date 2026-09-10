@@ -48,9 +48,10 @@ describe('UserMapper Unit Test', () => {
     expect(domainEntity.isEmailVerified).toBe(false);
     expect(domainEntity.isKycVerified).toBe(false);
     expect(domainEntity.accountTier).toBe('basic');
+    expect(domainEntity.hasPin).toBe(false);
   });
 
-  it('harus memetakan is_email_verified, is_kyc_verified, dan account_tier secara konsisten', () => {
+  it('harus memetakan is_email_verified, is_kyc_verified, account_tier, dan has_pin secara konsisten', () => {
     const basicUserDTO: UserDTO = {
       _id: 'usr_basic',
       username: 'Basic User',
@@ -64,6 +65,7 @@ describe('UserMapper Unit Test', () => {
       is_email_verified: true,
       is_kyc_verified: false,
       account_tier: 'basic',
+      has_pin: false,
     };
 
     const domainBasic = UserMapper.toDomain(basicUserDTO);
@@ -71,11 +73,21 @@ describe('UserMapper Unit Test', () => {
     expect(domainBasic.isKycVerified).toBe(false);
     expect(domainBasic.accountTier).toBe('basic');
     expect(domainBasic.isVerified).toBe(false);
+    expect(domainBasic.hasPin).toBe(false);
 
     const dtoFromDomain = UserMapper.toDTO(domainBasic);
     expect(dtoFromDomain.is_email_verified).toBe(true);
     expect(dtoFromDomain.is_kyc_verified).toBe(false);
     expect(dtoFromDomain.account_tier).toBe('basic');
     expect(dtoFromDomain.is_verified).toBe(false);
+    expect(dtoFromDomain.has_pin).toBe(false);
+
+    // Pengguna dengan PIN aktif
+    const userWithPin = UserMapper.toDomain({
+      ...basicUserDTO,
+      has_pin: true,
+    });
+    expect(userWithPin.hasPin).toBe(true);
+    expect(UserMapper.toDTO(userWithPin).has_pin).toBe(true);
   });
 });
