@@ -38,8 +38,8 @@ export class AuthRemoteDataSource {
     return response.data;
   }
 
-  async verifyEmail(email: string, code: string): Promise<{ status: string; message: string }> {
-    const response = await api.post<{ status: string; message: string }>('/auth/verify-email', { email, code });
+  async verifyEmail(email: string, code: string): Promise<any> {
+    const response = await api.post<any>('/auth/verify-email', { email, code });
     return response.data;
   }
 

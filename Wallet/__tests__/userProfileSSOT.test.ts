@@ -59,6 +59,9 @@ const mockUser: User = {
   avatar: 'https://avatar.test/budi.png',
   nik: '3171012345670001',
   balance: 15000000,
+  isEmailVerified: true,
+  isKycVerified: true,
+  accountTier: 'premium',
 };
 
 describe('TASK-B3-02: UserLocalDataSource (SQLite SSOT)', () => {

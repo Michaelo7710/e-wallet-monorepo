@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { AuthLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
+import { useAuthStore } from '@core/storage/useAuthStore';
+import { UserMapper } from '@data/mappers/userMapper';
 import { useVerifyEmailMutation } from '../hooks/useAuthMutations';
 
 const verifyEmailSchema = z.object({
@@ -24,6 +26,7 @@ const VerifyEmailScreen = () => {
   const route = useRoute<any>();
   const { email } = (route.params as { email?: string }) || {};
 
+  const loginSession = useAuthStore((state) => state.loginSession);
   const { mutate: verifyEmail, isPending } = useVerifyEmailMutation();
 
   const { control, handleSubmit } = useForm<VerifyEmailFormValues>({
@@ -46,11 +49,22 @@ const VerifyEmailScreen = () => {
     verifyEmail(
       { email, code: data.code },
       {
-        onSuccess: () => {
+        onSuccess: async (data: any) => {
+          const rawUser = data?.data?.user;
+          const sessionUser = rawUser
+            ? {
+                ...UserMapper.toDomain(rawUser),
+                _id: rawUser._id || rawUser.id,
+              }
+            : data?.data?.user;
+          const accessToken = data?.data?.access_token;
+          const refreshToken = data?.data?.refresh_token;
+
+          await loginSession(sessionUser, accessToken, refreshToken);
+
           Alert.alert(
             'Verifikasi Berhasil',
-            'Akun Anda telah aktif. Silakan masuk.',
-            [{ text: 'Masuk', onPress: () => navigation.navigate('Login') }]
+            'Verifikasi email berhasil. Selamat datang di GreenPay!'
           );
         },
         onError: (err: any) => {

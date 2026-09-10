@@ -54,9 +54,9 @@ export class AuthRepositoryImpl implements IAuthRepository {
     };
   }
 
-  async verifyEmail(email: string, code: string): Promise<boolean> {
+  async verifyEmail(email: string, code: string): Promise<any> {
     const res = await this.remoteDataSource.verifyEmail(email, code);
-    return res.status === 'success';
+    return res;
   }
 
   async refreshToken(refreshToken: string): Promise<string> {

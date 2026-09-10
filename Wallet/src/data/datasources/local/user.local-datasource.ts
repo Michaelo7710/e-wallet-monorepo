@@ -92,6 +92,9 @@ export class UserLocalDataSource {
       avatar: row.avatar ?? null,
       nik: row.nik ?? null,
       balance: Number(row.balance),
+      isEmailVerified: true,
+      isKycVerified: Boolean(row.is_verified),
+      accountTier: Boolean(row.is_verified) ? 'premium' : 'basic',
     };
   }
 

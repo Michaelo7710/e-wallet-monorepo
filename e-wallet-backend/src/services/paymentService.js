@@ -219,9 +219,18 @@ const AppError = require('../utils/AppError');
 // ========================================================
 // 0. TIERED KYC BALANCE LIMITS & RULES
 // ========================================================
-const LIMIT_NON_KYC = 5000000;  // Rp 5 Juta
-const LIMIT_KYC = 50000000;      // Rp 50 Juta
-const getWalletLimit = (isVerified) => (isVerified ? LIMIT_KYC : LIMIT_NON_KYC);
+const LIMIT_BASIC = 5000000;   // Rp 5 Juta
+const LIMIT_PREMIUM = 50000000; // Rp 50 Juta
+const getWalletLimit = (user) => {
+  if (!user) return LIMIT_BASIC;
+  if (typeof user === 'boolean') {
+    return user ? LIMIT_PREMIUM : LIMIT_BASIC;
+  }
+  if (user.account_tier === 'premium' || user.is_kyc_verified || user.is_verified) {
+    return LIMIT_PREMIUM;
+  }
+  return LIMIT_BASIC;
+};
 
 // ========================================================
 // 1. INITIALIZE MIDTRANS SNAP SDK CLIENT
@@ -260,7 +269,7 @@ exports.initiateTopUp = async (userId, amount) => {
     throw new AppError('Pengguna tidak terdaftar di dalam sistem.', StatusCodes.NOT_FOUND);
   }
 
-  const maxLimit = getWalletLimit(user.is_verified);
+  const maxLimit = getWalletLimit(user);
   const currentBalance = wallet ? wallet.balance : 0;
   const projectedBalance = currentBalance + parseFloat(amount);
 
@@ -664,7 +673,7 @@ exports.transferP2P = async (senderId, transferData) => {
   }
 
   // Validasi Limit Saldo Penerima Berjenjang KYC
-  const receiverLimit = getWalletLimit(receiver.is_verified);
+  const receiverLimit = getWalletLimit(receiver);
   const receiverProjectedBalance = receiverWallet.balance + parseFloat(amount);
   if (receiverProjectedBalance > receiverLimit) {
     throw new AppError(

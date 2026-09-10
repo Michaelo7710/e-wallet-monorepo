@@ -45,5 +45,37 @@ describe('UserMapper Unit Test', () => {
     expect(domainEntity.avatar).toBeNull();
     expect(domainEntity.nik).toBeNull();
     expect(domainEntity.balance).toBe(0);
+    expect(domainEntity.isEmailVerified).toBe(false);
+    expect(domainEntity.isKycVerified).toBe(false);
+    expect(domainEntity.accountTier).toBe('basic');
+  });
+
+  it('harus memetakan is_email_verified, is_kyc_verified, dan account_tier secara konsisten', () => {
+    const basicUserDTO: UserDTO = {
+      _id: 'usr_basic',
+      username: 'Basic User',
+      email: 'basic@greenpay.com',
+      phone_number: '081111111111',
+      role: 'user',
+      is_verified: false,
+      is_suspended: false,
+      two_factor_enabled: false,
+      balance: 100000,
+      is_email_verified: true,
+      is_kyc_verified: false,
+      account_tier: 'basic',
+    };
+
+    const domainBasic = UserMapper.toDomain(basicUserDTO);
+    expect(domainBasic.isEmailVerified).toBe(true);
+    expect(domainBasic.isKycVerified).toBe(false);
+    expect(domainBasic.accountTier).toBe('basic');
+    expect(domainBasic.isVerified).toBe(false);
+
+    const dtoFromDomain = UserMapper.toDTO(domainBasic);
+    expect(dtoFromDomain.is_email_verified).toBe(true);
+    expect(dtoFromDomain.is_kyc_verified).toBe(false);
+    expect(dtoFromDomain.account_tier).toBe('basic');
+    expect(dtoFromDomain.is_verified).toBe(false);
   });
 });

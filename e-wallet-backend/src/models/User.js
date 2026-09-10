@@ -150,9 +150,32 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  is_verified: {
+  is_email_verified: {
     type: Boolean,
     default: false
+  },
+  is_kyc_verified: {
+    type: Boolean,
+    default: false
+  },
+  account_tier: {
+    type: String,
+    enum: ['basic', 'premium'],
+    default: 'basic'
+  },
+  is_verified: {
+    type: Boolean,
+    default: false,
+    get: function (val) {
+      return this.is_kyc_verified !== undefined ? this.is_kyc_verified : val;
+    },
+    set: function (val) {
+      this.is_kyc_verified = val;
+      if (val) {
+        this.account_tier = 'premium';
+      }
+      return val;
+    }
   },
   is_suspended: {
     type: Boolean,
@@ -181,13 +204,26 @@ const userSchema = new mongoose.Schema({
     type: Date
   }
 }, { 
-  timestamps: true 
+  timestamps: true,
+  toJSON: { getters: true, virtuals: true },
+  toObject: { getters: true, virtuals: true }
 });
 
 // ==========================================
-// ALGOJO PRE-SAVE: Sentralisasi Enkripsi Kredensial
+// ALGOJO PRE-SAVE: Sentralisasi Enkripsi Kredensial & Sinkronisasi Tier
 // ==========================================
 userSchema.pre('save', async function () {
+  // Sinkronisasi status KYC dan Tier Akun
+  if (this.account_tier === 'premium' || this.is_kyc_verified || this.is_verified) {
+    this.is_kyc_verified = true;
+    this.account_tier = 'premium';
+    this.is_verified = true;
+  } else {
+    this.is_kyc_verified = false;
+    this.account_tier = 'basic';
+    this.is_verified = false;
+  }
+
   // 1. Eksekusi Enkripsi Password (jika dimodifikasi)
   if (this.isModified('password')) {
     this.password = await bcrypt.hash(this.password, 12);

@@ -22,7 +22,7 @@ export type LoginResult =
 export interface IAuthRepository {
   login(email: string, password: string): Promise<LoginResult>;
   register(username: string, email: string, phoneNumber: string, password: string): Promise<AuthSession>;
-  verifyEmail(email: string, code: string): Promise<boolean>;
+  verifyEmail(email: string, code: string): Promise<any>;
   refreshToken(refreshToken: string): Promise<string>;
   logout(refreshToken: string): Promise<void>;
   forgotPassword(email: string): Promise<void>;

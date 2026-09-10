@@ -68,6 +68,11 @@ describe('🧪 [AUTH ENGINE INTEGRATION TEST]', () => {
       .send({ email: 'budi@test.com', code: '123456' });
 
     expect(verifyRes.statusCode).toEqual(200);
+    expect(verifyRes.body.data).toHaveProperty('access_token');
+    expect(verifyRes.body.data).toHaveProperty('refresh_token');
+    expect(verifyRes.body.data.user.is_email_verified).toBe(true);
+    expect(verifyRes.body.data.user.is_kyc_verified).toBe(false);
+    expect(verifyRes.body.data.user.account_tier).toBe('basic');
 
     const loginRes = await request(app)
       .post('/api/v1/auth/login')

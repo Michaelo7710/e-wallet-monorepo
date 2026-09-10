@@ -414,7 +414,7 @@ exports.loginUser = async (email, password) => {
     throw new AppError('Email atau password salah', StatusCodes.UNAUTHORIZED);
   }
 
-  if (!user.is_verified) {
+  if (!user.is_email_verified && !user.is_verified) {
     throw new AppError('Akun Anda belum terverifikasi OTP email.', StatusCodes.FORBIDDEN);
   }
 
@@ -433,6 +433,9 @@ exports.loginUser = async (email, password) => {
         phone_number: user.phone_number,
         role: user.role,
         is_verified: user.is_verified,
+        is_email_verified: user.is_email_verified,
+        is_kyc_verified: user.is_kyc_verified,
+        account_tier: user.account_tier,
         two_factor_enabled: true
       }
     };
@@ -469,7 +472,7 @@ exports.verifyEmail = async (email, code) => {
     throw new AppError('Pengguna dengan email tersebut tidak ditemukan', StatusCodes.NOT_FOUND);
   }
 
-  if (user.is_verified) {
+  if (user.is_email_verified) {
     throw new AppError('Akun ini sudah berstatus terverifikasi sebelumnya', StatusCodes.BAD_REQUEST);
   }
 
@@ -503,17 +506,36 @@ exports.verifyEmail = async (email, code) => {
     await otpRecord.save(options);
     console.log('🔒 [VERIFY] Kode OTP dikunci permanen (is_used = true).');
 
-    // Mutasi Status Pengguna Menjadi Aktif Terverifikasi
-    user.is_verified = true;
+    // Mutasi Status Pengguna Menjadi Aktif Terverifikasi Email (JANGAN ubah is_kyc_verified!)
+    user.is_email_verified = true;
     await user.save({ session, validateBeforeSave: false });
-    console.log(' Akun resmi dinyatakan Valid Forensik.');
+    console.log('✅ Akun resmi dinyatakan Valid Email.');
+
+    // Terbitkan token sesi penuh secara otomatis
+    const accessToken = signAccessToken(user._id, user.role);
+    const refreshToken = signRefreshToken(user._id);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await RefreshToken.create([{
+      user_id: user._id,
+      token: refreshToken,
+      expires_at: expiresAt
+    }], options);
 
     if (session) {
       await session.commitTransaction();
       session.endSession();
     }
 
-    return true;
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.pin;
+
+    return { 
+      user: userResponse, 
+      accessToken, 
+      refreshToken 
+    };
   } catch (error) {
     console.error('💥 [VERIFY CRASH] Alur eksekusi verifikasi OTP terinterupsi!');
     if (session) {

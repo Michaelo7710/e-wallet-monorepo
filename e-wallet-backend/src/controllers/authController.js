@@ -133,10 +133,15 @@ exports.logout = catchAsync(async (req, res, next) => {
 
 exports.verifyEmail = catchAsync(async (req, res, next) => {
   const { email, code } = req.body;
-  await authService.verifyEmail(email, code);
+  const result = await authService.verifyEmail(email, code);
   res.status(StatusCodes.OK).json({
     status: 'success',
-    message: 'Verifikasi forensik berhasil. Akun Anda kini aktif sepenuhnya di ekosistem GreenPay.'
+    message: 'Verifikasi email berhasil. Selamat datang di GreenPay!',
+    data: {
+      user: result.user,
+      access_token: result.accessToken,
+      refresh_token: result.refreshToken
+    }
   });
 });
 
