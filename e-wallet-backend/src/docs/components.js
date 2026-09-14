@@ -81,8 +81,9 @@ const schemas = {
       status: { type: 'string', example: 'fail' },
       error_code: { type: 'string', example: 'OPERATIONAL_ERROR' },
       message: { type: 'string', example: 'Pesan penjelasan error operasional' },
-      timestamp: { type: 'string', example: '2026-08-06T08:59:00.000Z' },
+      timestamp: { type: 'string', format: 'date-time', example: '2026-08-06T08:59:00.000Z' },
     },
+    required: ['status', 'error_code', 'message', 'timestamp'],
   },
 
   // User Model Schema
@@ -98,6 +99,32 @@ const schemas = {
     },
   },
 
+  // Wallet DTO Schema
+  WalletDTO: {
+    type: 'object',
+    properties: {
+      balance: { type: 'number', example: 1500000 },
+      currency: { type: 'string', example: 'IDR' },
+    },
+    required: ['balance', 'currency'],
+  },
+
+  // Transaction DTO Schema (Financial Mutation Ledger)
+  TransactionDTO: {
+    type: 'object',
+    properties: {
+      _id: { type: 'string', example: '65f1a2b3c4d5e6f7a8b9c0d1' },
+      reference_id: { type: 'string', example: '65f1a2b3c4d5e6f7a8b9c0d2' },
+      reference_model: { type: 'string', example: 'Transaction' },
+      type: { type: 'string', enum: ['topup', 'transfer', 'withdrawal'], example: 'transfer' },
+      amount: { type: 'number', example: 500000 },
+      flow: { type: 'string', enum: ['in', 'out'], example: 'out' },
+      counterparty: { type: 'string', example: 'Michael S' },
+      createdAt: { type: 'string', format: 'date-time', example: '2026-08-06T08:59:00.000Z' },
+    },
+    required: ['_id', 'reference_id', 'reference_model', 'type', 'amount', 'flow', 'counterparty', 'createdAt'],
+  },
+
   // Auth Dual-Token Payload
   AuthTokens: {
     type: 'object',
@@ -105,6 +132,7 @@ const schemas = {
       access_token: { type: 'string', example: 'eyJhbGciOiJIUzI1Ni...' },
       refresh_token: { type: 'string', example: 'eyJhbGciOiJIUzI1Ni...' },
     },
+    required: ['access_token', 'refresh_token'],
   },
 
   // Standard Auth Success Response (Login / Register)
@@ -112,7 +140,7 @@ const schemas = {
     type: 'object',
     properties: {
       status: { type: 'string', example: 'success' },
-      message: { type: 'string', example: 'Autentikasi berhasil' },
+      message: { type: 'string', example: 'Autentikasi login berhasil.' },
       data: {
         type: 'object',
         properties: {
@@ -120,8 +148,10 @@ const schemas = {
           access_token: { type: 'string', example: 'eyJhbGciOiJIUzI1Ni...' },
           refresh_token: { type: 'string', example: 'eyJhbGciOiJIUzI1Ni...' },
         },
+        required: ['user', 'access_token', 'refresh_token'],
       },
     },
+    required: ['status', 'message', 'data'],
   },
 };
 

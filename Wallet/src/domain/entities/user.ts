@@ -12,4 +12,10 @@ export interface User {
   avatar: string | null;
   nik: string | null;
   balance: number;
+  isEmailVerified: boolean;
+  isKycVerified: boolean;
+  accountTier: 'basic' | 'premium';
+  hasPin: boolean;
+  idCardPhoto?: string | null;
+  bio?: string | null;
 }

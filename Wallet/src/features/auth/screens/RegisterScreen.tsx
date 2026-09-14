@@ -226,6 +226,18 @@ const RegisterScreen = () => {
         password: data.password,
       },
       {
+        onSuccess: () => {
+          Alert.alert(
+            'Registrasi Berhasil',
+            `Kode verifikasi OTP telah dikirimkan ke email ${data.email}. Silakan masukkan kode untuk memverifikasi akun Anda.`,
+            [
+              {
+                text: 'Lanjut Verifikasi',
+                onPress: () => navigation.navigate('VerifyEmail', { email: data.email }),
+              },
+            ]
+          );
+        },
         onError: (error: any) => {
           const errorMessage =
             error.response?.data?.message || error.message || 'Gagal membuat akun';

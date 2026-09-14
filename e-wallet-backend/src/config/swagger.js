@@ -38,12 +38,14 @@ const options = {
   },
   // 💡 Merekam rute Express sekaligus berkas dokumentasi terpisah
   apis: [
-    path.join(__dirname, '../routes/*.js'),
-    path.join(__dirname, '../docs/routes/*.js'),
-    path.join(process.cwd(), 'src/routes/*.js'),
-    path.join(process.cwd(), 'src/docs/routes/*.js'),
-    path.join(process.cwd(), 'e-wallet-backend/src/routes/*.js'),
-    path.join(process.cwd(), 'e-wallet-backend/src/docs/routes/*.js'),
+    path.join(__dirname, '../routes/*.js').replace(/\\/g, '/'),
+    path.join(__dirname, '../docs/routes/*.js').replace(/\\/g, '/'),
+    path.join(process.cwd(), 'src/routes/*.js').replace(/\\/g, '/'),
+    path.join(process.cwd(), 'src/docs/routes/*.js').replace(/\\/g, '/'),
+    path.join(process.cwd(), 'e-wallet-backend/src/routes/*.js').replace(/\\/g, '/'),
+    path.join(process.cwd(), 'e-wallet-backend/src/docs/routes/*.js').replace(/\\/g, '/'),
+    './src/routes/*.js',
+    './src/docs/routes/*.js',
   ],
 };
 

@@ -1,8 +1,16 @@
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 
-// 🚀 DYNAMIC MOCK: Palsukan fungsi sendEmail agar test tidak butuh kredensial Mailtrap
+// 🚀 DYNAMIC MOCK: Palsukan fungsi sendEmail & Midtrans Snap agar test tidak butuh kredensial eksternal
 jest.mock('../src/utils/email', () => jest.fn().mockResolvedValue(true));
+jest.mock('midtrans-client', () => ({
+  Snap: jest.fn().mockImplementation(() => ({
+    createTransaction: jest.fn().mockResolvedValue({
+      token: 'mock-snap-token-12345',
+      redirect_url: 'https://app.sandbox.midtrans.com/snap/v2/vtweb/mock-snap-token-12345'
+    })
+  }))
+}));
 
 let mongoServer;
 
@@ -11,6 +19,9 @@ beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   process.env.JWT_SECRET = 'test-jwt-secret-key-2026';
   process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key-2026';
+  process.env.MIDTRANS_SERVER_KEY = 'mock-sandbox-server-key-test-99999';
+  process.env.MIDTRANS_CLIENT_KEY = 'mock-sandbox-client-key-test-99999';
+  process.env.MIDTRANS_IS_PRODUCTION = 'false';
 
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();

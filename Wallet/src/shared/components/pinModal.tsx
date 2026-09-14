@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,38 @@ interface PinModalProps {
   isLoading?: boolean;
 }
 
+interface KeypadButtonProps {
+  num: string;
+  onPress: (num: string) => void;
+  disabled: boolean;
+}
+
 const PIN_LENGTH = 6;
+
+/**
+ * Sub-komponen tombol keypad numerik terisolasi.
+ * Dibungkus React.memo untuk mencegah re-render yang tidak perlu saat PIN berubah (Recomposition Lock / Green Computing).
+ */
+export const KeypadButtonComponent = memo(
+  ({ num, onPress, disabled }: KeypadButtonProps) => {
+    return (
+      <TouchableOpacity
+        style={styles.keypadButton}
+        onPress={() => onPress(num)}
+        disabled={disabled}
+        activeOpacity={0.6}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Angka ${num}`}
+        accessibilityHint={`Mengetik angka ${num}`}
+      >
+        <Text style={styles.keypadText}>{num}</Text>
+      </TouchableOpacity>
+    );
+  }
+);
+
+KeypadButtonComponent.displayName = 'KeypadButtonComponent';
 
 const PinModal = ({
   visible,
@@ -37,21 +68,28 @@ const PinModal = ({
     }
   }, [visible]);
 
-  const handleKeyPress = (num: string) => {
-    if (isLoading) return;
-    if (pin.length < PIN_LENGTH) {
-      const nextPin = pin + num;
-      setPin(nextPin);
-      if (nextPin.length === PIN_LENGTH) {
-        onSubmit(nextPin);
-      }
-    }
-  };
+  // Handler stabil dengan functional updater mencegah referensi berubah setiap kali pin bertambah
+  const handleKeyPress = useCallback(
+    (num: string) => {
+      if (isLoading) return;
+      setPin((prev) => {
+        if (prev.length < PIN_LENGTH) {
+          const nextPin = prev + num;
+          if (nextPin.length === PIN_LENGTH) {
+            onSubmit(nextPin);
+          }
+          return nextPin;
+        }
+        return prev;
+      });
+    },
+    [isLoading, onSubmit]
+  );
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (isLoading) return;
     setPin((prev) => prev.slice(0, -1));
-  };
+  }, [isLoading]);
 
   const renderDots = () => {
     const dots = [];
@@ -64,14 +102,31 @@ const PinModal = ({
         />
       );
     }
-    return <View style={styles.dotsContainer}>{dots}</View>;
+    return (
+      <View
+        style={styles.dotsContainer}
+        accessible={true}
+        accessibilityRole="header"
+        accessibilityLabel={`PIN transaksi, ${pin.length} dari ${PIN_LENGTH} digit telah dimasukkan.`}
+        accessibilityLiveRegion="polite"
+      >
+        {dots}
+      </View>
+    );
   };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose} disabled={isLoading}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            disabled={isLoading}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Tutup dialog PIN"
+          >
             <Ionicons name="close" size={24} color={colors.textMuted} />
           </TouchableOpacity>
 
@@ -89,53 +144,50 @@ const PinModal = ({
             <View style={styles.keypad}>
               <View style={styles.keypadRow}>
                 {['1', '2', '3'].map((num) => (
-                  <TouchableOpacity
+                  <KeypadButtonComponent
                     key={num}
-                    style={styles.keypadButton}
-                    onPress={() => handleKeyPress(num)}
-                    activeOpacity={0.6}
-                  >
-                    <Text style={styles.keypadText}>{num}</Text>
-                  </TouchableOpacity>
+                    num={num}
+                    onPress={handleKeyPress}
+                    disabled={isLoading}
+                  />
                 ))}
               </View>
               <View style={styles.keypadRow}>
                 {['4', '5', '6'].map((num) => (
-                  <TouchableOpacity
+                  <KeypadButtonComponent
                     key={num}
-                    style={styles.keypadButton}
-                    onPress={() => handleKeyPress(num)}
-                    activeOpacity={0.6}
-                  >
-                    <Text style={styles.keypadText}>{num}</Text>
-                  </TouchableOpacity>
+                    num={num}
+                    onPress={handleKeyPress}
+                    disabled={isLoading}
+                  />
                 ))}
               </View>
               <View style={styles.keypadRow}>
                 {['7', '8', '9'].map((num) => (
-                  <TouchableOpacity
+                  <KeypadButtonComponent
                     key={num}
-                    style={styles.keypadButton}
-                    onPress={() => handleKeyPress(num)}
-                    activeOpacity={0.6}
-                  >
-                    <Text style={styles.keypadText}>{num}</Text>
-                  </TouchableOpacity>
+                    num={num}
+                    onPress={handleKeyPress}
+                    disabled={isLoading}
+                  />
                 ))}
               </View>
               <View style={styles.keypadRow}>
                 <View style={styles.keypadEmpty} />
-                <TouchableOpacity
-                  style={styles.keypadButton}
-                  onPress={() => handleKeyPress('0')}
-                  activeOpacity={0.6}
-                >
-                  <Text style={styles.keypadText}>0</Text>
-                </TouchableOpacity>
+                <KeypadButtonComponent
+                  num="0"
+                  onPress={handleKeyPress}
+                  disabled={isLoading}
+                />
                 <TouchableOpacity
                   style={styles.keypadButton}
                   onPress={handleDelete}
+                  disabled={isLoading}
                   activeOpacity={0.6}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Hapus digit terakhir"
+                  accessibilityHint="Menghapus satu angka PIN sebelumnya"
                 >
                   <Ionicons name="backspace-outline" size={26} color={colors.textMain} />
                 </TouchableOpacity>

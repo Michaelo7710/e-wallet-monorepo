@@ -25,7 +25,7 @@
 //     default: false // Anti-Fraud Analytics untuk Admin
 //   }
 // }, {
-//   timestamps: { createdAt: 'created_at', updatedAt: false } // History biasanya tidak di-update
+//   timestamps: true
 // });
 
 // module.exports = mongoose.model('Transaction', transactionSchema);
@@ -73,8 +73,12 @@ const transactionSchema = new mongoose.Schema({
     default: false // Integritas Anti-Fraud Analytics untuk keamanan Admin Dashboard
   }
 }, {
-  // Riwayat keuangan bersifat immutable (tidak boleh di-update), cukup timestamps createdAt
-  timestamps: { createdAt: 'created_at', updatedAt: false } 
+  timestamps: true
 });
+
+transactionSchema.index({ createdAt: -1 });
+transactionSchema.index({ sender_id: 1, createdAt: -1 });
+transactionSchema.index({ receiver_id: 1, createdAt: -1 });
+transactionSchema.index({ type: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

@@ -8,7 +8,12 @@
     "dev": "nodemon server.js",
     "seed": "node src/utils/seeder.js",
     "seed:destroy": "node src/utils/seeder.js -d",
-    "test": "jest --runInBand --detectOpenHandles --forceExit"
+    "migrate:timestamps": "node scripts/migrateTimestamps.js",
+    "test": "jest --runInBand --detectOpenHandles --forceExit",
+    "security:sbom": "node scripts/security/generateSbom.js",
+    "security:license": "node scripts/security/auditLicenses.js",
+    "security:audit": "npm audit --audit-level=high",
+    "security:check-all": "npm run security:license && npm run security:sbom && npm run security:audit"
   },
   "jest": {
     "testEnvironment": "node",
@@ -36,6 +41,8 @@
     "mongoose": "^9.6.2",
     "morgan": "^1.10.1",
     "nodemailer": "^9.0.1",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1"
   },

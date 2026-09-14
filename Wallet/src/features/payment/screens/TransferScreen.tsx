@@ -15,14 +15,25 @@ import { UserLayout } from '@shared/layouts';
 import { InputField, ButtonCustom, PinModal } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { useUserProfile } from '@features/user/hooks/useUserData';
 import { useTransferMutation, useRecentContacts } from '../hooks/usePaymentMutations';
+import { useFeatureFlagStore } from '@core/config/featureFlags';
 import defaultAvatar from '@assets/images/avatar-default.png';
 
 const TransferScreen = () => {
   const navigation = useNavigation<any>();
-  const user = useAuthStore((state) => state.user);
+  const authUser = useAuthStore((state) => state.user);
+  const { data: profileUser } = useUserProfile();
+  const user = profileUser || authUser;
   const { data: contacts } = useRecentContacts();
   const { mutate: transfer, isPending } = useTransferMutation();
+
+  const isTransferEnabled = useFeatureFlagStore(
+    (state) => state.flags.p2p_transfer?.enabled ?? true
+  );
+  const transferNotice =
+    useFeatureFlagStore((state) => state.flags.p2p_transfer?.maintenanceMessage) ||
+    'Layanan Ini Sedang Dalam Pemeliharaan Berkala. Untuk sementara waktu mutasi ini ditangguhkan demi keamanan dana Anda.';
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [amount, setAmount] = useState('');
@@ -32,8 +43,33 @@ const TransferScreen = () => {
   const currentBalance = user?.balance ?? 0;
 
   const handleOpenPin = () => {
+    // Graceful Degradation Guard: Cegah pemunculan modal PIN saat fitur dinonaktifkan
+    if (!isTransferEnabled) {
+      Alert.alert('Fitur Sedang Pemeliharaan', transferNotice);
+      return;
+    }
+
+    if (!user?.hasPin) {
+      Alert.alert(
+        'Aktivasi Keamanan Diperlukan',
+        'Anda belum memiliki PIN transaksi. Silakan buat PIN 6 digit terlebih dahulu untuk mengamankan transfer dana Anda.',
+        [
+          { text: 'Batal', style: 'cancel' },
+          {
+            text: 'Buat PIN Sekarang',
+            onPress: () => navigation.navigate('SetupPin'),
+          },
+        ]
+      );
+      return;
+    }
+
     if (!phoneNumber || phoneNumber.length < 10) {
       Alert.alert('Data Tidak Lengkap', 'Nomor handphone tujuan minimal 10 digit.');
+      return;
+    }
+    if (user?.phoneNumber && phoneNumber.trim() === user.phoneNumber.trim()) {
+      Alert.alert('Transfer Ditolak', 'Anda tidak dapat melakukan transfer ke nomor handphone akun Anda sendiri.');
       return;
     }
     if (numericAmount < 10000) {
@@ -48,6 +84,12 @@ const TransferScreen = () => {
   };
 
   const handleConfirmPin = (pin: string) => {
+    if (!isTransferEnabled) {
+      setIsPinVisible(false);
+      Alert.alert('Fitur Sedang Pemeliharaan', transferNotice);
+      return;
+    }
+
     transfer(
       {
         receiverPhoneNumber: phoneNumber,
@@ -57,14 +99,31 @@ const TransferScreen = () => {
       {
         onSuccess: (tx) => {
           setIsPinVisible(false);
-          Alert.alert(
-            'Transfer Berhasil',
-            `Berhasil transfer Rp ${numericAmount.toLocaleString('id-ID')} ke ${phoneNumber}.\nRef: ${tx.referenceId}`,
-            [{ text: 'Selesai', onPress: () => navigation.goBack() }]
-          );
+          setAmount('');
+          setPhoneNumber('');
+          if (tx.status === 'pending_approval' || tx.isHighValue) {
+            Alert.alert(
+              'Transfer Sedang Ditinjau (AML)',
+              `Transfer bernilai besar sebesar Rp ${numericAmount.toLocaleString('id-ID')} berhasil diajukan.\n\nSesuai kepatuhan AML, transaksi ini memerlukan verifikasi Administrator sebelum dana diteruskan ke penerima.\nRef: ${tx.transactionId}`,
+              [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            );
+          } else {
+            Alert.alert(
+              'Transfer Berhasil',
+              `Berhasil transfer Rp ${numericAmount.toLocaleString('id-ID')} ke ${phoneNumber}.\nSisa Saldo: Rp ${tx.remainingBalance.toLocaleString('id-ID')}\nRef: ${tx.transactionId}`,
+              [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            );
+          }
         },
         onError: (err: any) => {
           setIsPinVisible(false);
+          if (err.response?.data?.error_code === 'RECEIVER_WALLET_LIMIT_EXCEEDED') {
+            Alert.alert(
+              'Batas Saldo Penerima Penuh',
+              err.response?.data?.message || 'Saldo penerima akan melebihi batas limit akunnya.'
+            );
+            return;
+          }
           const msg = err.response?.data?.message || err.message || 'Transfer gagal diproses';
           Alert.alert('Transfer Gagal', msg);
         },
@@ -82,6 +141,19 @@ const TransferScreen = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
+        {/* Graceful Degradation Banner */}
+        {!isTransferEnabled && (
+          <View
+            style={styles.degradationBanner}
+            accessible={true}
+            accessibilityRole="alert"
+            accessibilityLabel={transferNotice}
+          >
+            <Ionicons name="warning-outline" size={20} color={colors.warning} />
+            <Text style={styles.degradationBannerText}>{transferNotice}</Text>
+          </View>
+        )}
+
         <View style={styles.balanceInfoBox}>
           <Text style={styles.balanceLabel}>Saldo Aktif</Text>
           <Text style={styles.balanceValue}>Rp {currentBalance.toLocaleString('id-ID')}</Text>
@@ -96,6 +168,7 @@ const TransferScreen = () => {
                   key={contact.id}
                   style={styles.contactItem}
                   onPress={() => setPhoneNumber(contact.phoneNumber)}
+                  disabled={!isTransferEnabled}
                 >
                   <Image
                     source={contact.avatar ? { uri: contact.avatar } : defaultAvatar}
@@ -116,6 +189,7 @@ const TransferScreen = () => {
           keyboardType="phone-pad"
           value={phoneNumber}
           onChangeText={setPhoneNumber}
+          editable={isTransferEnabled}
         />
 
         <InputField
@@ -124,17 +198,19 @@ const TransferScreen = () => {
           keyboardType="numeric"
           value={amount}
           onChangeText={(val) => setAmount(val.replace(/[^0-9]/g, ''))}
+          editable={isTransferEnabled}
         />
 
         <ButtonCustom
           title="Lanjutkan Transfer"
           onPress={handleOpenPin}
+          disabled={!isTransferEnabled}
           style={styles.submitBtn}
         />
       </ScrollView>
 
       <PinModal
-        visible={isPinVisible}
+        visible={isPinVisible && Boolean(user?.hasPin)}
         onClose={() => setIsPinVisible(false)}
         onSubmit={handleConfirmPin}
         isLoading={isPending}
@@ -160,6 +236,23 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: spacing.xxxl,
+  },
+  degradationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.warning}18`,
+    borderColor: `${colors.warning}50`,
+    borderWidth: 1,
+    padding: spacing.md,
+    borderRadius: spacing.radius.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  degradationBannerText: {
+    flex: 1,
+    fontSize: typography.size.xs,
+    color: colors.textMain,
+    lineHeight: 18,
   },
   balanceInfoBox: {
     backgroundColor: colors.primaryLight,

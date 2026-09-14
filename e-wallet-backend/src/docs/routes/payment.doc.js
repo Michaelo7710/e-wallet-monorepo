@@ -28,8 +28,17 @@
  *     responses:
  *       200:
  *         description: Webhook berhasil diproses dan saldo pengguna telah dikreditkan
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 message: { type: string, example: "Webhook notifikasi diproses dan rekonsiliasi saldo berhasil diamankan." }
  *       400:
  *         $ref: '#/components/responses/400BadRequest'
+ *       500:
+ *         $ref: '#/components/responses/500InternalServerError'
  */
 
 /**
@@ -52,10 +61,25 @@
  *     responses:
  *       201:
  *         description: Snap Token berhasil diterbitkan untuk pembayaran di mobile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 message: { type: string, example: "Token pembayaran SNAP Midtrans berhasil diterbitkan." }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     reference_number: { type: string, example: "GP-TP-20260901-A1B2C3D4" }
+ *                     snap_token: { type: string, example: "e9f7a8b9-c0d1-4d5e-85f1-65f1a2b3c4d5" }
+ *                     redirect_url: { type: string, example: "https://app.sandbox.midtrans.com/snap/v2/vtweb/e9f7a8b9..." }
  *       400:
  *         $ref: '#/components/responses/400BadRequest'
  *       401:
  *         $ref: '#/components/responses/401Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/500InternalServerError'
  */
 
 /**
@@ -80,10 +104,27 @@
  *     responses:
  *       200:
  *         description: Transfer berhasil dieksekusi atau tertahan jika bernilai besar (>= 10 Juta)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 message: { type: string, example: "Transfer saldo sesama pengguna GreenPay berhasil diselesaikan." }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     transaction_id: { type: string, example: "65f1a2b3c4d5e6f7a8b9c0d1" }
+ *                     amount: { type: number, example: 250000 }
+ *                     status: { type: string, enum: [success, pending_approval], example: "success" }
+ *                     is_high_value: { type: boolean, example: false }
+ *                     remaining_balance: { type: number, example: 4750000 }
  *       400:
  *         $ref: '#/components/responses/400BadRequest'
  *       401:
  *         $ref: '#/components/responses/401Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/500InternalServerError'
  */
 
 /**
@@ -109,10 +150,26 @@
  *     responses:
  *       200:
  *         description: Penarikan saldo berhasil diproses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 message: { type: string, example: "Penarikan dana bernilai kecil sukses diproses secara instan." }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     reference_number: { type: string, example: "GP-WD-20260901-A1B2C3D4" }
+ *                     amount: { type: number, example: 100000 }
+ *                     status: { type: string, enum: [success, pending_approval], example: "success" }
+ *                     is_high_value: { type: boolean, example: false }
  *       400:
  *         $ref: '#/components/responses/400BadRequest'
  *       401:
  *         $ref: '#/components/responses/401Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/500InternalServerError'
  */
 
 /**
@@ -136,6 +193,26 @@
  *     responses:
  *       200:
  *         description: Riwayat transaksi berhasil diagregasi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: "success" }
+ *                 message: { type: string, example: "Buku besar mutasi berhasil diagregasi dan diselaraskan." }
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     total_records: { type: integer, example: 25 }
+ *                     current_page: { type: integer, example: 1 }
+ *                     limit: { type: integer, example: 10 }
+ *                     total_pages: { type: integer, example: 3 }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/TransactionDTO'
  *       401:
  *         $ref: '#/components/responses/401Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/500InternalServerError'
  */

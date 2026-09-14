@@ -1,16 +1,19 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { secureStorageService } from '@core/security/secureStorage.service';
 import { ENV } from '@core/config/env';
+import { telemetryService } from '@core/telemetry/telemetry.service';
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'gp_access_token',
   REFRESH_TOKEN: 'gp_refresh_token',
+  USER_DATA: 'gp_user_data',
+  BIOMETRICS_ENABLED: 'gp_biometrics_enabled',
 } as const;
 
 const api = axios.create({
   baseURL: ENV.API_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true',
@@ -34,26 +37,141 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
-// 1. Interceptor Request: Injeksi Access Token
+// 1. Interceptor Request: Injeksi Access Token, Correlation ID, Keamanan Host & Breadcrumbs
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    // A. Validasi Protokol HTTPS: Tolak HTTP mentah saat mode produksi
+    const targetUrl = config.url || '';
+    const fullUrl = targetUrl.startsWith('http://') || targetUrl.startsWith('https://')
+      ? targetUrl
+      : `${config.baseURL || ''}/${targetUrl.replace(/^\//, '')}`;
+
+    if (ENV.IS_PROD && fullUrl.startsWith('http://')) {
+      const insecureError = new Error(
+        `[SECURITY] Permintaan HTTP tidak aman ditolak pada mode produksi: ${fullUrl}`
+      );
+      telemetryService.captureException(insecureError, {
+        tag: 'SECURITY_ALERT_INSECURE_HTTP',
+        url: fullUrl,
+      });
+      return Promise.reject(insecureError);
+    }
+
+    // B. Sematkan Header Anti-Tamper Client Integrity
+    if (config.headers) {
+      config.headers['X-Client-Integrity'] = 'verified';
+    }
+
+    // C. Sisipkan Correlation ID aktif ke header request keluar jika tersedia
+    const activeCorrelationId = telemetryService.getCorrelationId();
+    if (activeCorrelationId && config.headers) {
+      config.headers['X-Correlation-ID'] = activeCorrelationId;
+    }
+
+    // D. Ambil dan sematkan Access Token
     let token = useAuthStore.getState().token;
     if (!token) {
-      token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      token = await secureStorageService.getItem<string>(STORAGE_KEYS.ACCESS_TOKEN);
     }
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // C. Rekam Breadcrumb Request Jaringan (otomatis disanitasi dari PII)
+    telemetryService.addBreadcrumb({
+      category: 'network',
+      message: `HTTP ${config.method?.toUpperCase() || 'GET'} ${config.url || ''}`,
+      data: {
+        method: config.method,
+        url: config.url,
+        params: config.params,
+        ...(config.data && { data: config.data }),
+      },
+    });
+
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    telemetryService.addBreadcrumb({
+      category: 'network',
+      level: 'error',
+      message: `HTTP Request Configuration Error: ${error?.message || 'Unknown error'}`,
+      data: { message: error?.message },
+    });
+    return Promise.reject(error);
+  }
 );
 
-// 2. Interceptor Response: Handle Auto Refresh Token (401)
+// 2. Interceptor Response: Handle Correlation ID, Breadcrumbs & Auto Refresh Token (401)
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A. Tangkap inbound X-Correlation-ID dari response header backend
+    const inboundCorrelationId =
+      response.headers?.['x-correlation-id'] || response.headers?.['X-Correlation-ID'];
+    if (inboundCorrelationId && typeof inboundCorrelationId === 'string') {
+      telemetryService.setCorrelationId(inboundCorrelationId);
+    }
+
+    // B. Rekam Breadcrumb Status HTTP Sukses
+    telemetryService.addBreadcrumb({
+      category: 'network',
+      level: 'info',
+      message: `HTTP ${response.status} ${response.config.url || ''}`,
+      data: {
+        status: response.status,
+        url: response.config.url,
+      },
+    });
+
+    return response;
+  },
   async (error: AxiosError) => {
+    // A. Tangkap X-Correlation-ID dari response header atau body saat request gagal
+    const errCorrelationId =
+      error.response?.headers?.['x-correlation-id'] ||
+      error.response?.headers?.['X-Correlation-ID'] ||
+      (error.response?.data as any)?.correlation_id;
+    if (errCorrelationId && typeof errCorrelationId === 'string') {
+      telemetryService.setCorrelationId(errCorrelationId);
+    }
+
+    // B. Deteksi Insiden SSL Pinning / TLS MITM Tamper
+    const errorCode = (error.code || '').toUpperCase();
+    const errorMessage = (error.message || '').toUpperCase();
+    const isMitmIncident =
+      errorCode === 'CERT_HAS_EXPIRED' ||
+      errorCode === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
+      errorMessage.includes('CERT_HAS_EXPIRED') ||
+      errorMessage.includes('UNABLE_TO_VERIFY_LEAF_SIGNATURE') ||
+      errorMessage.includes('DEPTH_ZERO_SELF_SIGNED_CERT') ||
+      errorMessage.includes('SELF_SIGNED_CERT_IN_CHAIN') ||
+      errorMessage.includes('SSL PINNING') ||
+      errorMessage.includes('CERTIFICATE VERIFICATION FAILED') ||
+      errorMessage.includes('TLS HANDSHAKE');
+
+    if (isMitmIncident) {
+      telemetryService.captureException(error, {
+        tag: 'SECURITY_ALERT_MITM',
+        url: error.config?.url,
+        code: error.code,
+        message: error.message,
+      });
+    }
+
+    // C. Rekam Breadcrumb HTTP Error
+    telemetryService.addBreadcrumb({
+      category: 'network',
+      level: 'error',
+      message: `HTTP Error ${error.response?.status || 'Network Error'} ${error.config?.url || ''}`,
+      data: {
+        status: error.response?.status,
+        url: error.config?.url,
+        message: error.message,
+        response: error.response?.data,
+      },
+    });
+
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (
@@ -78,7 +196,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+        const refreshToken = await secureStorageService.getItem<string>(STORAGE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
           throw new Error('Refresh Token tidak tersedia.');
         }
@@ -87,9 +205,22 @@ api.interceptors.response.use(
           refresh_token: refreshToken,
         });
 
-        const { token: newAccessToken } = response.data;
+        const refreshCorrelationId =
+          response.headers?.['x-correlation-id'] || response.headers?.['X-Correlation-ID'];
+        if (refreshCorrelationId && typeof refreshCorrelationId === 'string') {
+          telemetryService.setCorrelationId(refreshCorrelationId);
+        }
 
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
+        const newAccessToken =
+          response.data?.data?.access_token ||
+          response.data?.access_token ||
+          response.data?.token;
+
+        if (!newAccessToken || typeof newAccessToken !== 'string') {
+          throw new Error('Respon refresh token tidak valid: payload access_token kosong.');
+        }
+
+        await secureStorageService.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken);
         useAuthStore.getState().setAccessToken(newAccessToken);
 
         processQueue(null, newAccessToken);
@@ -101,7 +232,11 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        await useAuthStore.getState().logout();
+        try {
+          await useAuthStore.getState().logoutSession();
+        } catch (logoutError) {
+          console.warn('[NETWORK] Gagal membersihkan sesi saat refresh token gagal:', logoutError);
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

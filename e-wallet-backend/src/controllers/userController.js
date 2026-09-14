@@ -81,22 +81,33 @@ exports.updatePinSecurely = catchAsync(async (req, res, next) => {
 });
 
 // ========================================================
-// 6. KENDALI: UPGRADE VERIFIKASI AKUN PREMIUM (KYC SIMULATION)
+// 6. KENDALI: UPGRADE VERIFIKASI AKUN PREMIUM (KYC MULTI-FACTOR)
 // ========================================================
 exports.updateKYC = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
-  const { nik } = req.body;
 
-  console.log(`🎮 [USER CONTROLLER] Eksekusi simulasi validasi identitas NIK.`);
-  const user = await userService.updateKYC(userId, nik);
+  console.log(`🎮 [USER CONTROLLER] Eksekusi validasi KYC & pengajuan akun premium.`);
+  const user = await userService.updateKYC(userId, req.body);
 
   res.status(StatusCodes.OK).json({
     status: 'success',
     message: 'Akun Anda resmi ditingkatkan menjadi status Terverifikasi Premium.',
     data: {
+      _id: user._id,
       username: user.username,
+      email: user.email,
+      phone_number: user.phone_number,
+      role: user.role,
       nik: user.nik,
-      is_verified: user.is_verified
+      id_card_photo: user.id_card_photo,
+      bio: user.bio,
+      is_verified: user.is_verified,
+      is_kyc_verified: user.is_kyc_verified,
+      is_email_verified: user.is_email_verified,
+      account_tier: user.account_tier,
+      balance: user.balance,
+      two_factor_enabled: user.two_factor_enabled,
+      has_pin: Boolean(user.pin)
     }
   });
 });

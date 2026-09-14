@@ -1,70 +1,34 @@
-// const request = require('supertest');
-// const app = require('../app');
-// const { User, VerificationCode } = require('../src/models');
-
-// describe('🧪 [AUTH ENGINE INTEGRATION TEST]', () => {
-
-//   it('1. Harus sukses mendaftarkan pengguna baru (Register)', async () => {
-//     const res = await request(app)
-//       .post('/api/v1/auth/register')
-//       .send({
-//         username: 'Ahmad Test',
-//         email: 'ahmad@test.com',
-//         password: 'Password123!',
-//         phone_number: '081234567890'
-//       });
-
-//     expect(res.statusCode).toEqual(201); // atau 200/201 sesuai status register
-//     expect(res.body.status).toBe('success');
-//     expect(res.body.data.user).toHaveProperty('email', 'ahmad@test.com');
-
-//     // Pastikan kode OTP tersimpan di database memory
-//     const otp = await VerificationCode.findOne({ type: 'email_verification' });
-//     expect(otp).not.toBeNull();
-//   });
-
-//   it('2. Harus sukses verifikasi email OTP dan login (Dual-Token Check)', async () => {
-//     // Phase A: Buat User & OTP langsung di DB
-//     const user = await User.create({
-//       username: 'Budi Test',
-//       email: 'budi@test.com',
-//       password: 'Password123!',
-//       phone_number: '089876543210',
-//       is_verified: false
-//     });
-
-//     await VerificationCode.create({
-//       user_id: user._id,
-//       code: '123456',
-//       type: 'email_verification',
-//       expires_at: new Date(Date.now() + 10 * 60 * 1000)
-//     });
-
-//     // Phase B: Eksekusi Verifikasi OTP
-//     const verifyRes = await request(app)
-//       .post('/api/v1/auth/verify-email')
-//       .send({ email: 'budi@test.com', code: '123456' });
-
-//     expect(verifyRes.statusCode).toEqual(200);
-
-//     // Phase C: Eksekusi Login
-//     const loginRes = await request(app)
-//       .post('/api/v1/auth/login')
-//       .send({ email: 'budi@test.com', password: 'Password123!' });
-
-//     expect(loginRes.statusCode).toEqual(200);
-//     expect(loginRes.body.data).toHaveProperty('access_token');
-//     expect(loginRes.body.data).toHaveProperty('refresh_token');
-//   });
-
-// });
-
 const request = require('supertest');
 const app = require('../app');
 const { User, VerificationCode, RefreshToken } = require('../src/models');
 const { createTestUser } = require('./helpers/testFactory');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-describe('  [AUTH ENGINE INTEGRATION TEST]', () => {
+// Helper untuk menghasilkan TOTP dari secret Base32
+const generateTOTPCode = (secretBase32) => {
+  const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bin = '';
+  for (const char of secretBase32.toUpperCase()) {
+    const idx = BASE32_ALPHABET.indexOf(char);
+    bin += idx.toString(2).padStart(5, '0');
+  }
+  const bytes = [];
+  for (let i = 0; i < bin.length; i += 8) {
+    const sub = bin.substring(i, i + 8);
+    if (sub.length === 8) bytes.push(parseInt(sub, 2));
+  }
+  const secretBuffer = Buffer.from(bytes);
+  const counter = Math.floor(Date.now() / 30000);
+  const timeBuffer = Buffer.alloc(8);
+  timeBuffer.writeUInt32BE(counter, 4);
+
+  const hmac = crypto.createHmac('sha1', secretBuffer).update(timeBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  return ((hmac.readUInt32BE(offset) & 0x7fffffff) % 1000000).toString().padStart(6, '0');
+};
+
+describe('🧪 [AUTH ENGINE INTEGRATION TEST]', () => {
   it('1. Harus sukses mendaftarkan pengguna baru (Register)', async () => {
     const res = await request(app)
       .post('/api/v1/auth/register')
@@ -81,6 +45,54 @@ describe('  [AUTH ENGINE INTEGRATION TEST]', () => {
 
     const otp = await VerificationCode.findOne({ type: 'email_verification' });
     expect(otp).not.toBeNull();
+  });
+
+  it('1b. Harus menolak pendaftaran ulang jika email sudah terdaftar (400 Bad Request)', async () => {
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Ahmad Duplikat',
+        email: 'ahmad_dup@test.com',
+        password: 'Password123!',
+        phone_number: '081234567891',
+      });
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Ahmad Kembar',
+        email: 'ahmad_dup@test.com',
+        password: 'Password123!',
+        phone_number: '081234567892',
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.message).toMatch(/Email tersebut sudah terdaftar/i);
+    expect(res.body.error_code).toBe('DUPLICATE_RESOURCE');
+  });
+
+  it('1c. Harus menolak pendaftaran ulang jika nomor telepon sudah terdaftar (400 Bad Request)', async () => {
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Phone User',
+        email: 'phone1@test.com',
+        password: 'Password123!',
+        phone_number: '08999888777',
+      });
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        username: 'Phone User 2',
+        email: 'phone2@test.com',
+        password: 'Password123!',
+        phone_number: '08999888777',
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.message).toMatch(/Nomor Handphone tersebut sudah terdaftar/i);
+    expect(res.body.error_code).toBe('DUPLICATE_RESOURCE');
   });
 
   it('2. Harus sukses verifikasi email OTP dan login (Dual-Token Check)', async () => {
@@ -104,6 +116,11 @@ describe('  [AUTH ENGINE INTEGRATION TEST]', () => {
       .send({ email: 'budi@test.com', code: '123456' });
 
     expect(verifyRes.statusCode).toEqual(200);
+    expect(verifyRes.body.data).toHaveProperty('access_token');
+    expect(verifyRes.body.data).toHaveProperty('refresh_token');
+    expect(verifyRes.body.data.user.is_email_verified).toBe(true);
+    expect(verifyRes.body.data.user.is_kyc_verified).toBe(false);
+    expect(verifyRes.body.data.user.account_tier).toBe('basic');
 
     const loginRes = await request(app)
       .post('/api/v1/auth/login')
@@ -137,5 +154,171 @@ describe('  [AUTH ENGINE INTEGRATION TEST]', () => {
       .send({ refresh_token: refreshToken });
 
     expect(logoutRes.statusCode).toEqual(200);
+  });
+
+  it('4. Harus sukses generate 2FA dan verifikasi TOTP dengan header Bearer Token (Anti-IDOR)', async () => {
+    const { accessToken, user } = await createTestUser();
+
+    // 1. Generate 2FA Secret (hanya butuh Bearer token, tanpa userId di body)
+    const genRes = await request(app)
+      .post('/api/v1/auth/2fa/generate')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(genRes.statusCode).toEqual(200);
+    expect(genRes.body.status).toBe('success');
+    expect(genRes.body.data).toHaveProperty('secret');
+    expect(genRes.body.data).toHaveProperty('otpauth_url');
+
+    const { secret } = genRes.body.data;
+    const totpToken = generateTOTPCode(secret);
+
+    // 2. Verify 2FA (hanya kirim { token }, tanpa userId di body)
+    const verifyRes = await request(app)
+      .post('/api/v1/auth/2fa/verify')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ token: totpToken });
+
+    expect(verifyRes.statusCode).toEqual(200);
+    expect(verifyRes.body.status).toBe('success');
+
+    // Pastikan status 2FA pada database aktif
+    const updatedUser = await User.findById(user._id);
+    expect(updatedUser.two_factor_enabled).toBe(true);
+  });
+
+  it('5. Harus memblokir generate dan verify 2FA jika tidak menyertakan Bearer token (401)', async () => {
+    const genRes = await request(app).post('/api/v1/auth/2fa/generate');
+    expect(genRes.statusCode).toEqual(401);
+
+    const verifyRes = await request(app)
+      .post('/api/v1/auth/2fa/verify')
+      .send({ token: '123456' });
+    expect(verifyRes.statusCode).toEqual(401);
+  });
+
+  it('6. Harus menolak refresh token yang di-sign menggunakan JWT_SECRET (Isolasi Kriptografi)', async () => {
+    const { user } = await createTestUser();
+
+    // Buat token palsu yang ditandatangani dengan JWT_SECRET bukan JWT_REFRESH_SECRET
+    const illegitimateToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    await RefreshToken.create({
+      user_id: user._id,
+      token: illegitimateToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .send({ refresh_token: illegitimateToken });
+
+    expect(res.statusCode).toEqual(401);
+    expect(res.body.message).toMatch(/Verifikasi refresh token gagal/i);
+  });
+
+  it('7. Harus menahan sesi dan mengembalikan pre_auth_token jika user mengaktifkan 2FA saat login', async () => {
+    // Buat user dengan 2FA aktif dan secret terisi
+    const rawSecret = crypto.randomBytes(20);
+    const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let bin = '';
+    for (let byte of rawSecret) {
+      bin += byte.toString(2).padStart(8, '0');
+    }
+    let secret = '';
+    for (let i = 0; i < bin.length; i += 5) {
+      const sub = bin.substring(i, i + 5);
+      const idx = parseInt(sub, 2);
+      secret += BASE32_ALPHABET[idx];
+    }
+
+    const user = await User.create({
+      username: 'TwoFactor User',
+      email: 'twofactor@test.com',
+      password: 'Password123!',
+      phone_number: '081122334455',
+      is_verified: true,
+      two_factor_enabled: true,
+      two_factor_secret: secret,
+    });
+
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'twofactor@test.com', password: 'Password123!' });
+
+    expect(loginRes.statusCode).toEqual(200);
+    expect(loginRes.body.status).toBe('success');
+    expect(loginRes.body.data.require_2fa).toBe(true);
+    expect(loginRes.body.data).toHaveProperty('pre_auth_token');
+    expect(loginRes.body.data.user).toHaveProperty('two_factor_enabled', true);
+    expect(loginRes.body.data).not.toHaveProperty('access_token');
+    expect(loginRes.body.data).not.toHaveProperty('refresh_token');
+
+    // 8. Sukses tukar pre_auth_token + TOTP menjadi token sesi sah
+    const preAuthToken = loginRes.body.data.pre_auth_token;
+    const totpToken = generateTOTPCode(secret);
+
+    const verifyLoginRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({ pre_auth_token: preAuthToken, token: totpToken });
+
+    expect(verifyLoginRes.statusCode).toEqual(200);
+    expect(verifyLoginRes.body.status).toBe('success');
+    expect(verifyLoginRes.body.data).toHaveProperty('access_token');
+    expect(verifyLoginRes.body.data).toHaveProperty('refresh_token');
+    expect(verifyLoginRes.body.data.user).toHaveProperty('email', 'twofactor@test.com');
+  });
+
+  it('9. Harus menolak /2fa/verify-login jika pre_auth_token tidak valid, kode TOTP salah, atau payload kosong', async () => {
+    // Payload kosong
+    const emptyRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({});
+    expect(emptyRes.statusCode).toEqual(400);
+
+    // Invalid pre_auth_token
+    const invalidTokenRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({ pre_auth_token: 'invalid_token', token: '123456' });
+    expect(invalidTokenRes.statusCode).toEqual(401);
+
+    // Wrong TOTP code with valid ticket
+    const rawSecret = crypto.randomBytes(20);
+    const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let bin = '';
+    for (let byte of rawSecret) {
+      bin += byte.toString(2).padStart(8, '0');
+    }
+    let secret = '';
+    for (let i = 0; i < bin.length; i += 5) {
+      const sub = bin.substring(i, i + 5);
+      const idx = parseInt(sub, 2);
+      secret += BASE32_ALPHABET[idx];
+    }
+
+    const user = await User.create({
+      username: 'TwoFactor Wrong TOTP',
+      email: 'wrongtotp@test.com',
+      password: 'Password123!',
+      phone_number: '081122334466',
+      is_verified: true,
+      two_factor_enabled: true,
+      two_factor_secret: secret,
+    });
+
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'wrongtotp@test.com', password: 'Password123!' });
+
+    const preAuthToken = loginRes.body.data.pre_auth_token;
+
+    const wrongCodeRes = await request(app)
+      .post('/api/v1/auth/2fa/verify-login')
+      .send({ pre_auth_token: preAuthToken, token: '000000' });
+
+    expect(wrongCodeRes.statusCode).toEqual(401);
   });
 });

@@ -1,14 +1,13 @@
 // tests/helpers/testFactory.js
 const { User, Wallet, VerificationCode } = require('../../src/models');
 const { signAccessToken, signRefreshToken } = require('../../src/utils/jwt');
-const bcrypt = require('bcryptjs');
 
 /**
  * Factory untuk memproduksi User Reguler + Wallet + Token JWT
  */
 exports.createTestUser = async (overrides = {}) => {
-  const defaultPassword = await bcrypt.hash('Password123!', 12);
-  const defaultPin = await bcrypt.hash('123456', 12);
+  const defaultPassword = 'Password123!';
+  const defaultPin = '123456';
 
   const userData = {
     username: `User_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
@@ -37,7 +36,7 @@ exports.createTestUser = async (overrides = {}) => {
  * Factory untuk memproduksi Admin User + Token JWT
  */
 exports.createTestAdmin = async (overrides = {}) => {
-  const defaultPassword = await bcrypt.hash('Password123!', 12);
+  const defaultPassword = 'Password123!';
 
   const adminData = {
     username: `Admin_${Date.now()}_${Math.floor(Math.random() * 1000)}`,

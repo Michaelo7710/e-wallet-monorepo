@@ -45,6 +45,9 @@ yarn-error.log
 .env
 .env.local
 
+scr/core/security/secureStorage.service.ts
+
+
 # fastlane
 #
 # It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the

@@ -1,0 +1,47 @@
+name: Supply Chain Security & SBOM Generation
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - 'feat/*enterprise*'
+  pull_request:
+    branches:
+      - main
+      - staging
+      - 'feat/*enterprise*'
+
+jobs:
+  supply-chain-audit:
+    name: Supply Chain Vulnerability & CycloneDX SBOM Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 3. Install Dependensi Bersih (Clean Dependency Install)
+        run: npm ci
+
+      - name: 4. Verifikasi Kepatuhan Lisensi Komersial (Anti-Copyleft)
+        run: npm run security:license
+
+      - name: 5. Audit Kerentanan Dependensi (High/Critical Vulnerability Barrier)
+        run: npm run security:audit
+
+      - name: 6. Generate SBOM CycloneDX v1.5 JSON
+        run: npm run security:sbom
+
+      - name: 7. Unggah Artefak SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx-v1.5
+          path: reports/security/sbom-cyclonedx.json
+          retention-days: 90

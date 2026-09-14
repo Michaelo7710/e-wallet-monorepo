@@ -70,9 +70,36 @@ exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
   const result = await authService.loginUser(email, password);
 
+  if (result.require_2fa) {
+    return res.status(StatusCodes.OK).json({
+      status: 'success',
+      message: 'Kredensial valid. Diperlukan verifikasi kode 2FA.',
+      data: {
+        require_2fa: true,
+        pre_auth_token: result.pre_auth_token,
+        user: result.user
+      }
+    });
+  }
+
   res.status(StatusCodes.OK).json({
     status: 'success',
     message: 'Autentikasi login berhasil.',
+    data: {
+      user: result.user,
+      access_token: result.accessToken,
+      refresh_token: result.refreshToken
+    }
+  });
+});
+
+exports.verify2FALogin = catchAsync(async (req, res, next) => {
+  const { pre_auth_token, token } = req.body;
+  const result = await authService.verify2FALogin(pre_auth_token, token);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Verifikasi 2FA berhasil. Sesi penuh aktif.',
     data: {
       user: result.user,
       access_token: result.accessToken,
@@ -106,10 +133,15 @@ exports.logout = catchAsync(async (req, res, next) => {
 
 exports.verifyEmail = catchAsync(async (req, res, next) => {
   const { email, code } = req.body;
-  await authService.verifyEmail(email, code);
+  const result = await authService.verifyEmail(email, code);
   res.status(StatusCodes.OK).json({
     status: 'success',
-    message: 'Verifikasi forensik berhasil. Akun Anda kini aktif sepenuhnya di ekosistem GreenPay.'
+    message: 'Verifikasi email berhasil. Selamat datang di GreenPay!',
+    data: {
+      user: result.user,
+      access_token: result.accessToken,
+      refresh_token: result.refreshToken
+    }
   });
 });
 
@@ -144,8 +176,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 // GENERATE MANIFEST SECRET 2FA
 // ==========================================
 exports.generate2FA = catchAsync(async (req, res, next) => {
-  // Pengujian Postman: Tarik userId dari body (Nanti diganti req.user.id saat Middleware Protect aktif)
-  const { userId } = req.body; 
+  const userId = req.user._id;
   const data = await authService.generate2FASecret(userId);
   
   res.status(StatusCodes.OK).json({
@@ -158,7 +189,8 @@ exports.generate2FA = catchAsync(async (req, res, next) => {
 // VALIDASI TOKEN TOTP 2FA
 // ==========================================
 exports.verify2FA = catchAsync(async (req, res, next) => {
-  const { userId, token } = req.body;
+  const userId = req.user._id;
+  const { token } = req.body;
   await authService.verify2FAToken(userId, token);
   
   res.status(StatusCodes.OK).json({

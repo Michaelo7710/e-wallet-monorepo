@@ -1,16 +1,18 @@
 import api from '@core/network/api';
 import { TransactionDTO, SavedContactDTO } from '../../models/transactionDTO';
 
+export interface RawHistoryMetadata {
+  total_records: number;
+  current_page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface RawHistoryResponse {
   status: string;
-  results: number;
-  pagination: {
-    page: number;
-    limit: number;
-  };
-  data: {
-    transactions: TransactionDTO[];
-  };
+  message: string;
+  metadata: RawHistoryMetadata;
+  data: TransactionDTO[];
 }
 
 export class PaymentRemoteDataSource {
@@ -19,7 +21,21 @@ export class PaymentRemoteDataSource {
     return response.data.data;
   }
 
-  async transfer(receiverPhoneNumber: string, amount: number, pin: string): Promise<{ data: { transaction: TransactionDTO } }> {
+  async transfer(
+    receiverPhoneNumber: string,
+    amount: number,
+    pin: string
+  ): Promise<{
+    status: string;
+    message: string;
+    data: {
+      transaction_id: string;
+      amount: number;
+      status: 'success' | 'pending_approval';
+      is_high_value: boolean;
+      remaining_balance: number;
+    };
+  }> {
     const response = await api.post('/payments/transfer', {
       receiver_phone_number: receiverPhoneNumber,
       amount,

@@ -46,12 +46,17 @@ exports.deleteAdminBank = catchAsync(async (req, res, next) => {
 // ========================================================
 
 exports.getPendingTopUps = catchAsync(async (req, res, next) => {
-  const topups = await adminService.getPendingTopUps();
+  const { cursor, limit } = req.query;
+  const result = await adminService.getPendingTopUps(cursor, limit);
   res.status(StatusCodes.OK).json({
     status: 'success',
-    message: 'Daftar permohonan Top Up pending berhasil ditarik.',
-    results: topups.length,
-    data: topups
+    message: 'Daftar antrean berhasil ditarik.',
+    data: result.items,
+    meta: {
+      next_cursor: result.next_cursor,
+      has_more: result.has_more,
+      limit: parseInt(limit, 10) || 10
+    }
   });
 });
 
@@ -90,12 +95,17 @@ exports.deleteTopUpRecord = catchAsync(async (req, res, next) => {
 // ========================================================
 
 exports.getPendingWithdrawals = catchAsync(async (req, res, next) => {
-  const queue = await adminService.getPendingWithdrawals();
+  const { cursor, limit } = req.query;
+  const result = await adminService.getPendingWithdrawals(cursor, limit);
   res.status(StatusCodes.OK).json({
     status: 'success',
-    message: 'Daftar antrean penarikan dana berhasil ditarik.',
-    results: queue.length,
-    data: queue
+    message: 'Daftar antrean berhasil ditarik.',
+    data: result.items,
+    meta: {
+      next_cursor: result.next_cursor,
+      has_more: result.has_more,
+      limit: parseInt(limit, 10) || 10
+    }
   });
 });
 
@@ -143,13 +153,18 @@ exports.getFinancialReport = catchAsync(async (req, res, next) => {
 // ========================================================
 
 exports.getPendingTransfers = catchAsync(async (req, res, next) => {
-  const transfers = await adminService.getPendingTransfers();
+  const { cursor, limit } = req.query;
+  const result = await adminService.getPendingTransfers(cursor, limit);
 
   res.status(StatusCodes.OK).json({
     status: 'success',
-    message: 'Daftar antrean transfer high-value berhasil ditarik.',
-    results: transfers.length,
-    data: transfers
+    message: 'Daftar antrean berhasil ditarik.',
+    data: result.items,
+    meta: {
+      next_cursor: result.next_cursor,
+      has_more: result.has_more,
+      limit: parseInt(limit, 10) || 10
+    }
   });
 });
 

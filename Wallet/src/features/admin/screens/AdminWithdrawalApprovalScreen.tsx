@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -23,7 +24,16 @@ import {
 
 const AdminWithdrawalApprovalScreen = () => {
   const navigation = useNavigation();
-  const { data: withdrawals, isLoading, refetch, isRefetching } = usePendingWithdrawals();
+  const {
+    data,
+    isLoading,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePendingWithdrawals();
+  const withdrawals = data?.pages.flatMap((page) => page.items) ?? [];
   const { mutate: approve, isPending: isApproving } = useApproveWithdrawalMutation();
   const { mutate: reject, isPending: isRejecting } = useRejectWithdrawalMutation();
 
@@ -117,11 +127,29 @@ const AdminWithdrawalApprovalScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={withdrawals ?? []}
+          data={withdrawals}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           onRefresh={refetch}
           refreshing={isRefetching}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          initialNumToRender={8}
+          removeClippedSubviews={Platform.OS === 'android'}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator
+                style={{ paddingVertical: spacing.md }}
+                color={colors.primary}
+              />
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.centerContainer}>
               <Ionicons name="checkmark-done-circle-outline" size={64} color={colors.success} />

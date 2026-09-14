@@ -6,6 +6,7 @@ const router = express.Router();
 
 // Webhook Midtrans: WAJIB Terbuka Umum karena diketuk asinkronus oleh server luar Midtrans
 router.post('/midtrans-webhook', paymentController.handleMidtransWebhook);
+router.post('/midtrans-notification', paymentController.handleMidtransWebhook);
 
 // Sirkuit Transaksi Pengguna: Wajib terkunci aman
 router.use(protect);

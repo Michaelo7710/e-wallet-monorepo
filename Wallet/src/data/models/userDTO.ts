@@ -12,4 +12,15 @@ export interface UserDTO {
   avatar?: string | null;
   nik?: string | null;
   balance: number;
+  is_email_verified?: boolean;
+  is_kyc_verified?: boolean;
+  account_tier?: 'basic' | 'premium';
+  isEmailVerified?: boolean;
+  isKycVerified?: boolean;
+  accountTier?: 'basic' | 'premium';
+  has_pin?: boolean;
+  hasPin?: boolean;
+  id_card_photo?: string | null;
+  idCardPhoto?: string | null;
+  bio?: string | null;
 }

@@ -76,6 +76,33 @@ const startMongoSession = async () => {
 };
 
 // ========================================================
+// HELPER: KEYSET CURSOR PAGINATION (FIFO VIA _id)
+// ========================================================
+
+const buildCursorPagination = (cursor, limit) => {
+  const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+  const cursorFilter = {};
+
+  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+    cursorFilter._id = { $gt: new mongoose.Types.ObjectId(cursor) };
+  }
+
+  return { limitNum, cursorFilter };
+};
+
+const formatCursorResults = (items, limitNum) => {
+  const hasMore = items.length > limitNum;
+  const results = hasMore ? items.slice(0, limitNum) : items;
+  const nextCursor = hasMore ? results[results.length - 1]._id.toString() : null;
+
+  return {
+    items: results,
+    next_cursor: nextCursor,
+    has_more: hasMore,
+  };
+};
+
+// ========================================================
 // A. MANAJEMEN REKENING PLATFORM (ADMIN BANK)
 // ========================================================
 
@@ -101,7 +128,7 @@ exports.updateBank = async (bankId, updateData) => {
     bankId,
     updateData,
     {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }
   );
@@ -135,18 +162,24 @@ exports.deleteBank = async (bankId) => {
 // B. MANAJEMEN TOP UP USER
 // ========================================================
 
-exports.getPendingTopUps = async () => {
-  return TopUpRequest.find({
+exports.getPendingTopUps = async (cursor, limit) => {
+  const { limitNum, cursorFilter } = buildCursorPagination(cursor, limit);
+
+  const topups = await TopUpRequest.find({
     status: 'pending',
     deleted_at: null,
+    ...cursorFilter,
   })
     .populate('user_id', 'username email phone_number')
     .populate(
       'admin_bank_id',
       'bank_name account_number account_name'
     )
-    .sort({ createdAt: 1 })
+    .sort({ _id: 1 })
+    .limit(limitNum + 1)
     .lean();
+
+  return formatCursorResults(topups, limitNum);
 };
 
 exports.processTopUpDecision = async (
@@ -191,15 +224,11 @@ exports.processTopUpDecision = async (
 
       await request.save(options);
 
-      const walletQuery = Wallet.findOne({
-        user_id: request.user_id,
-      });
-
-      if (session) {
-        walletQuery.session(session);
-      }
-
-      const wallet = await walletQuery;
+      const wallet = await Wallet.findOneAndUpdate(
+        { user_id: request.user_id },
+        { $inc: { balance: request.amount } },
+        { returnDocument: 'after', ...options }
+      );
 
       if (!wallet) {
         throw new AppError(
@@ -207,10 +236,6 @@ exports.processTopUpDecision = async (
           StatusCodes.NOT_FOUND
         );
       }
-
-      wallet.balance += request.amount;
-
-      await wallet.save(options);
 
       await Transaction.create(
         [
@@ -284,13 +309,19 @@ exports.deleteTopUpRecord = async (topUpId) => {
 // C. MONITORING WITHDRAWAL
 // ========================================================
 
-exports.getPendingWithdrawals = async () => {
-  return WithdrawalRequest.find({
+exports.getPendingWithdrawals = async (cursor, limit) => {
+  const { limitNum, cursorFilter } = buildCursorPagination(cursor, limit);
+
+  const withdrawals = await WithdrawalRequest.find({
     status: 'pending_approval',
+    ...cursorFilter,
   })
     .populate('user_id', 'username email phone_number')
-    .sort({ createdAt: 1 })
+    .sort({ _id: 1 })
+    .limit(limitNum + 1)
     .lean();
+
+  return formatCursorResults(withdrawals, limitNum);
 };
 
 exports.executeKliringDecision = async (
@@ -361,24 +392,14 @@ exports.getFinancialDashboard = async (
   }
 
   // ------------------------------------------------------
-  // 3. Filter berdasarkan created_at / createdAt
+  // 3. Filter rentang waktu berdasarkan createdAt (B-Tree Indexing)
   // ------------------------------------------------------
 
   const timeBoundary = {
-    $or: [
-      {
-        created_at: {
-          $gte: startDate,
-          $lt: endDate,
-        },
-      },
-      {
-        createdAt: {
-          $gte: startDate,
-          $lt: endDate,
-        },
-      },
-    ],
+    createdAt: {
+      $gte: startDate,
+      $lt: endDate,
+    },
   };
 
   // ------------------------------------------------------
@@ -442,15 +463,21 @@ exports.getFinancialDashboard = async (
 // E. APPROVAL TRANSFER NOMINAL BESAR
 // ========================================================
 
-exports.getPendingTransfers = async () => {
-  return Transaction.find({
+exports.getPendingTransfers = async (cursor, limit) => {
+  const { limitNum, cursorFilter } = buildCursorPagination(cursor, limit);
+
+  const transfers = await Transaction.find({
     type: 'transfer',
     status: 'pending_approval',
+    ...cursorFilter,
   })
     .populate('sender_id', 'username email phone_number')
     .populate('receiver_id', 'username email phone_number')
-    .sort({ created_at: 1 })
+    .sort({ _id: 1 })
+    .limit(limitNum + 1)
     .lean();
+
+  return formatCursorResults(transfers, limitNum);
 };
 
 exports.processTransferDecision = async (
@@ -492,15 +519,11 @@ exports.processTransferDecision = async (
     const options = session ? { session } : {};
 
     if (decision === 'approve') {
-      const receiverWalletQuery = Wallet.findOne({
-        user_id: transaction.receiver_id,
-      });
-
-      if (session) {
-        receiverWalletQuery.session(session);
-      }
-
-      const receiverWallet = await receiverWalletQuery;
+      const receiverWallet = await Wallet.findOneAndUpdate(
+        { user_id: transaction.receiver_id },
+        { $inc: { balance: transaction.amount } },
+        { returnDocument: 'after', ...options }
+      );
 
       if (!receiverWallet) {
         throw new AppError(
@@ -509,25 +532,17 @@ exports.processTransferDecision = async (
         );
       }
 
-      receiverWallet.balance += transaction.amount;
-
-      await receiverWallet.save(options);
-
       transaction.status = 'success';
 
       await transaction.save(options);
     }
 
     if (decision === 'reject') {
-      const senderWalletQuery = Wallet.findOne({
-        user_id: transaction.sender_id,
-      });
-
-      if (session) {
-        senderWalletQuery.session(session);
-      }
-
-      const senderWallet = await senderWalletQuery;
+      const senderWallet = await Wallet.findOneAndUpdate(
+        { user_id: transaction.sender_id },
+        { $inc: { balance: transaction.amount } },
+        { returnDocument: 'after', ...options }
+      );
 
       if (!senderWallet) {
         throw new AppError(
@@ -535,10 +550,6 @@ exports.processTransferDecision = async (
           StatusCodes.NOT_FOUND
         );
       }
-
-      senderWallet.balance += transaction.amount;
-
-      await senderWallet.save(options);
 
       transaction.status = 'rejected';
 
