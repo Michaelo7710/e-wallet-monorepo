@@ -36,6 +36,40 @@ const VerifyEmailScreen = () => {
     },
   });
 
+  const handleVerifySuccess = async (response: any) => {
+    try {
+      // Ekstraksi defensif mendukung response.data.data maupun response.data
+      const payload = response?.data?.data || response?.data || response;
+      const user = payload?.user;
+      const accessToken = payload?.access_token || payload?.accessToken || payload?.token;
+      const refreshToken = payload?.refresh_token || payload?.refreshToken;
+
+      // Jika server mengembalikan sesi lengkap (Backend Baru):
+      if (user && accessToken && refreshToken) {
+        const sessionUser = {
+          ...UserMapper.toDomain(user),
+          id: user.id || user._id,
+          _id: user._id || user.id,
+        };
+        await loginSession(sessionUser as any, accessToken, refreshToken);
+        Alert.alert('Selamat Datang!', 'Email Anda berhasil diverifikasi. Sesi Anda telah aktif.');
+        // Navigasi otomatis di-handle oleh perubahan state authStore di AppNavigator
+        return;
+      }
+
+      // Fallback jika backend cloud belum mengembalikan token (Legacy Backend Fallback):
+      console.warn(' [VERIFY_EMAIL] Server tidak mengembalikan token sesi lengkap. Mengalihkan ke Login manual.');
+      Alert.alert(
+        'Verifikasi Berhasil',
+        'Email Anda telah terverifikasi. Silakan masuk dengan kata sandi Anda.',
+        [{ text: 'Masuk Sekarang', onPress: () => navigation.navigate('Login') }]
+      );
+    } catch (err) {
+      console.error(' [VERIFY_EMAIL] Gagal memproses sesi:', err);
+      navigation.navigate('Login');
+    }
+  };
+
   const onSubmit = (data: VerifyEmailFormValues) => {
     if (!email) {
       Alert.alert(
@@ -49,24 +83,7 @@ const VerifyEmailScreen = () => {
     verifyEmail(
       { email, code: data.code },
       {
-        onSuccess: async (data: any) => {
-          const rawUser = data?.data?.user;
-          const sessionUser = rawUser
-            ? {
-                ...UserMapper.toDomain(rawUser),
-                _id: rawUser._id || rawUser.id,
-              }
-            : data?.data?.user;
-          const accessToken = data?.data?.access_token;
-          const refreshToken = data?.data?.refresh_token;
-
-          await loginSession(sessionUser, accessToken, refreshToken);
-
-          Alert.alert(
-            'Verifikasi Berhasil',
-            'Verifikasi email berhasil. Selamat datang di GreenPay!'
-          );
-        },
+        onSuccess: handleVerifySuccess,
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Verifikasi Gagal';

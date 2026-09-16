@@ -90,6 +90,7 @@ const HomeScreen = () => {
           <WalletCard
             balance={currentBalance}
             userName={user?.username || 'E-Wallet User'}
+            user={user}
           />
         </View>
 
