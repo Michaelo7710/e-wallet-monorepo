@@ -1,0 +1,72 @@
+# Dependabot Configuration for GreenPay Monorepo
+# Enforces automated security patching and dependency lifecycle governance
+version: 2
+updates:
+  # 1. Backend Service (Node.js / Express)
+  - package-ecosystem: "npm"
+    directory: "/e-wallet-backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Michaelo7710"
+    labels:
+      - "backend"
+      - "dependencies"
+      - "security"
+    groups:
+      dev-dependencies:
+        patterns:
+          - "jest*"
+          - "nodemon*"
+          - "supertest*"
+          - "mongodb-memory-server*"
+
+  # 2. Mobile Client (React Native / Expo SDK 51)
+  - package-ecosystem: "npm"
+    directory: "/Wallet"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:30"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Michaelo7710"
+    labels:
+      - "mobile"
+      - "dependencies"
+      - "frontend"
+    groups:
+      expo-ecosystem:
+        patterns:
+          - "expo*"
+          - "@expo/*"
+
+  # 3. Monorepo Root (DevSecOps Tooling & SBOM Scripts)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels:
+      - "devsecops"
+      - "monorepo"
+
+  # 4. GitHub Actions CI/CD Workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "Europe/Amsterdam"
+    labels:
+      - "ci/cd"
+      - "github-actions"

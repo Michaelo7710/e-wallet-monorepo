@@ -1,0 +1,35 @@
+name: "🛡️ Security Advisory / Vulnerability Report"
+description: "Submit a private security vulnerability report"
+title: "[SEC]: <vulnerability summary>"
+labels: ["security", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **DO NOT REPORT PUBLIC ZERO-DAYS HERE IF SENSITIVE.**
+        For critical security vulnerabilities, please refer to our [Security Policy](https://github.com/Michaelo7710/e-wallet-monorepo/blob/main/.github/SECURITY.md) or contact security@greenpay-fintech.internal directly.
+  - type: dropdown
+    id: vulnerability_type
+    attributes:
+      label: Vulnerability Category
+      options:
+        - "CWE-384 / Session Fixation & Auth Flaw"
+        - "CWE-798 / Hardcoded Secrets or Key Leakage"
+        - "CWE-362 / Race Condition (Double Spending)"
+        - "CWE-89 / Injection (NoSQL / SQL)"
+        - "CWE-352 / Cross-Site Request Forgery or Broken Object Level Auth (BOLA)"
+        - "Supply Chain Vulnerability (NPM Dependency)"
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Technical Details & Proof of Concept (PoC)
+      description: Detailed steps to demonstrate the vulnerability without executing destructive actions.
+    validations:
+      required: true
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Suggested Remediation
+      description: How should this vulnerability be fixed in accordance with Clean Architecture?

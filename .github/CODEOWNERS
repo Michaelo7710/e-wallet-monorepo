@@ -1,0 +1,18 @@
+# Code Owners for GreenPay Monorepo
+# Automatically requests reviews from relevant architects
+
+# Global Monorepo Owners
+* @Michaelo7710
+
+# Backend Service & Financial Ledger Engine
+/e-wallet-backend/ @Michaelo7710
+
+# Mobile Client & React Native Clean Architecture
+/Wallet/ @Michaelo7710
+
+# CI/CD Workflows & DevSecOps
+/.github/ @Michaelo7710
+/scripts/security/ @Michaelo7710
+
+# System Architecture & Compliance Documentation
+/docs/ @Michaelo7710

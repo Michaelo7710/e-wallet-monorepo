@@ -1,0 +1,43 @@
+name: "CodeQL SAST & Vulnerability Analysis"
+
+on:
+  push:
+    branches:
+      - "main"
+      - "staging"
+      - "feat/**"
+  pull_request:
+    branches:
+      - "main"
+      - "staging"
+  schedule:
+    - cron: '0 4 * * 1' # Every Monday at 04:00 UTC
+
+jobs:
+  analyze:
+    name: CodeQL Static Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript-typescript' ]
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: 3. Perform CodeQL Static Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
