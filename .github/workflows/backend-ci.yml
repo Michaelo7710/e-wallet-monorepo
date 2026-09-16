@@ -45,9 +45,23 @@ jobs:
         working-directory: ./e-wallet-backend
         env:
           NODE_ENV: test
-          JWT_SECRET: github_actions_ci_access_secret_2026
-          JWT_REFRESH_SECRET: github_actions_ci_refresh_secret_2026
-          USE_TRANSACTIONS: false
+          PORT: 3000
+          DATABASE_URL: mongodb://127.0.0.1:27017/test_db
+          JWT_SECRET: github_actions_ci_access_secret_2026_minimum_32_chars
+          JWT_EXPIRES_IN: 15m
+          JWT_REFRESH_SECRET: github_actions_ci_refresh_secret_2026_minimum_32_chars
+          JWT_REFRESH_EXPIRES_IN: 7d
+          JWT_PRE_AUTH_SECRET: github_actions_ci_preauth_secret_2026_minimum_32_chars
+          JWT_PRE_AUTH_EXPIRES_IN: 3m
+          MIDTRANS_SERVER_KEY: test_server_key_ci_2026_dummy
+          MIDTRANS_CLIENT_KEY: test_client_key_ci_2026_dummy
+          MIDTRANS_IS_PRODUCTION: 'false'
+          EMAIL_HOST: sandbox.smtp.mailtrap.io
+          EMAIL_PORT: '2525'
+          EMAIL_USER: ci_test_user
+          EMAIL_PASS: ci_test_password
+          USE_TRANSACTIONS: 'false'
+          TOTP_WINDOW_STEPS: '1'
         run: npm test -- --coverage
 
       - name: 5. Archive Coverage Report Artifact

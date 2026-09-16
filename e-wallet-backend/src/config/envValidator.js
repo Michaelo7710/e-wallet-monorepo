@@ -52,7 +52,9 @@ function sanitizeDatabaseUri(uri) {
  * @returns {Readonly<object>} Objek ENV yang telah divalidasi dan dibekukan.
  */
 function validateEnv(options = {}) {
-  const exitOnError = options.exitOnError !== false;
+  // Dalam lingkungan test (Jest/CI), jangan pernah memanggil process.exit(1) secara default agar test runner tidak terbunuh
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const exitOnError = options.exitOnError !== undefined ? Boolean(options.exitOnError) : !isTestEnv;
   const forceReload = options.forceReload === true;
   const envSource = options.customEnv || process.env;
 
