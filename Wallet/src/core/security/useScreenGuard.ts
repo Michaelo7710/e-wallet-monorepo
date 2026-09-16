@@ -4,7 +4,6 @@ import * as ScreenCapture from 'expo-screen-capture';
 export const useScreenGuard = (enabled: boolean = true) => {
   useEffect(() => {
     if (!enabled) return;
-    let isMounted = true;
     const activateGuard = async () => {
       try {
         await ScreenCapture.preventScreenCaptureAsync('greenpay_secure_vault');
@@ -14,7 +13,6 @@ export const useScreenGuard = (enabled: boolean = true) => {
     };
     activateGuard();
     return () => {
-      isMounted = false;
       ScreenCapture.allowScreenCaptureAsync('greenpay_secure_vault').catch(() => {});
     };
   }, [enabled]);

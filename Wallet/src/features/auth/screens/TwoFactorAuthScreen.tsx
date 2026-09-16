@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,10 +35,10 @@ const TwoFactorAuthScreen = () => {
     },
   });
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     clearPreAuthSession();
     navigation.navigate('Login');
-  };
+  }, [clearPreAuthSession, navigation]);
 
   useEffect(() => {
     if (!isSessionValid() || !preAuthToken) {
@@ -48,7 +48,7 @@ const TwoFactorAuthScreen = () => {
         [{ text: 'Kembali ke Login', onPress: handleCancel }]
       );
     }
-  }, []);
+  }, [isSessionValid, preAuthToken, handleCancel]);
 
   const onSubmit = (data: TwoFactorFormValues) => {
     if (!preAuthToken) {

@@ -6,9 +6,7 @@ import {
   isPinnedHost,
   getPinnedHashes,
   extractHostname,
-  PINNED_DOMAINS,
 } from '../src/core/network/sslPinning.config';
-import { Platform, BackHandler } from 'react-native';
 import { telemetryService } from '../src/core/telemetry/telemetry.service';
 import { ENV } from '../src/core/config/env';
 

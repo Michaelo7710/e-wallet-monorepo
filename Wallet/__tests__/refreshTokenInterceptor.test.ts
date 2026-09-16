@@ -1,5 +1,5 @@
 import axios from 'axios';
-import api, { AppError, isPublicEndpoint, PUBLIC_ENDPOINTS, STORAGE_KEYS } from '../src/core/network/api';
+import api, { AppError, isPublicEndpoint, STORAGE_KEYS } from '../src/core/network/api';
 import { secureStorageService } from '../src/core/security/secureStorage.service';
 import { useAuthStore } from '../src/core/storage/useAuthStore';
 
