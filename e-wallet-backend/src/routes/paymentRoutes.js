@@ -1,6 +1,7 @@
 const express = require('express');
 const paymentController = require('../controllers/paymentController'); 
 const { protect } = require('../middlewares/authMiddleware');
+const { idempotencyGuard } = require('../middlewares/idempotencyMiddleware');
 
 const router = express.Router();
 
@@ -11,8 +12,8 @@ router.post('/midtrans-notification', paymentController.handleMidtransWebhook);
 // Sirkuit Transaksi Pengguna: Wajib terkunci aman
 router.use(protect);
 router.post('/topup/initiate', paymentController.initiateTopUp);
-router.post('/withdrawal/request', paymentController.requestWithdrawal);
-router.post('/transfer', paymentController.transferP2P);
+router.post('/withdrawal/request', idempotencyGuard, paymentController.requestWithdrawal);
+router.post('/transfer', idempotencyGuard, paymentController.transferP2P);
 router.get('/history', paymentController.getTransactionHistory);
 
 module.exports = router;

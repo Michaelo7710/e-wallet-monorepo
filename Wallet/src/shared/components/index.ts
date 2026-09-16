@@ -1,7 +1,8 @@
 export { default as ButtonCustom } from './ButtonCustom';
 export { default as InputField } from './InputField';
 export { default as ControlledInput } from './ControlledInput';
-export { default as WalletCard } from './WalletCard';
+export { default as WalletCard, getWalletTierInfo } from './WalletCard';
+export type { WalletCardProps } from './WalletCard';
 export { default as PinModal } from './PinModal';
 export { default as NetworkStatusBanner } from './NetworkStatusBanner';
 export { default as DeviceSecurityBlockedScreen } from './DeviceSecurityBlockedScreen';

@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # 1. DATABASE SERVICE: MongoDB Enterprise Engine
+  # ============================================================================
+  mongodb:
+    image: mongo:6.0
+    container_name: greenpay-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=santri_ewallet
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - greenpay-network
+
+  # ============================================================================
+  # 2. BACKEND API SERVICE: Node.js Express Modular Monolith
+  # ============================================================================
+  backend:
+    build:
+      context: ./e-wallet-backend
+      dockerfile: Dockerfile
+    container_name: greenpay-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/santri_ewallet?retryWrites=false
+      - USE_TRANSACTIONS=false
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_here}
+      - JWT_EXPIRES_IN=15m
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-your_jwt_refresh_secret_here}
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - JWT_PRE_AUTH_SECRET=${JWT_PRE_AUTH_SECRET:-your_pre_auth_secret_here}
+      - JWT_PRE_AUTH_EXPIRES_IN=3m
+      - EMAIL_HOST=${EMAIL_HOST:-sandbox.smtp.mailtrap.io}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER:-your_email_user}
+      - EMAIL_PASS=${EMAIL_PASS:-your_email_pass}
+      - TOTP_WINDOW_STEPS=2
+      - MIDTRANS_SERVER_KEY=${MIDTRANS_SERVER_KEY:-SB-Mid-server-placeholder}
+      - MIDTRANS_CLIENT_KEY=${MIDTRANS_CLIENT_KEY:-SB-Mid-client-placeholder}
+      - MIDTRANS_IS_PRODUCTION=false
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - greenpay-network
+
+networks:
+  greenpay-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+    driver: local

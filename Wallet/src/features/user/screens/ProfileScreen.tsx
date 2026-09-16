@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 import { UserLayout } from '@shared/layouts';
-import { ButtonCustom } from '@shared/components';
+import { ButtonCustom, getWalletTierInfo } from '@shared/components';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { BiometricsService } from '@core/security/biometrics.service';
 import { colors, typography, spacing } from '@core/theme';
@@ -75,6 +75,8 @@ const ProfileScreen = () => {
   const navigation = useNavigation<any>();
   const { user, logoutSession, isBiometricsEnabled, setBiometricsEnabled } =
     useAuthStore();
+
+  const tierInfo = getWalletTierInfo(user);
 
   const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean>(false);
 
@@ -202,33 +204,33 @@ const ProfileScreen = () => {
               <View
                 style={[
                   styles.kycBadge,
-                  user?.isVerified
+                  tierInfo.isPremium
                     ? styles.kycBadgeVerified
                     : styles.kycBadgeUnverified,
                 ]}
               >
                 <Ionicons
                   name={
-                    user?.isVerified
+                    tierInfo.isPremium
                       ? 'shield-checkmark'
                       : 'alert-circle-outline'
                   }
                   size={12}
-                  color={user?.isVerified ? colors.primaryDark : colors.warning}
+                  color={tierInfo.isPremium ? colors.primaryDark : colors.warning}
                   style={{ marginRight: 4 }}
                 />
                 <Text
                   style={[
                     styles.kycBadgeText,
                     {
-                      color: user?.isVerified
+                      color: tierInfo.isPremium
                         ? colors.primaryDark
                         : colors.warning,
                     },
                   ]}
                 >
-                  {user?.isVerified
-                    ? 'Akun Premium (Limit Rp 50 Jt)'
+                  {tierInfo.isPremium
+                    ? 'Premium Verified (Limit Rp 50 Jt)'
                     : 'Akun Basic (Limit Rp 5 Jt)'}
                 </Text>
               </View>
@@ -236,7 +238,7 @@ const ProfileScreen = () => {
           </View>
         </View>
 
-        {!user?.isVerified && (
+        {!tierInfo.isPremium && (
           <TouchableOpacity
             style={styles.kycBanner}
             activeOpacity={0.8}

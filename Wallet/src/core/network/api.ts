@@ -11,6 +11,38 @@ export const STORAGE_KEYS = {
   BIOMETRICS_ENABLED: 'gp_biometrics_enabled',
 } as const;
 
+export class AppError extends Error {
+  public statusCode?: number;
+  public errorCode?: string;
+  public isOperational: boolean;
+
+  constructor(message: string, statusCode = 400, errorCode = 'APP_ERROR') {
+    super(message);
+    this.name = 'AppError';
+    this.statusCode = statusCode;
+    this.errorCode = errorCode;
+    this.isOperational = true;
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+export const PUBLIC_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/verify-email',
+  '/auth/resend-otp',
+  '/auth/2fa/login-verify',
+  '/auth/2fa/verify-login',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/config/feature-flags',
+];
+
+export const isPublicEndpoint = (url?: string): boolean => {
+  if (!url) return false;
+  return PUBLIC_ENDPOINTS.some((endpoint) => url.includes(endpoint));
+};
+
 const api = axios.create({
   baseURL: ENV.API_URL,
   timeout: 15000,
@@ -78,7 +110,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // C. Rekam Breadcrumb Request Jaringan (otomatis disanitasi dari PII)
+    // E. Rekam Breadcrumb Request Jaringan (otomatis disanitasi dari PII)
     telemetryService.addBreadcrumb({
       category: 'network',
       message: `HTTP ${config.method?.toUpperCase() || 'GET'} ${config.url || ''}`,
@@ -114,13 +146,16 @@ api.interceptors.response.use(
     }
 
     // B. Rekam Breadcrumb Status HTTP Sukses
+    const reqUrl = response.config.url || '';
+    const reqMethod = response.config.method?.toUpperCase() || 'GET';
     telemetryService.addBreadcrumb({
       category: 'network',
       level: 'info',
-      message: `HTTP ${response.status} ${response.config.url || ''}`,
+      message: `HTTP ${response.status} [${reqMethod}] ${reqUrl}`,
       data: {
         status: response.status,
-        url: response.config.url,
+        url: reqUrl,
+        method: reqMethod,
       },
     });
 
@@ -150,10 +185,13 @@ api.interceptors.response.use(
       errorMessage.includes('CERTIFICATE VERIFICATION FAILED') ||
       errorMessage.includes('TLS HANDSHAKE');
 
+    const failedUrl = error.config?.url || 'unknown_url';
+    const failedMethod = error.config?.method?.toUpperCase() || 'UNKNOWN_METHOD';
+
     if (isMitmIncident) {
       telemetryService.captureException(error, {
         tag: 'SECURITY_ALERT_MITM',
-        url: error.config?.url,
+        url: failedUrl,
         code: error.code,
         message: error.message,
       });
@@ -163,22 +201,37 @@ api.interceptors.response.use(
     telemetryService.addBreadcrumb({
       category: 'network',
       level: 'error',
-      message: `HTTP Error ${error.response?.status || 'Network Error'} ${error.config?.url || ''}`,
+      message: `HTTP Error ${error.response?.status || 'Network Error'} [${failedMethod}] ${failedUrl}`,
       data: {
         status: error.response?.status,
-        url: error.config?.url,
+        url: failedUrl,
+        method: failedMethod,
         message: error.message,
         response: error.response?.data,
       },
     });
 
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
 
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/login')
-    ) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // Periksa apakah request berasal dari rute publik yang di-whitelist
+      if (isPublicEndpoint(originalRequest.url)) {
+        telemetryService.addBreadcrumb({
+          category: 'auth',
+          level: 'warn',
+          message: `[AUTH_BYPASS_REFRESH] HTTP 401 pada endpoint publik: [${failedMethod}] ${failedUrl}. Meneruskan error asli ke caller.`,
+          data: {
+            url: failedUrl,
+            method: failedMethod,
+            status: 401,
+          },
+        });
+        // Jangan lakukan auto-refresh untuk endpoint publik. Teruskan error asli server ke caller.
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -198,7 +251,17 @@ api.interceptors.response.use(
       try {
         const refreshToken = await secureStorageService.getItem<string>(STORAGE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
-          throw new Error('Refresh Token tidak tersedia.');
+          telemetryService.addBreadcrumb({
+            category: 'auth',
+            level: 'warn',
+            message: `[AUTH_NO_REFRESH_TOKEN] Refresh token tidak tersedia pada rute terlindungi: ${originalRequest.url}. Mengakhiri sesi.`,
+            data: { url: originalRequest.url },
+          });
+          throw new AppError(
+            'Refresh token tidak tersedia.',
+            401,
+            'REFRESH_TOKEN_NOT_FOUND'
+          );
         }
 
         const response = await axios.post(`${ENV.API_URL}/auth/refresh-token`, {
@@ -232,6 +295,15 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        telemetryService.addBreadcrumb({
+          category: 'auth',
+          level: 'error',
+          message: `[AUTH_REFRESH_FAILED] Gagal menyegarkan token untuk ${originalRequest.url}: ${(refreshError as any)?.message || 'Unknown error'}`,
+          data: {
+            url: originalRequest.url,
+            error: (refreshError as any)?.message,
+          },
+        });
         try {
           await useAuthStore.getState().logoutSession();
         } catch (logoutError) {
