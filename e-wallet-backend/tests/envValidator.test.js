@@ -150,8 +150,10 @@ describe('Fail-Fast Environment Schema Validator', () => {
   });
 
   it('harus mengembalikan objek yang sama melalui getEnv()', () => {
-    const env = getEnv();
-    expect(env).toBeDefined();
-    expect(typeof env).toBe('object');
+    const env1 = getEnv();
+    const env2 = getEnv();
+    expect(env1).toBeDefined();
+    expect(typeof env1).toBe('object');
+    expect(env1).toBe(env2);
   });
 });

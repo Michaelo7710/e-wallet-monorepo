@@ -2,40 +2,49 @@ name: Frontend E-Wallet CI Pipeline
 
 on:
   push:
-    branches: [ "main", "development" ]
+    branches:
+      - "main"
+      - "development"
+      - "staging"
+      - "feat/**"
     paths:
       - 'Wallet/**'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
-    branches: [ "main", "development" ]
+    branches:
+      - "main"
+      - "development"
+      - "staging"
+      - "feat/**"
     paths:
       - 'Wallet/**'
       - '.github/workflows/frontend-ci.yml'
 
 jobs:
   code-quality-guard:
-    name: Validasi Integritas React Native
+    name: React Native TypeScript & Quality Guard
     runs-on: ubuntu-latest
 
     steps:
       - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: 2. Setup Lingkungan Node.js
+      - name: 2. Setup Node.js Runtime (LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: 'Wallet/package-lock.json'
 
-      - name: 3. Instalasi Dependensi (Frontend React Native)
+      - name: 3. Install Clean Dependencies
         working-directory: ./Wallet
         run: npm ci
 
-      - name: 4. Validasi Tipe Data (TypeScript Strict Check)
+      # 🛡️ STRICT COMPILER ENFORCEMENT: Zero TS Compiler Tolerance
+      - name: 4. Strict TypeScript Type Check (Zero Tolerance)
         working-directory: ./Wallet
-        run: npx tsc --noEmit --skipLibCheck || echo "TypeScript check completed"
+        run: npx tsc --noEmit --skipLibCheck
 
-      - name: 5. Analisis Sintaks (ESLint)
+      - name: 5. Syntax & Code Standards (ESLint)
         working-directory: ./Wallet
         run: npm run lint --if-present

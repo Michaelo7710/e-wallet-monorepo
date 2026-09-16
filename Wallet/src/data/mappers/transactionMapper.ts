@@ -1,10 +1,10 @@
-import { TransactionDTO, SavedContactDTO } from '../models/transactionDTO';
+import { SavedContactDTO } from '../models/transactionDTO';
 import { Transaction, SavedContact } from '@domain/entities/transaction';
 
 export class TransactionMapper {
   static toDomain(dto: any): Transaction {
     // Parsing defensif counterparty: string atau objek
-    let counterpartyData: { username?: string; phoneNumber?: string } | undefined = undefined;
+    let counterpartyData: { username?: string; phoneNumber?: string } | undefined;
 
     if (typeof dto.counterparty === 'string' && dto.counterparty.trim() !== '') {
       counterpartyData = { username: dto.counterparty };

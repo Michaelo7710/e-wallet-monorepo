@@ -103,7 +103,7 @@ export class UserLocalDataSource {
       balance: Number(row.balance),
       isEmailVerified: true,
       isKycVerified: Boolean(row.is_verified),
-      accountTier: Boolean(row.is_verified) ? 'premium' : 'basic',
+      accountTier: row.is_verified ? 'premium' : 'basic',
       hasPin: Boolean(row.has_pin),
       idCardPhoto: row.id_card_photo ?? null,
       bio: row.bio ?? null,

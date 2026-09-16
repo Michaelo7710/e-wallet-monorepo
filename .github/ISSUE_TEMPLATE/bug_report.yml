@@ -1,0 +1,53 @@
+name: "🐛 Bug Report"
+description: "Report a reproducible bug or defect in GreenPay Mobile or Backend"
+title: "[BUG]: <short description>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue. Please ensure no personal identifiable information (PII), credentials, or secret keys are included in your report.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      options:
+        - "Backend (Node.js/Express API)"
+        - "Mobile App (React Native/Expo)"
+        - "Database / Ledger Mutations"
+        - "Authentication & Dual-Token"
+        - "CI/CD & DevOps Tooling"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "e.g., Calling /api/v1/payments/transfer without Idempotency-Key returns 500 instead of 400..."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the behavior.
+      placeholder: |
+        1. POST to `/api/v1/auth/login` with valid credentials
+        2. Extract access_token
+        3. Call `/api/v1/payments/withdraw`
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs Actual Behavior
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment & Runtime Details
+      description: Node version, OS, Expo SDK version, or Docker version.
+      placeholder: "Node v20.12, Expo SDK 51, Ubuntu 22.04 / Windows 11"

@@ -1,0 +1,39 @@
+name: "💡 Architecture & Feature Proposal (RFC)"
+description: "Propose a new feature, architecture optimization, or scalability improvement"
+title: "[RFC]: <short proposal title>"
+labels: ["enhancement", "architecture", "rfc"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Business Motivation
+      description: What challenge or user friction does this proposal solve?
+      placeholder: "As a user or system engineer, I want to..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Architectural Solution
+      description: Detailed description of the technical implementation.
+      placeholder: "Detail API contract changes, domain use cases, or schema migrations..."
+    validations:
+      required: true
+  - type: dropdown
+    id: tier
+    attributes:
+      label: System Impact Level
+      options:
+        - "Low (UI / Presentation Layer change)"
+        - "Medium (New non-critical API / Query endpoint)"
+        - "High (Balance ledger, ACID transaction, Auth, or Security change)"
+    validations:
+      required: true
+  - type: checkboxes
+    id: compliance_considerations
+    attributes:
+      label: Regulatory & Performance Considerations
+      options:
+        - label: "GDPR Compliant (No unnecessary PII retained)"
+        - label: "Idempotency & Anti-Double Spending guaranteed"
+        - label: "Mobile performance optimized (zero unnecessary re-renders)"
