@@ -97,6 +97,11 @@ const HistoryScreen = () => {
           maxToRenderPerBatch={10}
           initialNumToRender={8}
           removeClippedSubviews={Platform.OS === 'android'}
+          getItemLayout={(_data, index) => ({
+            length: 80,
+            offset: 80 * index,
+            index,
+          })}
           ListFooterComponent={
             isFetchingNextPage ? (
               <ActivityIndicator
