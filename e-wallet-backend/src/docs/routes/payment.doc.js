@@ -114,6 +114,7 @@
  *                 data:
  *                   type: object
  *                   properties:
+ *                     reference_number: { type: string, example: "GP-TRF-20260917-A1B2C3D4" }
  *                     transaction_id: { type: string, example: "65f1a2b3c4d5e6f7a8b9c0d1" }
  *                     amount: { type: number, example: 250000 }
  *                     status: { type: string, enum: [success, pending_approval], example: "success" }
@@ -161,9 +162,11 @@
  *                   type: object
  *                   properties:
  *                     reference_number: { type: string, example: "GP-WD-20260901-A1B2C3D4" }
+ *                     transaction_id: { type: string, example: "65f1a2b3c4d5e6f7a8b9c0d2" }
  *                     amount: { type: number, example: 100000 }
  *                     status: { type: string, enum: [success, pending_approval], example: "success" }
  *                     is_high_value: { type: boolean, example: false }
+ *                     remaining_balance: { type: number, example: 1900000 }
  *       400:
  *         $ref: '#/components/responses/400BadRequest'
  *       401:

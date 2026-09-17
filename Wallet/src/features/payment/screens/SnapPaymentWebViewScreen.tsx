@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Linking,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -44,31 +44,22 @@ const SnapPaymentWebViewScreen = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER.PROFILE });
     queryClient.invalidateQueries({ queryKey: ['payment', 'history'] });
 
-    Alert.alert(
+    feedback.dialog.alert(
       'Status Pembayaran',
       'Silakan cek mutasi saldo Anda. Jika pembayaran berhasil, saldo akan masuk secara otomatis.',
-      [
-        {
-          text: 'Kembali ke Beranda',
-          onPress: () => navigation.navigate('MainTab'),
-        },
-      ]
+      () => navigation.navigate('MainTab')
     );
   };
 
   const handleClose = () => {
-    Alert.alert(
-      'Tutup Pembayaran',
-      'Apakah Anda yakin ingin keluar dari halaman pembayaran?',
-      [
-        { text: 'Lanjut Bayar', style: 'cancel' },
-        {
-          text: 'Tutup',
-          style: 'destructive',
-          onPress: handleFinish,
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Tutup Pembayaran',
+      message: 'Apakah Anda yakin ingin keluar dari halaman pembayaran?',
+      confirmText: 'Tutup',
+      cancelText: 'Lanjut Bayar',
+      isDestructive: true,
+      onConfirm: handleFinish,
+    });
   };
 
   const handleShouldStartLoad = (request: { url: string }): boolean => {
@@ -94,7 +85,7 @@ const SnapPaymentWebViewScreen = () => {
         if (supported) {
           Linking.openURL(url).catch(() => {});
         } else {
-          Alert.alert(
+          feedback.dialog.warning(
             'Aplikasi Tidak Tersedia',
             'Aplikasi pembayaran pihak ketiga yang dipilih tidak terpasang di perangkat Anda.'
           );
@@ -110,7 +101,7 @@ const SnapPaymentWebViewScreen = () => {
 
     // 4. Blokir seluruh navigasi ke domain asing
     console.warn('[WEBVIEW SECURITY] Navigasi diblokir ke domain tidak sah:', url);
-    Alert.alert(
+    feedback.dialog.error(
       'Keamanan Terancam',
       'Navigasi dialihkan ke luar sistem pembayaran resmi dan telah diblokir secara otomatis.'
     );

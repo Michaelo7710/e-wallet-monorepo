@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import bgImage from '@assets/images/Auth-bg.png';
+import bgImage from '@assets/images/auth-mesh-bg.png';
 import { NetworkStatusBanner } from '@shared/components';
 
 interface AuthLayoutProps {

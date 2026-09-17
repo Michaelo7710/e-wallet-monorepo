@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { useAuthStore } from '@core/storage/useAuthStore';
 import { useUserProfile } from '@features/user/hooks/useUserData';
 import { useTransferMutation, useRecentContacts } from '../hooks/usePaymentMutations';
 import { useFeatureFlagStore } from '@core/config/featureFlags';
+import { feedback } from '@core/feedback';
 import defaultAvatar from '@assets/images/avatar-default.png';
 
 const TransferScreen = () => {
@@ -45,39 +45,35 @@ const TransferScreen = () => {
   const handleOpenPin = () => {
     // Graceful Degradation Guard: Cegah pemunculan modal PIN saat fitur dinonaktifkan
     if (!isTransferEnabled) {
-      Alert.alert('Fitur Sedang Pemeliharaan', transferNotice);
+      feedback.dialog.error('Layanan Ditangguhkan', transferNotice);
       return;
     }
 
     if (!user?.hasPin) {
-      Alert.alert(
-        'Aktivasi Keamanan Diperlukan',
-        'Anda belum memiliki PIN transaksi. Silakan buat PIN 6 digit terlebih dahulu untuk mengamankan transfer dana Anda.',
-        [
-          { text: 'Batal', style: 'cancel' },
-          {
-            text: 'Buat PIN Sekarang',
-            onPress: () => navigation.navigate('SetupPin'),
-          },
-        ]
-      );
+      feedback.dialog.confirm({
+        title: 'Aktivasi Keamanan Diperlukan',
+        message: 'Anda belum memiliki PIN transaksi. Silakan buat PIN 6 digit terlebih dahulu untuk mengamankan transfer dana Anda.',
+        confirmText: 'Buat PIN Sekarang',
+        cancelText: 'Batal',
+        onConfirm: () => navigation.navigate('SetupPin'),
+      });
       return;
     }
 
     if (!phoneNumber || phoneNumber.length < 10) {
-      Alert.alert('Data Tidak Lengkap', 'Nomor handphone tujuan minimal 10 digit.');
+      feedback.dialog.error('Nomor Handphone Tidak Valid', 'Nomor handphone tujuan minimal 10 digit.');
       return;
     }
     if (user?.phoneNumber && phoneNumber.trim() === user.phoneNumber.trim()) {
-      Alert.alert('Transfer Ditolak', 'Anda tidak dapat melakukan transfer ke nomor handphone akun Anda sendiri.');
+      feedback.dialog.error('Transfer Ditolak', 'Anda tidak dapat melakukan transfer ke nomor handphone akun Anda sendiri.');
       return;
     }
     if (numericAmount < 10000) {
-      Alert.alert('Nominal Minimal', 'Nominal transfer minimal Rp 10.000.');
+      feedback.dialog.error('Batas Minimal Transfer', 'Nominal transfer minimal Rp 10.000.');
       return;
     }
     if (numericAmount > currentBalance) {
-      Alert.alert('Saldo Tidak Cukup', 'Saldo dompet Anda tidak mencukupi untuk nominal transfer ini.');
+      feedback.dialog.error('Saldo Tidak Mencukupi', 'Saldo dompet Anda tidak mencukupi untuk nominal transfer ini.');
       return;
     }
     setIsPinVisible(true);
@@ -86,7 +82,7 @@ const TransferScreen = () => {
   const handleConfirmPin = (pin: string) => {
     if (!isTransferEnabled) {
       setIsPinVisible(false);
-      Alert.alert('Fitur Sedang Pemeliharaan', transferNotice);
+      feedback.dialog.error('Layanan Ditangguhkan', transferNotice);
       return;
     }
 
@@ -101,31 +97,35 @@ const TransferScreen = () => {
           setIsPinVisible(false);
           setAmount('');
           setPhoneNumber('');
-          if (tx.status === 'pending_approval' || tx.isHighValue) {
-            Alert.alert(
-              'Transfer Sedang Ditinjau (AML)',
-              `Transfer bernilai besar sebesar Rp ${numericAmount.toLocaleString('id-ID')} berhasil diajukan.\n\nSesuai kepatuhan AML, transaksi ini memerlukan verifikasi Administrator sebelum dana diteruskan ke penerima.\nRef: ${tx.transactionId}`,
-              [{ text: 'Selesai', onPress: () => navigation.goBack() }]
-            );
-          } else {
-            Alert.alert(
-              'Transfer Berhasil',
-              `Berhasil transfer Rp ${numericAmount.toLocaleString('id-ID')} ke ${phoneNumber}.\nSisa Saldo: Rp ${tx.remainingBalance.toLocaleString('id-ID')}\nRef: ${tx.transactionId}`,
-              [{ text: 'Selesai', onPress: () => navigation.goBack() }]
-            );
-          }
+          navigation.navigate('TransactionDetail', {
+            transaction: {
+              ...tx,
+              id: tx.transactionId,
+              transactionId: tx.transactionId,
+              referenceNumber: tx.referenceNumber,
+              referenceId: tx.referenceNumber,
+              type: 'transfer',
+              amount: tx.amount || numericAmount,
+              receiverPhoneNumber: phoneNumber,
+              description: `Transfer P2P ke ${phoneNumber}`,
+              status: tx.status || 'success',
+              isHighValue: tx.isHighValue ?? numericAmount >= 10000000,
+              remainingBalance: tx.remainingBalance,
+              createdAt: new Date().toISOString(),
+            },
+          });
         },
         onError: (err: any) => {
           setIsPinVisible(false);
           if (err.response?.data?.error_code === 'RECEIVER_WALLET_LIMIT_EXCEEDED') {
-            Alert.alert(
+            feedback.dialog.error(
               'Batas Saldo Penerima Penuh',
               err.response?.data?.message || 'Saldo penerima akan melebihi batas limit akunnya.'
             );
             return;
           }
           const msg = err.response?.data?.message || err.message || 'Transfer gagal diproses';
-          Alert.alert('Transfer Gagal', msg);
+          feedback.dialog.error('Transfer Gagal', msg);
         },
       }
     );

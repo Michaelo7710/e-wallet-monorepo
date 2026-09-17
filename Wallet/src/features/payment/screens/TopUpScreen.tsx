@@ -5,8 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -49,12 +49,12 @@ const TopUpScreen = () => {
   const handleTopUp = () => {
     // Graceful Degradation Guard: Blokir eksekusi mutasi jika fitur dinonaktifkan
     if (!isTopUpEnabled) {
-      Alert.alert('Fitur Sedang Pemeliharaan', topUpNotice);
+      feedback.dialog.warning('Fitur Sedang Pemeliharaan', topUpNotice);
       return;
     }
 
     if (finalAmount < 10000) {
-      Alert.alert('Nominal Tidak Valid', 'Top Up saldo minimal Rp 10.000.');
+      feedback.toast.warning('Top Up saldo minimal Rp 10.000.');
       return;
     }
 
@@ -68,7 +68,7 @@ const TopUpScreen = () => {
       },
       onError: (err: any) => {
         const msg = err.response?.data?.message || err.message || 'Gagal memproses top up';
-        Alert.alert('Gagal Top Up', msg);
+        feedback.dialog.error('Gagal Top Up', msg);
       },
     });
   };

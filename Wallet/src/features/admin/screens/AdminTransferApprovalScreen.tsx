@@ -5,10 +5,10 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
@@ -41,24 +41,20 @@ const AdminTransferApprovalScreen = () => {
   const [selectedRejectItem, setSelectedRejectItem] = useState<PendingTransfer | null>(null);
 
   const handleApprove = (item: PendingTransfer) => {
-    Alert.alert(
-      'Konfirmasi Kliring Transfer',
-      `Setujui transfer dana sebesar Rp ${item.amount.toLocaleString('id-ID')} dari ${item.sender.username} ke ${item.receiver.username}?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Setujui & Teruskan',
-          onPress: () => {
-            approveTransfer(item.id, {
-              onSuccess: () =>
-                Alert.alert('Sukses', 'Transfer dana berhasil disetujui dan diteruskan ke penerima.'),
-              onError: (err: any) =>
-                Alert.alert('Gagal', err.response?.data?.message || err.message || 'Gagal menyetujui transfer'),
-            });
-          },
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Konfirmasi Kliring Transfer',
+      message: `Setujui transfer dana sebesar Rp ${item.amount.toLocaleString('id-ID')} dari ${item.sender.username} ke ${item.receiver.username}?`,
+      confirmText: 'Setujui & Teruskan',
+      cancelText: 'Batal',
+      onConfirm: () => {
+        approveTransfer(item.id, {
+          onSuccess: () =>
+            feedback.toast.success('Transfer dana berhasil disetujui dan diteruskan ke penerima.'),
+          onError: (err: any) =>
+            feedback.dialog.error('Gagal', err.response?.data?.message || err.message || 'Gagal menyetujui transfer'),
+        });
+      },
+    });
   };
 
   const handleReject = (item: PendingTransfer) => {
@@ -72,10 +68,10 @@ const AdminTransferApprovalScreen = () => {
       {
         onSuccess: () => {
           setSelectedRejectItem(null);
-          Alert.alert('Selesai', 'Transfer ditolak dan saldo telah dipulangkan ke pengirim.');
+          feedback.toast.success('Transfer ditolak dan saldo telah dipulangkan ke pengirim.');
         },
         onError: (err: any) =>
-          Alert.alert('Gagal', err.response?.data?.message || err.message || 'Gagal menolak transfer'),
+          feedback.dialog.error('Gagal', err.response?.data?.message || err.message || 'Gagal menolak transfer'),
       }
     );
   };

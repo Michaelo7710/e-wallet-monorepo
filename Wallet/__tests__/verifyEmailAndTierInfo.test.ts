@@ -8,7 +8,7 @@ jest.mock('@expo/vector-icons', () => ({
 import { getWalletTierInfo } from '../src/shared/components/WalletCard';
 import { User } from '../src/domain/entities/user';
 import { UserMapper } from '../src/data/mappers/userMapper';
-import { Alert } from 'react-native';
+import { feedback } from '../src/core/feedback';
 
 jest.mock('../src/core/security/biometrics.service', () => ({
   BiometricsService: {
@@ -53,7 +53,7 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
     it('harus mengembalikan Akun Basic dengan limit Rp 5.000.000 jika user null', () => {
       const tierInfo = getWalletTierInfo(null);
       expect(tierInfo).toEqual({
-        tierName: 'Akun Basic',
+        tierName: 'REGULER TIER',
         maxLimit: 5000000,
         formattedLimit: 'Rp 5.000.000',
         isPremium: false,
@@ -83,7 +83,7 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
 
       // WAJIB mengevaluasi accountTier/isKycVerified, BUKAN isVerified legacy!
       expect(tierInfo.isPremium).toBe(false);
-      expect(tierInfo.tierName).toBe('Akun Basic');
+      expect(tierInfo.tierName).toBe('REGULER TIER');
       expect(tierInfo.maxLimit).toBe(5000000);
       expect(tierInfo.formattedLimit).toBe('Rp 5.000.000');
     });
@@ -109,7 +109,7 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
 
       const tierInfo = getWalletTierInfo(premiumUser);
       expect(tierInfo.isPremium).toBe(true);
-      expect(tierInfo.tierName).toBe('Akun Premium');
+      expect(tierInfo.tierName).toBe('PLATINUM KYC');
       expect(tierInfo.maxLimit).toBe(50000000);
       expect(tierInfo.formattedLimit).toBe('Rp 50.000.000');
     });
@@ -125,24 +125,51 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
       expect(tierInfo.maxLimit).toBe(50000000);
       expect(tierInfo.formattedLimit).toBe('Rp 50.000.000');
     });
+
+    it('TASK-QA-02 Edge Case: harus fallback ke Reguler Tier (5jt) jika field accountTier dan isKycVerified undefined', () => {
+      const edgeUser: Partial<User> = {
+        id: 'usr-edge-01',
+        username: 'incomplete_profile',
+      };
+
+      const tierInfo = getWalletTierInfo(edgeUser as User);
+      expect(tierInfo.isPremium).toBe(false);
+      expect(tierInfo.tierName).toBe('REGULER TIER');
+      expect(tierInfo.maxLimit).toBe(5000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 5.000.000');
+    });
+
+    it('TASK-QA-02 Edge Case: harus mengakui Platinum KYC (50jt) jika accountTier "premium" meski isKycVerified bernilai false (Admin Override)', () => {
+      const adminOverrideUser: Partial<User> = {
+        id: 'usr-admin-override',
+        accountTier: 'premium',
+        isKycVerified: false,
+      };
+
+      const tierInfo = getWalletTierInfo(adminOverrideUser as User);
+      expect(tierInfo.isPremium).toBe(true);
+      expect(tierInfo.tierName).toBe('PLATINUM KYC');
+      expect(tierInfo.maxLimit).toBe(50000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 50.000.000');
+    });
   });
 
   describe('2. Defensive Auto-Login Extraction & Legacy Fallback Logic', () => {
     let mockLoginSession: jest.Mock;
     let mockNavigate: jest.Mock;
-    let alertSpy: jest.SpyInstance;
+    let dialogSpy: jest.SpyInstance;
     let warnSpy: jest.SpyInstance;
 
     beforeEach(() => {
       jest.clearAllMocks();
       mockLoginSession = jest.fn().mockResolvedValue(undefined);
       mockNavigate = jest.fn();
-      alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+      dialogSpy = jest.spyOn(feedback.dialog, 'alert').mockImplementation(() => {});
       warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
     afterEach(() => {
-      alertSpy.mockRestore();
+      dialogSpy.mockRestore();
       warnSpy.mockRestore();
     });
 
@@ -161,15 +188,15 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
             _id: user._id || user.id,
           };
           await mockLoginSession(sessionUser, accessToken, refreshToken);
-          Alert.alert('Selamat Datang!', 'Email Anda berhasil diverifikasi. Sesi Anda telah aktif.');
+          feedback.dialog.alert('Selamat Datang!', 'Email Anda berhasil diverifikasi. Sesi Anda telah aktif.');
           return;
         }
 
         console.warn(' [VERIFY_EMAIL] Server tidak mengembalikan token sesi lengkap. Mengalihkan ke Login manual.');
-        Alert.alert(
+        feedback.dialog.alert(
           'Verifikasi Berhasil',
           'Email Anda telah terverifikasi. Silakan masuk dengan kata sandi Anda.',
-          [{ text: 'Masuk Sekarang', onPress: () => mockNavigate('Login') }]
+          () => mockNavigate('Login')
         );
       } catch (err) {
         console.error(' [VERIFY_EMAIL] Gagal memproses sesi:', err);
@@ -212,7 +239,7 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
         'jwt-access-nested-123',
         'jwt-refresh-nested-456'
       );
-      expect(alertSpy).toHaveBeenCalledWith(
+      expect(dialogSpy).toHaveBeenCalledWith(
         'Selamat Datang!',
         'Email Anda berhasil diverifikasi. Sesi Anda telah aktif.'
       );
@@ -287,17 +314,15 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('[VERIFY_EMAIL] Server tidak mengembalikan token sesi lengkap')
       );
-      expect(alertSpy).toHaveBeenCalledWith(
+      expect(dialogSpy).toHaveBeenCalledWith(
         'Verifikasi Berhasil',
         'Email Anda telah terverifikasi. Silakan masuk dengan kata sandi Anda.',
-        expect.arrayContaining([
-          expect.objectContaining({ text: 'Masuk Sekarang' }),
-        ])
+        expect.any(Function)
       );
 
-      // Simulasikan pengguna menekan tombol "Masuk Sekarang"
-      const alertButtons = alertSpy.mock.calls[0][2];
-      alertButtons[0].onPress();
+      // Simulasikan pengguna menekan tombol konfirmasi (callback onConfirm)
+      const onConfirm = dialogSpy.mock.calls[0][2];
+      onConfirm();
       expect(mockNavigate).toHaveBeenCalledWith('Login');
     });
 
@@ -314,10 +339,10 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
 
       expect(mockLoginSession).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalledWith(
+      expect(dialogSpy).toHaveBeenCalledWith(
         'Verifikasi Berhasil',
         expect.any(String),
-        expect.any(Array)
+        expect.any(Function)
       );
     });
   });

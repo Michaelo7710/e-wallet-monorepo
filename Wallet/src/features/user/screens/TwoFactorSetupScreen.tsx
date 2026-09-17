@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
@@ -60,7 +60,7 @@ const TwoFactorSetupScreen = () => {
     if (!generateData?.secret) return;
     await Clipboard.setStringAsync(generateData.secret);
     setCopied(true);
-    Alert.alert('Kunci Disalin', 'Kunci rahasia 2FA telah disalin ke papan klip.');
+    feedback.toast.success('Kunci rahasia 2FA telah disalin ke papan klip.');
     setTimeout(() => setCopied(false), 3000);
   };
 
@@ -75,10 +75,10 @@ const TwoFactorSetupScreen = () => {
             useAuthStore.getState().setUser(updatedUser);
             await userLocalDataSource.upsertProfile(updatedUser);
           }
-          Alert.alert(
+          feedback.dialog.success(
             '2FA Berhasil Diaktifkan!',
             'Setiap kali masuk akun, Anda akan diminta memasukkan 6 digit kode keamanan.',
-            [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            () => navigation.goBack()
           );
         },
         onError: (err: any) => {
@@ -86,7 +86,7 @@ const TwoFactorSetupScreen = () => {
             err.response?.data?.message ||
             err.message ||
             'Kode verifikasi tidak valid atau telah kedaluwarsa';
-          Alert.alert('Verifikasi Gagal', errorMessage);
+          feedback.dialog.error('Verifikasi Gagal', errorMessage);
         },
       }
     );

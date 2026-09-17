@@ -23,3 +23,21 @@ export interface SavedContactDTO {
   };
   last_transacted_at: string;
 }
+
+export interface WithdrawalResponseDTO {
+  reference_number: string;
+  transaction_id: string;
+  amount: number;
+  status: 'success' | 'pending_approval';
+  is_high_value: boolean;
+  remaining_balance: number;
+}
+
+export interface TransferResponseDTO {
+  reference_number: string;
+  transaction_id: string;
+  amount: number;
+  status: 'success' | 'pending_approval';
+  is_high_value: boolean;
+  remaining_balance: number;
+}

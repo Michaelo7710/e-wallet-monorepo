@@ -13,9 +13,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   StatusBar,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@core/theme';
@@ -31,18 +31,22 @@ export interface GlobalErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   correlationId: string | null;
+  copied?: boolean;
 }
 
 export class GlobalErrorBoundary extends Component<
   GlobalErrorBoundaryProps,
   GlobalErrorBoundaryState
 > {
+  private copyTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor(props: GlobalErrorBoundaryProps) {
     super(props);
     this.state = {
       hasError: false,
       error: null,
       correlationId: null,
+      copied: false,
     };
   }
 
@@ -63,11 +67,24 @@ export class GlobalErrorBoundary extends Component<
     this.setState({ correlationId });
   }
 
+  componentWillUnmount(): void {
+    if (this.copyTimeout) {
+      clearTimeout(this.copyTimeout);
+      this.copyTimeout = null;
+    }
+  }
+
   handleReset = (): void => {
+    if (this.copyTimeout) {
+      clearTimeout(this.copyTimeout);
+      this.copyTimeout = null;
+    }
+
     this.setState({
       hasError: false,
       error: null,
       correlationId: null,
+      copied: false,
     });
 
     if (this.props.onReset) {
@@ -75,13 +92,26 @@ export class GlobalErrorBoundary extends Component<
     }
   };
 
-  handleCopyCorrelationId = (): void => {
+  handleCopyCorrelationId = async (): Promise<void> => {
     const id = this.state.correlationId || 'N/A';
-    Alert.alert(
-      'ID Pelacakan Tersedia',
-      `ID Referensi Tiket CS:\n${id}\n\nSilakan salin ID ini untuk dilaporkan ke Customer Care GreenPay.`,
-      [{ text: 'Mengerti', style: 'default' }]
-    );
+    try {
+      await Clipboard.setStringAsync(id);
+      this.setState({ copied: true });
+
+      if (this.copyTimeout) {
+        clearTimeout(this.copyTimeout);
+      }
+
+      this.copyTimeout = setTimeout(() => {
+        this.setState({ copied: false });
+        this.copyTimeout = null;
+      }, 3000);
+    } catch (err) {
+      // Defensive fallback: Jangan biarkan unhandled promise rejection saat clipboard dibatasi OS/device
+      if (__DEV__) {
+        console.warn('Gagal menyalin Correlation ID ke papan klip:', err);
+      }
+    }
   };
 
   render(): ReactNode {
@@ -127,7 +157,11 @@ export class GlobalErrorBoundary extends Component<
             <Text selectable style={styles.codeText}>
               ID Pelacakan: {trackingId}
             </Text>
-            <Text style={styles.codeHint}>Ketuk untuk melihat detail pelacakan tiket</Text>
+            <Text style={styles.codeHint}>
+              {this.state.copied
+                ? '✓ ID Pelacakan berhasil disalin ke papan klip!'
+                : 'Ketuk untuk menyalin ID referensi tiket'}
+            </Text>
           </TouchableOpacity>
 
           {/* Tombol Aksi Pemulihan */}

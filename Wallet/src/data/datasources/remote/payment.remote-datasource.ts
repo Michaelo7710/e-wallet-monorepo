@@ -1,5 +1,10 @@
 import api from '@core/network/api';
-import { TransactionDTO, SavedContactDTO } from '../../models/transactionDTO';
+import {
+  TransactionDTO,
+  SavedContactDTO,
+  WithdrawalResponseDTO,
+  TransferResponseDTO,
+} from '../../models/transactionDTO';
 
 export interface RawHistoryMetadata {
   total_records: number;
@@ -28,13 +33,7 @@ export class PaymentRemoteDataSource {
   ): Promise<{
     status: string;
     message: string;
-    data: {
-      transaction_id: string;
-      amount: number;
-      status: 'success' | 'pending_approval';
-      is_high_value: boolean;
-      remaining_balance: number;
-    };
+    data: TransferResponseDTO;
   }> {
     const response = await api.post('/payments/transfer', {
       receiver_phone_number: receiverPhoneNumber,
@@ -44,13 +43,23 @@ export class PaymentRemoteDataSource {
     return response.data;
   }
 
-  async requestWithdrawal(bankName: string, accountNumber: string, accountName: string, amount: number): Promise<void> {
-    await api.post('/payments/withdrawal/request', {
+  async requestWithdrawal(
+    bankName: string,
+    accountNumber: string,
+    accountName: string,
+    amount: number
+  ): Promise<{
+    status: string;
+    message: string;
+    data: WithdrawalResponseDTO;
+  }> {
+    const response = await api.post('/payments/withdrawal/request', {
       bank_name: bankName,
       account_number: accountNumber,
       account_name: accountName,
       amount,
     });
+    return response.data;
   }
 
   async getHistory(page = 1, limit = 10, type?: string): Promise<RawHistoryResponse> {

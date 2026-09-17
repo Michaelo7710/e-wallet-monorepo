@@ -6,8 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { UserLayout } from '@shared/layouts';
@@ -21,10 +21,14 @@ const AdminDashboardScreen = () => {
   const { data: stats, refetch, isRefetching } = useAdminStats();
 
   const handleLogout = () => {
-    Alert.alert('Keluar Panel Admin', 'Apakah Anda yakin ingin keluar dari sesi Admin?', [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Keluar', style: 'destructive', onPress: async () => await logoutSession() },
-    ]);
+    feedback.dialog.confirm({
+      title: 'Keluar Panel Admin',
+      message: 'Apakah Anda yakin ingin keluar dari sesi Admin?',
+      confirmText: 'Keluar',
+      cancelText: 'Batal',
+      isDestructive: true,
+      onConfirm: async () => await logoutSession(),
+    });
   };
 
   return (

@@ -1,12 +1,12 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
@@ -54,16 +54,16 @@ const ChangeEmailScreen = () => {
       },
       {
         onSuccess: () => {
-          Alert.alert(
+          feedback.dialog.success(
             'Email Berhasil Diperbarui',
             'Alamat email akun Anda resmi dimutasi.',
-            [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            () => navigation.goBack()
           );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Gagal memperbarui email';
-          Alert.alert('Gagal Memperbarui Email', errorMessage);
+          feedback.dialog.error('Gagal Memperbarui Email', errorMessage);
         },
       }
     );

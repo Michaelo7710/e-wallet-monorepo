@@ -4,6 +4,7 @@ import {
   TransferParams,
   TransferResult,
   WithdrawalParams,
+  WithdrawalResult,
 } from '@domain/repositories/payment.repository.interface';
 import { Transaction, SavedContact } from '@domain/entities/transaction';
 import { PaymentRemoteDataSource } from '../datasources/remote/payment.remote-datasource';
@@ -34,6 +35,7 @@ export class PaymentRepositoryImpl implements IPaymentRepository {
     );
     const d = res.data;
     return {
+      referenceNumber: d.reference_number,
       transactionId: d.transaction_id,
       amount: d.amount,
       status: d.status,
@@ -42,13 +44,22 @@ export class PaymentRepositoryImpl implements IPaymentRepository {
     };
   }
 
-  async requestWithdrawal(params: WithdrawalParams): Promise<void> {
-    await this.remoteDataSource.requestWithdrawal(
+  async requestWithdrawal(params: WithdrawalParams): Promise<WithdrawalResult> {
+    const res = await this.remoteDataSource.requestWithdrawal(
       params.bankName,
       params.accountNumber,
       params.accountName,
       params.amount
     );
+    const d = res.data;
+    return {
+      referenceNumber: d.reference_number,
+      transactionId: d.transaction_id,
+      amount: d.amount,
+      status: d.status,
+      isHighValue: d.is_high_value,
+      remainingBalance: d.remaining_balance,
+    };
   }
 
   /**
