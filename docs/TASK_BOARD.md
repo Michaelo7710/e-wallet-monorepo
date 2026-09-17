@@ -9,7 +9,7 @@
 
 | Total Tugas Terdaftar | 🟢 Selesai Terverifikasi (DONE) | 🟡 Dikerjakan (IN_PROGRESS) | 🔴 Menunggu (TODO) |
 |:---:|:---:|:---:|:---:|
-| **20** | **20** | **0** | **0** |
+| **31** | **20** | **0** | **11** |
 
 
 ---
@@ -48,15 +48,35 @@
 
 ---
 
+## 🗂️ Bagian C: Papan Tugas Remediasi Risiko Finansial (PR Audit Blocker Remediation)
+
+> **Konteks:** Menindaklanjuti temuan audit keamanan finansial tingkat tinggi pada PR `feat/greenpay-enterprise-hardening`. Seluruh tugas di bawah ini dirancang oleh `tech-architecture-lead` dan diabadikan oleh `personal-assistant-agy` sebagai prasyarat mutlak sebelum branch diizinkan untuk di-merge.
+
+| ID Task | Asal Delegasi | Pelaksana Target | Deskripsi Tugas & Target File | Status | Kriteria Verifikasi Lulus (DoD) |
+|:---|:---|:---|:---|:---:|:---|
+| `TASK-BE-03` | `tech-architecture-lead` | `backend-developer` | **Authoritative Receipt Contract Verification:** Verifikasi response endpoint `/payments/withdrawal/request` dan `/payments/transfer` di backend agar selalu mengembalikan payload kanonikal lengkap (`reference_number`, `transaction_id`, `amount`, `status`, `is_high_value`, `remaining_balance`). | 🔴 **TODO** | Payload response diverifikasi konsisten pada [`e-wallet-backend/src/services/paymentService.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/e-wallet-backend/src/services/paymentService.js) dan [`paymentController.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/e-wallet-backend/src/controllers/paymentController.js), serta unit test backend lulus. |
+| `TASK-FE-02` | `tech-architecture-lead` | `frontend-developer` | **Remote Datasource & Repository DTO Refactoring:** Ubah `requestWithdrawal` dari `Promise<void>` menjadi `Promise<WithdrawalResponseDTO>` yang membawa data kanonikal backend, lalu alirkan ke [`payment.repository.impl.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/data/repositories/payment.repository.impl.ts) dan [`usePaymentMutations.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/hooks/usePaymentMutations.ts). | 🔴 **TODO** | Tipe data tidak lagi `void`, compile `tsc --noEmit` 0 error, data respons backend mengalir utuh ke caller hook. |
+| `TASK-FE-03` | `tech-architecture-lead` | `frontend-developer` | **Canonical Receipt Navigation & Fallback Elimination:** Update [`WithdrawScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/WithdrawScreen.tsx) dan [`TransferScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/TransferScreen.tsx) agar membawa reference ID resmi server. Di [`TransactionDetailScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/TransactionDetailScreen.tsx), eliminasi generator nomor acak client (`GP-TRX-timestamp`). Tampilkan peringatan unverified jika referensi server tidak ditemukan. | 🔴 **TODO** | 0 sintaks nomor referensi palsu client di seluruh source code, resi berstatus canonical, tombol share dinonaktifkan jika unverified. |
+| `TASK-FE-04` | `tech-architecture-lead` | `frontend-developer` | **Harmonisasi Limit Finansial ke Backend SSOT (5M & 50M):** Kembalikan batasan limit pada [`WalletCard.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/shared/components/WalletCard.tsx) ke Rp 5.000.000 (Reguler / Non-KYC) dan Rp 50.000.000 (Platinum KYC) agar selaras 100% dengan backend `paymentService.js` dan copy [`KycVerificationScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/user/screens/KycVerificationScreen.tsx). | 🔴 **TODO** | Seluruh kontrak limit nominal konsisten di seluruh aplikasi tanpa pertentangan angka. |
+| `TASK-QA-02` | `tech-architecture-lead` | `qa-engineer` | **Regression Test Suite Batas Limit Finansial:** Selaraskan assertions pengujian plafon pada [`verifyEmailAndTierInfo.test.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/verifyEmailAndTierInfo.test.ts) dengan nilai batas 5jt dan 50jt. Tambahkan edge-case test untuk verifikasi konsistensi plafon. | 🔴 **TODO** | Seluruh assertions pengujian limit lulus 100% di Jest tanpa kegagalan. |
+| `TASK-FE-05` | `tech-architecture-lead` | `frontend-developer` | **Restorasi Modal Dialog untuk Kegagalan Moneter:** Ganti seluruh `feedback.toast.error` pada validasi saldo, kegagalan transfer/penarikan, dan penolakan transaksi di [`TransferScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/TransferScreen.tsx) dan [`WithdrawScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/WithdrawScreen.tsx) menjadi `feedback.dialog.error` pemblokir. | 🔴 **TODO** | Kesalahan transaksi tidak hilang otomatis; pengguna wajib menekan tombol dialog konfirmasi untuk melanjutkan. |
+| `TASK-FE-06` | `tech-architecture-lead` | `frontend-developer` | **Implementasi Sanitasi & Masking Data Finansial Sensitif:** Buat helper masker data sensitif ([`masking.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/shared/utils/masking.ts)). Terapkan masking pada tampilan nomor rekening/nomor ponsel di [`TransactionDetailScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/TransactionDetailScreen.tsx) dan pada payload string share resi. | 🔴 **TODO** | Rekening ter-masking `******1234` dan HP `0812****8901`, data pribadi terlindungi sesuai UU PDP. |
+| `TASK-DEVOPS-02` | `tech-architecture-lead` | `devops-engineer` | **Peningkatan Anti-Alert CI Guard ke Multi-line & Require Detection:** Rombak [`guard-anti-alert.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/scripts/ci/guard-anti-alert.js) agar memindai seluruh teks berkas dengan regex multi-baris (`/gm`, `/s`) untuk menangkap import multi-baris, import alias, dan pemanggilan `require('react-native')`. | 🔴 **TODO** | Script mendeteksi berkas uji import multi-baris dan require, serta lulus bersih pada kode produksi. |
+| `TASK-FE-07` | `tech-architecture-lead` | `frontend-developer` | **Defensive Clipboard & Unmount Cleanup pada GlobalErrorBoundary:** Tambahkan penanganan `try/catch` pada `Clipboard.setStringAsync` di [`GlobalErrorBoundary.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/core/telemetry/GlobalErrorBoundary.tsx), dan bersihkan timer timeout saat `componentWillUnmount`. | 🔴 **TODO** | Error boundary kebal dari unhandled promise rejection saat akses clipboard dan bebas memory leak unmount. |
+| `TASK-FE-08` | `tech-architecture-lead` | `frontend-developer` | **Pengamanan Konkurensi & Rantai Callback Feedback Store:** Cegah penimpaan state modal saat `onConfirm` memanggil dialog baru secara beruntun pada [`feedback.store.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/core/feedback/feedback.store.ts) dan [`GlobalDialogModal.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/shared/components/GlobalDialogModal.tsx). | 🔴 **TODO** | Dialog bertingkat dapat terbuka mulus tanpa terpotong atau tertutup dini oleh dialog sebelumnya. |
+| `TASK-QA-03` | `tech-architecture-lead` | `qa-engineer` | **Comprehensive Integration & Boundary Test Suite:** Tulis unit & integration test untuk memvalidasi: (1) resi berbasis canonical data server, (2) masking data pada share payload, (3) penolakan resi tanpa server reference, dan (4) multi-line detection guard-anti-alert. | 🔴 **TODO** | Seluruh test suite baru lulus di Jest (100% PASS), menjamin ketiadaan regresi batas integrasi. |
+
+---
+
 ## 🚀 Panduan Eksekusi Tugas Cepat (Quick Invocation Guide)
 
 Untuk memanggil eksekusi tugas berikutnya langsung dengan skill bersangkutan, Anda dapat memberikan perintah:
 
-1. **Eksekusi Pengujian Otomatis (`qa-engineer`):**
-   > *"Gunakan skill qa-engineer untuk mengeksekusi TASK-QA-01."*
-2. **Eksekusi Pembersihan Kode & Migrasi Notifikasi (`frontend-developer`):**
-   > *"Gunakan skill frontend-developer untuk mengeksekusi TASK-FE-01."*
-3. **Eksekusi Linter & Guard Anti-Regresi (`devops-engineer`):**
-   > *"Gunakan skill devops-engineer untuk mengeksekusi TASK-DEVOPS-01."*
-4. **Eksekusi Lanjutan Upgrade Skill Batch 3 (`skill-creator`):**
-   > *"Lanjutkan upgrade Batch 3 mulai dari TASK-SKILL-01."*
+1. **Eksekusi Paket 1: Resi Kanonikal & Datasource (`frontend-developer` / `backend-developer`):**
+   > *"Gunakan skill backend-developer untuk verifikasi TASK-BE-03, lalu lanjutkan dengan frontend-developer untuk TASK-FE-02 dan TASK-FE-03."*
+2. **Eksekusi Paket 2: Penyelarasan Limit Saldo 5M/50M (`frontend-developer` & `qa-engineer`):**
+   > *"Gunakan skill frontend-developer untuk TASK-FE-04, lalu uji dengan qa-engineer pada TASK-QA-02."*
+3. **Eksekusi Paket 3: Restorasi Dialog Moneter & Masking Data (`frontend-developer`):**
+   > *"Gunakan skill frontend-developer untuk mengeksekusi TASK-FE-05 dan TASK-FE-06."*
+4. **Eksekusi Paket 4: Hardening CI Guard & Error Boundary (`devops-engineer`, `frontend-developer`, `qa-engineer`):**
+   > *"Gunakan skill devops-engineer untuk TASK-DEVOPS-02, frontend-developer untuk TASK-FE-07 & TASK-FE-08, dan qa-engineer untuk TASK-QA-03."*
