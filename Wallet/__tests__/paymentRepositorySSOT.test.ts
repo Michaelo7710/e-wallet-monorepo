@@ -396,4 +396,80 @@ describe('TASK-B2-09: PaymentRepositoryImpl Offline-First Integration', () => {
     expect(mockLocalDataSource.getContacts).toHaveBeenCalled();
     expect(contacts).toEqual(cachedContacts);
   });
+
+  it('TASK-FE-02: requestWithdrawal harus mengembalikan WithdrawalResult kanonikal dari remote data source', async () => {
+    const mockWithdrawalDTO = {
+      status: 'success',
+      message: 'Penarikan sukses diproses.',
+      data: {
+        reference_number: 'GP-WD-20260917-ABC12345',
+        transaction_id: 'tx-wd-001',
+        amount: 100000,
+        status: 'success' as const,
+        is_high_value: false,
+        remaining_balance: 1900000,
+      },
+    };
+
+    mockRemoteDataSource.requestWithdrawal.mockResolvedValue(mockWithdrawalDTO);
+
+    const result = await repository.requestWithdrawal({
+      bankName: 'BCA',
+      accountNumber: '1234567890',
+      accountName: 'Tester Akun',
+      amount: 100000,
+    });
+
+    expect(mockRemoteDataSource.requestWithdrawal).toHaveBeenCalledWith(
+      'BCA',
+      '1234567890',
+      'Tester Akun',
+      100000
+    );
+    expect(result).toEqual({
+      referenceNumber: 'GP-WD-20260917-ABC12345',
+      transactionId: 'tx-wd-001',
+      amount: 100000,
+      status: 'success',
+      isHighValue: false,
+      remainingBalance: 1900000,
+    });
+  });
+
+  it('TASK-FE-02: transfer harus mengembalikan TransferResult kanonikal dari remote data source', async () => {
+    const mockTransferDTO = {
+      status: 'success',
+      message: 'Transfer sukses diproses.',
+      data: {
+        reference_number: 'GP-TRF-20260917-DEF67890',
+        transaction_id: 'tx-trf-001',
+        amount: 500000,
+        status: 'success' as const,
+        is_high_value: false,
+        remaining_balance: 19500000,
+      },
+    };
+
+    mockRemoteDataSource.transfer.mockResolvedValue(mockTransferDTO);
+
+    const result = await repository.transfer({
+      receiverPhoneNumber: '081234567890',
+      amount: 500000,
+      pin: '123456',
+    });
+
+    expect(mockRemoteDataSource.transfer).toHaveBeenCalledWith(
+      '081234567890',
+      500000,
+      '123456'
+    );
+    expect(result).toEqual({
+      referenceNumber: 'GP-TRF-20260917-DEF67890',
+      transactionId: 'tx-trf-001',
+      amount: 500000,
+      status: 'success',
+      isHighValue: false,
+      remainingBalance: 19500000,
+    });
+  });
 });

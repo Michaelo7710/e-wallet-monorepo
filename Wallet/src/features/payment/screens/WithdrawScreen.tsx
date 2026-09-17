@@ -42,24 +42,24 @@ const WithdrawScreen = () => {
   const handleWithdraw = () => {
     // Graceful Degradation Guard: Blokir eksekusi penarikan saat partner bank offline
     if (!isWithdrawEnabled) {
-      feedback.toast.warning(withdrawNotice);
+      feedback.dialog.error('Layanan Ditangguhkan', withdrawNotice);
       return;
     }
 
     if (!accountNumber || accountNumber.length < 6) {
-      feedback.toast.error('Nomor rekening wajib diisi minimal 6 digit.');
+      feedback.dialog.error('Nomor Rekening Tidak Valid', 'Nomor rekening wajib diisi minimal 6 digit.');
       return;
     }
     if (!accountName || accountName.length < 3) {
-      feedback.toast.error('Nama pemilik rekening wajib diisi.');
+      feedback.dialog.error('Nama Pemilik Rekening Tidak Valid', 'Nama pemilik rekening wajib diisi minimal 3 karakter.');
       return;
     }
     if (numericAmount < 50000) {
-      feedback.toast.warning('Penarikan saldo minimal Rp 50.000.');
+      feedback.dialog.error('Batas Minimal Penarikan', 'Penarikan saldo minimal Rp 50.000.');
       return;
     }
     if (numericAmount > currentBalance) {
-      feedback.toast.error('Saldo Anda tidak mencukupi untuk melakukan penarikan ini.');
+      feedback.dialog.error('Saldo Tidak Mencukupi', 'Saldo Anda tidak mencukupi untuk melakukan penarikan ini.');
       return;
     }
 
@@ -71,24 +71,29 @@ const WithdrawScreen = () => {
         amount: numericAmount,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           navigation.navigate('TransactionDetail', {
             transaction: {
+              id: data.transactionId,
+              transactionId: data.transactionId,
+              referenceNumber: data.referenceNumber,
+              referenceId: data.referenceNumber,
               type: 'withdrawal',
-              amount: numericAmount,
+              amount: data.amount || numericAmount,
               bankName: selectedBank,
               accountNumber,
               accountName,
               description: `Tarik tunai ke ${selectedBank}`,
-              status: numericAmount >= 10000000 ? 'pending_approval' : 'success',
-              isHighValue: numericAmount >= 10000000,
+              status: data.status || (numericAmount >= 10000000 ? 'pending_approval' : 'success'),
+              isHighValue: data.isHighValue ?? numericAmount >= 10000000,
+              remainingBalance: data.remainingBalance,
               createdAt: new Date().toISOString(),
             },
           });
         },
         onError: (err: any) => {
           const msg = err.response?.data?.message || err.message || 'Penarikan gagal diproses';
-          feedback.toast.error(msg);
+          feedback.dialog.error('Penarikan Gagal', msg);
         },
       }
     );

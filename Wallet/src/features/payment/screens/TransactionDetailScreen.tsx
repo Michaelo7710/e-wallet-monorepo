@@ -15,14 +15,16 @@ import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import dayjs from 'dayjs';
 
-import { colors, typography } from '@core/theme';
+import { colors, typography, spacing } from '@core/theme';
 import { feedback } from '@core/feedback';
+import { maskBankAccount, maskPhoneNumber } from '@shared/utils';
 
 export interface TransactionDetailParams {
   transaction?: {
     id?: string;
     transactionId?: string;
     referenceId?: string;
+    referenceNumber?: string;
     amount?: number;
     type?: string;
     status?: string;
@@ -30,6 +32,7 @@ export interface TransactionDetailParams {
     receiverPhoneNumber?: string;
     bankName?: string;
     accountNumber?: string;
+    targetAccount?: string;
     accountName?: string;
     remainingBalance?: number;
     createdAt?: string;
@@ -51,29 +54,41 @@ const TransactionDetailScreen: React.FC = () => {
   const tx = params.transaction || {};
 
   const amount = tx.amount || 0;
-  const rawRef =
+
+  // Resolusi nomor referensi kanonikal server.
+  // Fallback acak client (client-generated timestamp) dieliminasi total demi integritas audit finansial.
+  const serverReference =
+    tx.referenceNumber ||
     tx.referenceId ||
     tx.transactionId ||
-    tx.id ||
-    `GP-TRX-${dayjs().format('YYYYMMDD-HHmmss')}`;
+    tx.id;
+
+  const isServerVerified = Boolean(serverReference);
+  const rawRef = isServerVerified ? serverReference! : 'Menunggu Verifikasi Server';
 
   const isPendingAml =
     tx.status === 'pending_approval' || tx.isHighValue || amount >= 10000000;
   const isFailed = tx.status === 'failed' || tx.status === 'rejected';
 
-  const statusLabel = isFailed
+  const statusLabel = !isServerVerified
+    ? 'Belum Terverifikasi'
+    : isFailed
     ? 'Transaksi Gagal'
     : isPendingAml
     ? 'Menunggu Persetujuan (AML)'
     : 'Transaksi Berhasil';
 
-  const statusColor = isFailed
+  const statusColor = !isServerVerified
+    ? colors.warning
+    : isFailed
     ? colors.error
     : isPendingAml
     ? colors.warning
     : colors.success;
 
-  const statusIconName = isFailed
+  const statusIconName = !isServerVerified
+    ? ('alert-circle-outline' as const)
+    : isFailed
     ? ('alert-circle' as const)
     : isPendingAml
     ? ('time' as const)
@@ -89,14 +104,24 @@ const TransactionDetailScreen: React.FC = () => {
     ? dayjs(tx.createdAt).format('D MMMM YYYY, HH:mm [WIB]')
     : dayjs().format('D MMMM YYYY, HH:mm [WIB]');
 
+  const formattedReceiverPhone = tx.receiverPhoneNumber
+    ? maskPhoneNumber(tx.receiverPhoneNumber)
+    : tx.counterparty?.phoneNumber
+    ? maskPhoneNumber(tx.counterparty.phoneNumber)
+    : null;
+
   const targetName =
     tx.counterparty?.username ||
     tx.accountName ||
-    tx.receiverPhoneNumber ||
+    formattedReceiverPhone ||
     tx.description ||
     'GreenPay Network';
 
   const handleCopyRef = async () => {
+    if (!isServerVerified) {
+      feedback.toast.warning('Nomor referensi belum tersedia dari server.');
+      return;
+    }
     try {
       await Clipboard.setStringAsync(rawRef);
       feedback.toast.success('Nomor referensi berhasil disalin!');
@@ -106,12 +131,23 @@ const TransactionDetailScreen: React.FC = () => {
   };
 
   const handleShareReceipt = async () => {
+    if (!isServerVerified) {
+      feedback.toast.warning('Resi belum terverifikasi oleh server dan tidak dapat dibagikan.');
+      return;
+    }
     try {
+      const bankAccount = tx.accountNumber || tx.targetAccount;
+      const targetDisplay = tx.bankName
+        ? `${targetName} - ${tx.bankName} (${maskBankAccount(bankAccount)})`
+        : formattedReceiverPhone && targetName !== formattedReceiverPhone
+        ? `${targetName} (${formattedReceiverPhone})`
+        : targetName;
+
       const shareMessage = `BUKTI TRANSAKSI GREENPAY E-WALLET\n` +
         `------------------------------------\n` +
         `Status: ${statusLabel}\n` +
         `Nominal: ${formattedAmount}\n` +
-        `Tujuan: ${targetName}\n` +
+        `Tujuan: ${targetDisplay}\n` +
         `Nomor Ref: ${rawRef}\n` +
         `Waktu: ${formattedDate}\n` +
         `------------------------------------\n` +
@@ -145,11 +181,18 @@ const TransactionDetailScreen: React.FC = () => {
           </TouchableOpacity>
           <Text style={styles.navTitle}>Bukti Transaksi</Text>
           <TouchableOpacity
-            style={styles.navButton}
+            style={[styles.navButton, !isServerVerified && styles.navButtonDisabled]}
             onPress={handleShareReceipt}
+            disabled={!isServerVerified}
             activeOpacity={0.7}
+            accessibilityLabel="Bagikan Bukti Transaksi"
+            accessibilityState={{ disabled: !isServerVerified }}
           >
-            <Ionicons name="share-social-outline" size={22} color={colors.white} />
+            <Ionicons
+              name="share-social-outline"
+              size={22}
+              color={isServerVerified ? colors.white : 'rgba(255, 255, 255, 0.4)'}
+            />
           </TouchableOpacity>
         </View>
 
@@ -168,6 +211,16 @@ const TransactionDetailScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.receiptCard}>
+          {/* Peringatan Unverified Transaksi */}
+          {!isServerVerified && (
+            <View style={styles.unverifiedBanner}>
+              <Ionicons name="warning-outline" size={18} color={colors.warning} />
+              <Text style={styles.unverifiedBannerText}>
+                Peringatan: Transaksi ini belum memiliki nomor referensi resmi server (Unverified).
+              </Text>
+            </View>
+          )}
+
           {/* Nominal Display */}
           <View style={styles.amountBox}>
             <Text style={styles.amountLabel}>Total Nominal</Text>
@@ -186,22 +239,44 @@ const TransactionDetailScreen: React.FC = () => {
             <DetailRow label="Jenis Transaksi" value={tx.type?.toUpperCase() || 'P2P TRANSFER'} />
             <DetailRow label="Penerima / Tujuan" value={targetName} />
             {tx.bankName ? (
-              <DetailRow label="Bank Tujuan" value={`${tx.bankName} (${tx.accountNumber || '-'})`} />
+              <DetailRow label="Bank Tujuan" value={`${tx.bankName} (${maskBankAccount(tx.accountNumber || tx.targetAccount)})`} />
+            ) : null}
+            {formattedReceiverPhone && targetName !== formattedReceiverPhone ? (
+              <DetailRow label="Nomor Handphone" value={formattedReceiverPhone} />
             ) : null}
             <View style={styles.refIdRow}>
               <View style={styles.refTextCol}>
                 <Text style={styles.metaLabel}>Nomor Referensi</Text>
-                <Text style={styles.refValueText} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.refValueText,
+                    !isServerVerified && styles.refValueUnverified,
+                  ]}
+                  numberOfLines={1}
+                >
                   {rawRef}
                 </Text>
               </View>
               <TouchableOpacity
-                style={styles.copyButton}
+                style={[styles.copyButton, !isServerVerified && styles.copyButtonDisabled]}
                 onPress={handleCopyRef}
+                disabled={!isServerVerified}
                 activeOpacity={0.7}
+                accessibilityState={{ disabled: !isServerVerified }}
               >
-                <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                <Text style={styles.copyButtonText}>Salin</Text>
+                <Ionicons
+                  name="copy-outline"
+                  size={16}
+                  color={isServerVerified ? colors.primary : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.copyButtonText,
+                    !isServerVerified && { color: colors.textMuted },
+                  ]}
+                >
+                  Salin
+                </Text>
               </TouchableOpacity>
             </View>
             <DetailRow label="Waktu Transaksi" value={formattedDate} />
@@ -210,10 +285,21 @@ const TransactionDetailScreen: React.FC = () => {
           </View>
 
           {/* Security Seal */}
-          <View style={styles.securitySeal}>
-            <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-            <Text style={styles.securitySealText}>
-              Terverifikasi Otentik • Enkripsi Kriptografis TLS 1.3
+          <View style={[styles.securitySeal, !isServerVerified && styles.securitySealUnverified]}>
+            <Ionicons
+              name={isServerVerified ? 'shield-checkmark' : 'alert-circle-outline'}
+              size={16}
+              color={isServerVerified ? colors.primary : colors.warning}
+            />
+            <Text
+              style={[
+                styles.securitySealText,
+                !isServerVerified && { color: colors.warning },
+              ]}
+            >
+              {isServerVerified
+                ? 'Terverifikasi Otentik • Enkripsi Kriptografis TLS 1.3'
+                : 'Belum Terverifikasi Server • Menunggu Konfirmasi Otoritatif'}
             </Text>
           </View>
         </View>
@@ -222,12 +308,26 @@ const TransactionDetailScreen: React.FC = () => {
       {/* Sticky Bottom Actions */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
-          style={styles.shareButton}
+          style={[styles.shareButton, !isServerVerified && styles.shareButtonDisabled]}
           onPress={handleShareReceipt}
+          disabled={!isServerVerified}
           activeOpacity={0.8}
+          accessibilityState={{ disabled: !isServerVerified }}
         >
-          <Ionicons name="share-social" size={18} color={colors.white} style={styles.btnIcon} />
-          <Text style={styles.shareButtonText}>Bagikan Bukti Transaksi</Text>
+          <Ionicons
+            name="share-social"
+            size={18}
+            color={isServerVerified ? colors.white : colors.textMuted}
+            style={styles.btnIcon}
+          />
+          <Text
+            style={[
+              styles.shareButtonText,
+              !isServerVerified && styles.shareButtonTextDisabled,
+            ]}
+          >
+            {isServerVerified ? 'Bagikan Bukti Transaksi' : 'Resi Belum Terverifikasi'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -479,6 +579,46 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  unverifiedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginHorizontal: 16,
+    marginTop: 16,
+    gap: spacing.xs,
+  },
+  unverifiedBannerText: {
+    flex: 1,
+    fontSize: typography.size.xs,
+    color: '#92400E',
+    fontWeight: '500',
+  },
+  refValueUnverified: {
+    color: colors.warning,
+    fontStyle: 'italic',
+  },
+  navButtonDisabled: {
+    opacity: 0.4,
+  },
+  shareButtonDisabled: {
+    backgroundColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  shareButtonTextDisabled: {
+    color: colors.textMuted,
+  },
+  copyButtonDisabled: {
+    backgroundColor: '#F3F4F6',
+  },
+  securitySealUnverified: {
+    backgroundColor: '#FFFBEB',
+    borderTopColor: '#FDE68A',
   },
 });
 

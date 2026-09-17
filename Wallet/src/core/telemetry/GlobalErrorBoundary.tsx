@@ -38,6 +38,8 @@ export class GlobalErrorBoundary extends Component<
   GlobalErrorBoundaryProps,
   GlobalErrorBoundaryState
 > {
+  private copyTimeout: ReturnType<typeof setTimeout> | null = null;
+
   constructor(props: GlobalErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -65,11 +67,24 @@ export class GlobalErrorBoundary extends Component<
     this.setState({ correlationId });
   }
 
+  componentWillUnmount(): void {
+    if (this.copyTimeout) {
+      clearTimeout(this.copyTimeout);
+      this.copyTimeout = null;
+    }
+  }
+
   handleReset = (): void => {
+    if (this.copyTimeout) {
+      clearTimeout(this.copyTimeout);
+      this.copyTimeout = null;
+    }
+
     this.setState({
       hasError: false,
       error: null,
       correlationId: null,
+      copied: false,
     });
 
     if (this.props.onReset) {
@@ -79,9 +94,24 @@ export class GlobalErrorBoundary extends Component<
 
   handleCopyCorrelationId = async (): Promise<void> => {
     const id = this.state.correlationId || 'N/A';
-    await Clipboard.setStringAsync(id);
-    this.setState({ copied: true });
-    setTimeout(() => this.setState({ copied: false }), 3000);
+    try {
+      await Clipboard.setStringAsync(id);
+      this.setState({ copied: true });
+
+      if (this.copyTimeout) {
+        clearTimeout(this.copyTimeout);
+      }
+
+      this.copyTimeout = setTimeout(() => {
+        this.setState({ copied: false });
+        this.copyTimeout = null;
+      }, 3000);
+    } catch (err) {
+      // Defensive fallback: Jangan biarkan unhandled promise rejection saat clipboard dibatasi OS/device
+      if (__DEV__) {
+        console.warn('Gagal menyalin Correlation ID ke papan klip:', err);
+      }
+    }
   };
 
   render(): ReactNode {

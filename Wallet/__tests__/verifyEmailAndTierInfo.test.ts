@@ -50,17 +50,17 @@ jest.mock('../src/core/security/secureStorage.service', () => ({
 
 describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilience', () => {
   describe('1. Logika Kalkulasi Plafon Saldo (getWalletTierInfo)', () => {
-    it('harus mengembalikan Akun Basic dengan limit Rp 2.000.000 jika user null', () => {
+    it('harus mengembalikan Akun Basic dengan limit Rp 5.000.000 jika user null', () => {
       const tierInfo = getWalletTierInfo(null);
       expect(tierInfo).toEqual({
         tierName: 'REGULER TIER',
-        maxLimit: 2000000,
-        formattedLimit: 'Rp 2.000.000',
+        maxLimit: 5000000,
+        formattedLimit: 'Rp 5.000.000',
         isPremium: false,
       });
     });
 
-    it('harus mengembalikan Akun Basic (Rp 2.000.000) untuk akun baru yang sudah verifikasi email tapi belum KYC', () => {
+    it('harus mengembalikan Akun Basic (Rp 5.000.000) untuk akun baru yang sudah verifikasi email tapi belum KYC', () => {
       const newlyVerifiedUser: User = {
         id: 'usr-new-01',
         username: 'pengguna_baru',
@@ -84,11 +84,11 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
       // WAJIB mengevaluasi accountTier/isKycVerified, BUKAN isVerified legacy!
       expect(tierInfo.isPremium).toBe(false);
       expect(tierInfo.tierName).toBe('REGULER TIER');
-      expect(tierInfo.maxLimit).toBe(2000000);
-      expect(tierInfo.formattedLimit).toBe('Rp 2.000.000');
+      expect(tierInfo.maxLimit).toBe(5000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 5.000.000');
     });
 
-    it('harus mengembalikan Akun Premium dengan limit Rp 20.000.000 jika accountTier === "premium"', () => {
+    it('harus mengembalikan Akun Premium dengan limit Rp 50.000.000 jika accountTier === "premium"', () => {
       const premiumUser: User = {
         id: 'usr-prem-01',
         username: 'sultan_crypto',
@@ -110,11 +110,11 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
       const tierInfo = getWalletTierInfo(premiumUser);
       expect(tierInfo.isPremium).toBe(true);
       expect(tierInfo.tierName).toBe('PLATINUM KYC');
-      expect(tierInfo.maxLimit).toBe(20000000);
-      expect(tierInfo.formattedLimit).toBe('Rp 20.000.000');
+      expect(tierInfo.maxLimit).toBe(50000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 50.000.000');
     });
 
-    it('harus mengembalikan Akun Premium dengan limit Rp 20.000.000 jika isKycVerified bernilai true', () => {
+    it('harus mengembalikan Akun Premium dengan limit Rp 50.000.000 jika isKycVerified bernilai true', () => {
       const kycUser: Partial<User> = {
         isKycVerified: true,
         accountTier: 'basic' as any, // edge case: tier belum terupdate tapi isKycVerified true
@@ -122,8 +122,35 @@ describe('TASK-QA-HOTFIX-05: getWalletTierInfo & Defensive Verification Resilien
 
       const tierInfo = getWalletTierInfo(kycUser as User);
       expect(tierInfo.isPremium).toBe(true);
-      expect(tierInfo.maxLimit).toBe(20000000);
-      expect(tierInfo.formattedLimit).toBe('Rp 20.000.000');
+      expect(tierInfo.maxLimit).toBe(50000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 50.000.000');
+    });
+
+    it('TASK-QA-02 Edge Case: harus fallback ke Reguler Tier (5jt) jika field accountTier dan isKycVerified undefined', () => {
+      const edgeUser: Partial<User> = {
+        id: 'usr-edge-01',
+        username: 'incomplete_profile',
+      };
+
+      const tierInfo = getWalletTierInfo(edgeUser as User);
+      expect(tierInfo.isPremium).toBe(false);
+      expect(tierInfo.tierName).toBe('REGULER TIER');
+      expect(tierInfo.maxLimit).toBe(5000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 5.000.000');
+    });
+
+    it('TASK-QA-02 Edge Case: harus mengakui Platinum KYC (50jt) jika accountTier "premium" meski isKycVerified bernilai false (Admin Override)', () => {
+      const adminOverrideUser: Partial<User> = {
+        id: 'usr-admin-override',
+        accountTier: 'premium',
+        isKycVerified: false,
+      };
+
+      const tierInfo = getWalletTierInfo(adminOverrideUser as User);
+      expect(tierInfo.isPremium).toBe(true);
+      expect(tierInfo.tierName).toBe('PLATINUM KYC');
+      expect(tierInfo.maxLimit).toBe(50000000);
+      expect(tierInfo.formattedLimit).toBe('Rp 50.000.000');
     });
   });
 

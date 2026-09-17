@@ -17,12 +17,18 @@ const { width } = Dimensions.get('window');
 export const GlobalDialogModal: React.FC = () => {
   const dialog = useFeedbackStore((state) => state.dialog);
   const closeDialog = useFeedbackStore((state) => state.closeDialog);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsProcessing(false);
+  }, [dialog?.id]);
 
   if (!dialog || !dialog.isOpen) {
     return null;
   }
 
   const {
+    id,
     title,
     message,
     type = 'info',
@@ -34,16 +40,40 @@ export const GlobalDialogModal: React.FC = () => {
   } = dialog;
 
   const handleConfirm = async () => {
-    closeDialog();
-    if (onConfirm) {
-      await onConfirm();
+    if (isProcessing) return;
+    const currentDialogId = id;
+    setIsProcessing(true);
+
+    try {
+      if (onConfirm) {
+        await onConfirm();
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error saat mengeksekusi onConfirm dialog:', error);
+      }
+    } finally {
+      setIsProcessing(false);
+      closeDialog(currentDialogId);
     }
   };
 
-  const handleCancel = () => {
-    closeDialog();
-    if (onCancel) {
-      onCancel();
+  const handleCancel = async () => {
+    if (isProcessing) return;
+    const currentDialogId = id;
+    setIsProcessing(true);
+
+    try {
+      if (onCancel) {
+        await onCancel();
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error saat mengeksekusi onCancel dialog:', error);
+      }
+    } finally {
+      setIsProcessing(false);
+      closeDialog(currentDialogId);
     }
   };
 
@@ -84,9 +114,9 @@ export const GlobalDialogModal: React.FC = () => {
       transparent
       visible={dialog.isOpen}
       animationType="fade"
-      onRequestClose={handleCancel}
+      onRequestClose={isProcessing ? undefined : handleCancel}
     >
-      <TouchableWithoutFeedback onPress={cancelText ? handleCancel : handleConfirm}>
+      <TouchableWithoutFeedback onPress={isProcessing ? undefined : (cancelText ? handleCancel : handleConfirm)}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalCard}>
@@ -103,7 +133,9 @@ export const GlobalDialogModal: React.FC = () => {
               <View style={styles.buttonContainer}>
                 {cancelText ? (
                   <TouchableOpacity
-                    style={styles.cancelButton}
+                    testID="dialog-cancel-button"
+                    disabled={isProcessing}
+                    style={[styles.cancelButton, isProcessing && styles.disabledButton]}
                     onPress={handleCancel}
                     activeOpacity={0.7}
                   >
@@ -112,15 +144,20 @@ export const GlobalDialogModal: React.FC = () => {
                 ) : null}
 
                 <TouchableOpacity
+                  testID="dialog-confirm-button"
+                  disabled={isProcessing}
                   style={[
                     styles.confirmButton,
                     isDestructive && styles.destructiveButton,
                     !cancelText && styles.fullWidthButton,
+                    isProcessing && styles.disabledButton,
                   ]}
                   onPress={handleConfirm}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.confirmButtonText}>{confirmText}</Text>
+                  <Text style={styles.confirmButtonText}>
+                    {isProcessing ? 'Memproses...' : confirmText}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -211,5 +248,8 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     fontWeight: '600',
     color: colors.white,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

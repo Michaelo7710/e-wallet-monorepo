@@ -1,11 +1,26 @@
+import React from 'react';
+import ReactTestRenderer from 'react-test-renderer';
 import { feedback } from '../src/core/feedback/feedback.service';
 import { useFeedbackStore } from '../src/core/feedback/feedback.store';
+import { GlobalDialogModal } from '../src/shared/components/GlobalDialogModal';
+
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+}));
+
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  const React = require('react');
+  RN.Modal = (props: any) => (props.visible ? React.createElement(RN.View, props, props.children) : null);
+  return RN;
+});
 
 describe('TASK-QA-01: Unified Feedback Service & Store Unit Tests', () => {
   beforeEach(() => {
     // Reset Zustand store state before each test
     useFeedbackStore.setState({
       dialog: null,
+      dialogQueue: [],
       toast: null,
     });
   });
@@ -166,6 +181,150 @@ describe('TASK-QA-01: Unified Feedback Service & Store Unit Tests', () => {
 
       feedback.dialog.close();
       expect(useFeedbackStore.getState().dialog?.isOpen).toBe(false);
+    });
+  });
+
+  describe('TASK-FE-08: Concurrency & Chained Callback Protection Tests', () => {
+    it('harus memberikan id unik setiap kali showDialog dipanggil', () => {
+      const id1 = useFeedbackStore.getState().showDialog({
+        title: 'Dialog 1',
+        message: 'Pesan 1',
+      });
+      const id2 = useFeedbackStore.getState().showDialog({
+        title: 'Dialog 2',
+        message: 'Pesan 2',
+      });
+
+      expect(id1).toBeDefined();
+      expect(id2).toBeDefined();
+      expect(id1).not.toBe(id2);
+      expect(useFeedbackStore.getState().dialog?.id).toBe(id2);
+    });
+
+    it('harus menolak closeDialog jika targetId tidak cocok dengan dialog aktif (mencegah penutupan rantai callback)', () => {
+      const id1 = useFeedbackStore.getState().showDialog({
+        title: 'Dialog 1',
+        message: 'Pesan 1',
+      });
+
+      // Dialog kedua dibuka (misalnya dari onConfirm dialog 1)
+      const id2 = useFeedbackStore.getState().showDialog({
+        title: 'Dialog 2 (Chained)',
+        message: 'Pesan 2',
+      });
+
+      // Handler dialog 1 mencoba menutup dengan targetId id1
+      useFeedbackStore.getState().closeDialog(id1);
+
+      // State dialog 2 HARUS tetap terbuka dan tidak tertutup dini!
+      const currentDialog = useFeedbackStore.getState().dialog;
+      expect(currentDialog?.isOpen).toBe(true);
+      expect(currentDialog?.id).toBe(id2);
+      expect(currentDialog?.title).toBe('Dialog 2 (Chained)');
+
+      // Ketika id2 ditutup, barulah dialog tertutup
+      useFeedbackStore.getState().closeDialog(id2);
+      expect(useFeedbackStore.getState().dialog?.isOpen).toBe(false);
+    });
+
+    it('harus mengantrekan dialog baru via queueDialog jika sedang ada dialog aktif', () => {
+      const id1 = useFeedbackStore.getState().showDialog({
+        title: 'Dialog Utama',
+        message: 'Sedang tampil',
+      });
+
+      const id2 = useFeedbackStore.getState().queueDialog({
+        title: 'Dialog Antrean',
+        message: 'Menunggu giliran',
+      });
+
+      const state = useFeedbackStore.getState();
+      expect(state.dialog?.id).toBe(id1);
+      expect(state.dialogQueue?.length).toBe(1);
+      expect(state.dialogQueue?.[0].id).toBe(id2);
+
+      // Tutup dialog utama
+      useFeedbackStore.getState().closeDialog(id1);
+
+      // Dialog antrean otomatis naik menjadi dialog aktif!
+      const nextState = useFeedbackStore.getState();
+      expect(nextState.dialog?.isOpen).toBe(true);
+      expect(nextState.dialog?.id).toBe(id2);
+      expect(nextState.dialog?.title).toBe('Dialog Antrean');
+      expect(nextState.dialogQueue?.length).toBe(0);
+    });
+
+    it('harus mengeksekusi rantai callback onConfirm pada GlobalDialogModal tanpa menutup dialog penerus', async () => {
+      let renderer: any;
+      await ReactTestRenderer.act(async () => {
+        renderer = ReactTestRenderer.create(React.createElement(GlobalDialogModal));
+      });
+
+      // Buka Dialog 1 yang di dalam onConfirm-nya memicu Dialog 2
+      await ReactTestRenderer.act(async () => {
+        feedback.dialog.confirm({
+          title: 'Konfirmasi Awal',
+          message: 'Lanjutkan ke tahap 2?',
+          confirmText: 'Lanjut',
+          onConfirm: async () => {
+            // Rantai callback: buka dialog kedua
+            feedback.dialog.success('Sukses Tahap 2', 'Data berhasil diperbarui');
+          },
+        });
+      });
+
+      // Pastikan Dialog 1 ter-render
+      expect(useFeedbackStore.getState().dialog?.title).toBe('Konfirmasi Awal');
+
+      // Tekan tombol confirm pada GlobalDialogModal
+      const confirmButton = renderer.root.findByProps({ testID: 'dialog-confirm-button' });
+      await ReactTestRenderer.act(async () => {
+        await confirmButton.props.onPress();
+      });
+
+      // Dialog kedua HARUS tetap aktif di store!
+      const currentDialog = useFeedbackStore.getState().dialog;
+      expect(currentDialog?.isOpen).toBe(true);
+      expect(currentDialog?.title).toBe('Sukses Tahap 2');
+      expect(currentDialog?.confirmText).toBe('Selesai');
+      await ReactTestRenderer.act(async () => {
+        renderer.unmount();
+      });
+    });
+
+    it('harus mengeksekusi onCancel pada GlobalDialogModal dengan aman saat membuka dialog baru', async () => {
+      let renderer: any;
+      await ReactTestRenderer.act(async () => {
+        renderer = ReactTestRenderer.create(React.createElement(GlobalDialogModal));
+      });
+
+      await ReactTestRenderer.act(async () => {
+        feedback.dialog.confirm({
+          title: 'Batal Transaksi?',
+          message: 'Apakah Anda ingin membatalkan transaksi?',
+          confirmText: 'Lanjutkan',
+          cancelText: 'Batalkan',
+          onConfirm: () => {},
+          onCancel: () => {
+            feedback.dialog.alert('Informasi Pembatalan', 'Transaksi telah dibatalkan');
+          },
+        });
+      });
+
+      const dialog1Id = useFeedbackStore.getState().dialog?.id;
+      const cancelButton = renderer.root.findByProps({ testID: 'dialog-cancel-button' });
+
+      await ReactTestRenderer.act(async () => {
+        await cancelButton.props.onPress();
+      });
+
+      const currentDialog = useFeedbackStore.getState().dialog;
+      expect(currentDialog?.isOpen).toBe(true);
+      expect(currentDialog?.title).toBe('Informasi Pembatalan');
+      expect(currentDialog?.id).not.toBe(dialog1Id);
+      await ReactTestRenderer.act(async () => {
+        renderer.unmount();
+      });
     });
   });
 });

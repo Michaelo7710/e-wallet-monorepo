@@ -10,8 +10,8 @@ export const getWalletTierInfo = (user: User | null) => {
   const isPremium = user?.accountTier === 'premium' || Boolean(user?.isKycVerified);
   return {
     tierName: isPremium ? 'PLATINUM KYC' : 'REGULER TIER',
-    maxLimit: isPremium ? 20000000 : 2000000,
-    formattedLimit: isPremium ? 'Rp 20.000.000' : 'Rp 2.000.000',
+    maxLimit: isPremium ? 50000000 : 5000000,
+    formattedLimit: isPremium ? 'Rp 50.000.000' : 'Rp 5.000.000',
     isPremium,
   };
 };

@@ -45,7 +45,7 @@ const TransferScreen = () => {
   const handleOpenPin = () => {
     // Graceful Degradation Guard: Cegah pemunculan modal PIN saat fitur dinonaktifkan
     if (!isTransferEnabled) {
-      feedback.toast.warning(transferNotice);
+      feedback.dialog.error('Layanan Ditangguhkan', transferNotice);
       return;
     }
 
@@ -61,19 +61,19 @@ const TransferScreen = () => {
     }
 
     if (!phoneNumber || phoneNumber.length < 10) {
-      feedback.toast.error('Nomor handphone tujuan minimal 10 digit.');
+      feedback.dialog.error('Nomor Handphone Tidak Valid', 'Nomor handphone tujuan minimal 10 digit.');
       return;
     }
     if (user?.phoneNumber && phoneNumber.trim() === user.phoneNumber.trim()) {
-      feedback.toast.error('Anda tidak dapat melakukan transfer ke nomor handphone akun Anda sendiri.');
+      feedback.dialog.error('Transfer Ditolak', 'Anda tidak dapat melakukan transfer ke nomor handphone akun Anda sendiri.');
       return;
     }
     if (numericAmount < 10000) {
-      feedback.toast.warning('Nominal transfer minimal Rp 10.000.');
+      feedback.dialog.error('Batas Minimal Transfer', 'Nominal transfer minimal Rp 10.000.');
       return;
     }
     if (numericAmount > currentBalance) {
-      feedback.toast.error('Saldo dompet Anda tidak mencukupi untuk nominal transfer ini.');
+      feedback.dialog.error('Saldo Tidak Mencukupi', 'Saldo dompet Anda tidak mencukupi untuk nominal transfer ini.');
       return;
     }
     setIsPinVisible(true);
@@ -82,7 +82,7 @@ const TransferScreen = () => {
   const handleConfirmPin = (pin: string) => {
     if (!isTransferEnabled) {
       setIsPinVisible(false);
-      feedback.toast.warning(transferNotice);
+      feedback.dialog.error('Layanan Ditangguhkan', transferNotice);
       return;
     }
 
@@ -100,10 +100,17 @@ const TransferScreen = () => {
           navigation.navigate('TransactionDetail', {
             transaction: {
               ...tx,
+              id: tx.transactionId,
+              transactionId: tx.transactionId,
+              referenceNumber: tx.referenceNumber,
+              referenceId: tx.referenceNumber,
               type: 'transfer',
-              amount: numericAmount,
+              amount: tx.amount || numericAmount,
               receiverPhoneNumber: phoneNumber,
               description: `Transfer P2P ke ${phoneNumber}`,
+              status: tx.status || 'success',
+              isHighValue: tx.isHighValue ?? numericAmount >= 10000000,
+              remainingBalance: tx.remainingBalance,
               createdAt: new Date().toISOString(),
             },
           });
@@ -111,14 +118,14 @@ const TransferScreen = () => {
         onError: (err: any) => {
           setIsPinVisible(false);
           if (err.response?.data?.error_code === 'RECEIVER_WALLET_LIMIT_EXCEEDED') {
-            feedback.dialog.alert(
+            feedback.dialog.error(
               'Batas Saldo Penerima Penuh',
               err.response?.data?.message || 'Saldo penerima akan melebihi batas limit akunnya.'
             );
             return;
           }
           const msg = err.response?.data?.message || err.message || 'Transfer gagal diproses';
-          feedback.toast.error(msg);
+          feedback.dialog.error('Transfer Gagal', msg);
         },
       }
     );
