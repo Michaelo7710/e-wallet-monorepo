@@ -6,9 +6,9 @@
 **ACCEPTED & IMPLEMENTED** (16 September 2026)
 
 ## Pemangku Kepentingan
-- Principal Mobile Architect (`tech-architecture-lead`)
-- Senior UI/UX Designer (`ui-ux-designer`)
-- Senior Product Owner (`product-owner`)
+- Principal Mobile Architect
+- Senior UI/UX Designer
+- Senior Product Owner
 
 ---
 

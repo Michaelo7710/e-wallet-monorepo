@@ -9,19 +9,19 @@
 | **Nama Proyek** | GreenPay E-Wallet Enterprise Platform |
 | **Kode Proyek** | `PRJ-GPAY-2026` |
 | **Klien / Business Unit** | Showcase Portofolio Enterprise / Digital Banking Division |
-| **Product Owner** | Senior Product Owner (`product-owner` AI Agent) |
-| **Technical Architecture Lead** | Principal Software Architect (`tech-architecture-lead` AI Agent) |
-| **UI/UX Design Lead** | Principal Product Designer (`ui-ux-designer` AI Agent) |
+| **Product Owner** | Senior Product Owner |
+| **Technical Architecture Lead** | Principal Software Architect |
+| **UI/UX Design Lead** | Principal Product Designer |
 | **Versi Dokumen** | `v3.1.0` (Zero-Budget Architecture, Thematic Group Assets & Digital Receipt) |
 | **Status Dokumen** | **APPROVED & BASELINED (READY FOR DOWNSTREAM EXECUTION)** |
 | **Tanggal Pembaruan** | 16 September 2026 |
-| **Dokumen Acuan Historis** | [`docs/BRD_AS_IS.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/docs/BRD_AS_IS.md) *(Baseline v2.1.0 hasil reverse-engineering)* |
+| **Dokumen Acuan Historis** | [`docs/BRD_AS_IS.md`](docs/BRD_AS_IS.md) *(Baseline v2.1.0 hasil reverse-engineering)* |
 
 ### Log Riwayat Perubahan
 
 | Versi | Tanggal | Penulis | Ringkasan Perubahan | Status Persetujuan |
 |:---|:---|:---|:---|:---|
-| `v2.1.0` | 2026-09-16 | Reverse-Engineering | BRD As-Is berbasis kode sumber eksisting (24 API & 25 Screens). | Diarsipkan ([`docs/BRD_AS_IS.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/docs/BRD_AS_IS.md)) |
+| `v2.1.0` | 2026-09-16 | Product Owner | BRD As-Is berbasis kode sumber eksisting (24 API & 25 Screens). | Diarsipkan ([`docs/BRD_AS_IS.md`](docs/BRD_AS_IS.md)) |
 | `v3.0.0` | 2026-09-16 | Senior Product Owner | Rekonstruksi 3 Pilar (Design, Business, User). Eliminasi disonansi visual Auth vs Dashboard, tiering limit, INVEST User Stories. | Terbit |
 | `v3.1.0` | 2026-09-16 | Senior Product Owner | **Integrasi Kebijakan Zero-Budget (Rp 0)**, standarisasi **Thematic Group Backdrops** (4 grup fitur: Auth, User, Payment, Admin), perancangan aset **Emerald Platinum Wallet Card**, dan penambahan layar esensial **`TransactionDetailScreen.tsx` (Screen ke-26 / Digital Receipt)** untuk menggantikan dialog `Alert` mentah. | **Baselined & Approved** |
 
@@ -190,16 +190,16 @@ Dengan ditetapkannya `TransactionDetailScreen.tsx`, struktur antarmuka aplikasi 
 
 | ID Fitur | Modul Sistem | Uraian Target Pembaruan | MoSCoW | Nilai Bisnis | Target Eksekutor |
 |:---|:---|:---|:---:|:---:|:---|
-| `FEAT-01` | Theme & Design | **Thematic Group Backdrops:** Penerapan latar tematik 4 modul dan kompresi `Auth-bg.png` (<80KB). | **Must-Have** | P0 (Kritis) | `ui-ux-designer` & `tech-architecture-lead` |
-| `FEAT-02` | Wallet Card | **Emerald Platinum Card Asset:** Desain tekstur kartu premium dengan chip virtual untuk dasbor `HomeScreen`. | **Must-Have** | P0 (Kritis) | `ui-ux-designer` & `frontend-developer` |
-| `FEAT-03` | Receipt & Detail| **TransactionDetailScreen (Screen #26):** Struk digital resmi pengganti dialog `Alert` mentah pasca-transaksi. | **Must-Have** | P0 (Kritis) | `ui-ux-designer` & `frontend-developer` |
-| `FEAT-04` | History Interaction | **Clickable History Items:** Menghubungkan klik baris transaksi di `HistoryScreen` ke `TransactionDetailScreen`. | **Must-Have** | P0 (Kritis) | `frontend-developer` |
-| `FEAT-05` | PIN Haptic Modal| **Haptic Security PIN Modal:** Validasi 6-digit PIN dengan animasi titik aman & getaran haptik. | **Must-Have** | P0 (Kritis) | `tech-architecture-lead` & `frontend-developer` |
-| `FEAT-06` | Account Tiering | **Tiering Limit Enforcement:** Pembatasan mutasi: Reguler (Rp 2 Juta) vs KYC Verified (Rp 20 Juta). | **Must-Have** | P0 (Kritis) | `tech-architecture-lead` & `backend-developer` |
-| `FEAT-07` | Midtrans Flow | **SNAP Fee Calculation:** Transparansi biaya admin pada checkout pembayaran Midtrans. | **Must-Have** | P1 (Tinggi) | `backend-developer` |
-| `FEAT-08` | Bell Navigation | **Header Notification Link:** Menghubungkan ikon lonceng notifikasi di `HomeScreen` ke modal riwayat notifikasi. | **Should-Have** | P1 (Tinggi) | `frontend-developer` |
-| `FEAT-09` | Share Feature | **Share Receipt Action:** Membagikan bukti struk transfer langsung ke aplikasi pihak ketiga (WhatsApp/Telegram). | **Should-Have** | P2 (Sedang) | `frontend-developer` |
-| `FEAT-10` | Offline Cache | **Local SQLite Ledger Cache:** Sinkronisasi mutasi transaksi saat jaringan terputus. | **Could-Have** | P2 (Sedang) | `tech-architecture-lead` |
+| `FEAT-01` | Theme & Design | **Thematic Group Backdrops:** Penerapan latar tematik 4 modul dan kompresi `Auth-bg.png` (<80KB). | **Must-Have** | P0 (Kritis) | UI/UX Designer & Tech Architecture Lead |
+| `FEAT-02` | Wallet Card | **Emerald Platinum Card Asset:** Desain tekstur kartu premium dengan chip virtual untuk dasbor `HomeScreen`. | **Must-Have** | P0 (Kritis) | UI/UX Designer & Frontend Developer |
+| `FEAT-03` | Receipt & Detail| **TransactionDetailScreen (Screen #26):** Struk digital resmi pengganti dialog `Alert` mentah pasca-transaksi. | **Must-Have** | P0 (Kritis) | UI/UX Designer & Frontend Developer |
+| `FEAT-04` | History Interaction | **Clickable History Items:** Menghubungkan klik baris transaksi di `HistoryScreen` ke `TransactionDetailScreen`. | **Must-Have** | P0 (Kritis) | Frontend Developer |
+| `FEAT-05` | PIN Haptic Modal| **Haptic Security PIN Modal:** Validasi 6-digit PIN dengan animasi titik aman & getaran haptik. | **Must-Have** | P0 (Kritis) | Tech Architecture Lead & Frontend Developer |
+| `FEAT-06` | Account Tiering | **Tiering Limit Enforcement:** Pembatasan mutasi: Reguler (Rp 2 Juta) vs KYC Verified (Rp 20 Juta). | **Must-Have** | P0 (Kritis) | Tech Architecture Lead & Backend Developer |
+| `FEAT-07` | Midtrans Flow | **SNAP Fee Calculation:** Transparansi biaya admin pada checkout pembayaran Midtrans. | **Must-Have** | P1 (Tinggi) | Backend Developer |
+| `FEAT-08` | Bell Navigation | **Header Notification Link:** Menghubungkan ikon lonceng notifikasi di `HomeScreen` ke modal riwayat notifikasi. | **Should-Have** | P1 (Tinggi) | Frontend Developer |
+| `FEAT-09` | Share Feature | **Share Receipt Action:** Membagikan bukti struk transfer langsung ke aplikasi pihak ketiga (WhatsApp/Telegram). | **Should-Have** | P2 (Sedang) | Frontend Developer |
+| `FEAT-10` | Offline Cache | **Local SQLite Ledger Cache:** Sinkronisasi mutasi transaksi saat jaringan terputus. | **Could-Have** | P2 (Sedang) | Tech Architecture Lead |
 
 ---
 
@@ -211,7 +211,7 @@ Dengan ditetapkannya `TransactionDetailScreen.tsx`, struktur antarmuka aplikasi 
 - **Parent Epic:** `Transaction Confirmation & Ledger Transparency`
 - **Prioritas MoSCoW:** `Must-Have`
 - **Story Points Estimasi:** `5`
-- **PIC Rekayasa:** `ui-ux-designer`, `frontend-developer`
+- **PIC Rekayasa:** UI/UX Designer, Frontend Developer
 
 #### Pernyataan Story
 ```text
@@ -273,21 +273,21 @@ Given pengguna berada di TransactionDetailScreen berstatus sukses
  3. Desain Komponen WalletCard Modern                      4. Terapkan Layout Thematic Container
 ```
 
-### A. Panduan Spesifik untuk `ui-ux-designer`:
-1. **Generasi Aset Nol Rupiah ([`Wallet/src/assets/images`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/assets/images)):**
+### A. Panduan Spesifik untuk UI/UX Designer:
+1. **Generasi Aset Nol Rupiah ([`Wallet/src/assets/images`](Wallet/src/assets/images)):**
    - Rancang tekstur kartu `card-texture-platinum.png` (800x500) berwarna hijau zamrud mewah dengan aksen emas untuk `WalletCard`.
    - Rancang backdrop ringan `auth-mesh-bg.webp` (<80KB) untuk menggantikan `Auth-bg.png` (4.2MB).
    - Rancang aksen grafis header melengkung `pattern-payment-flow.png` untuk modul pembayaran.
 2. **Desain Layar ke-26 (`TransactionDetailScreen.tsx`):**
    - Rancang tampilan kertas struk digital (*digital voucher/receipt card*) dengan *jagged/perforated bottom edge* modern, tipografi nominal kontras tinggi, dan tombol *Action Share Sheet*.
 
-### B. Panduan Spesifik untuk `tech-architecture-lead`:
-1. **Pembaruan Navigasi ([`UserStack.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/app/navigation/UserStack.tsx)):**
+### B. Panduan Spesifik untuk Tech Architecture Lead:
+1. **Pembaruan Navigasi ([`UserStack.tsx`](Wallet/src/app/navigation/UserStack.tsx)):**
    - Daftarkan `TransactionDetail: { transaction: Transaction | any }` ke dalam `UserStackParamList`.
 2. **Eliminasi Alert Primitif:**
-   - Ubah callback `onSuccess` di [`TransferScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/TransferScreen.tsx) dan [`WithdrawScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/payment/screens/WithdrawScreen.tsx) agar memanggil `navigation.navigate('TransactionDetail', { transaction: tx })`.
+   - Ubah callback `onSuccess` di [`TransferScreen.tsx`](Wallet/src/features/payment/screens/TransferScreen.tsx) dan [`WithdrawScreen.tsx`](Wallet/src/features/payment/screens/WithdrawScreen.tsx) agar memanggil `navigation.navigate('TransactionDetail', { transaction: tx })`.
 3. **Aktivasi Klik Riwayat Mutasi:**
-   - Hubungkan `onPress` pada `renderTransactionItem` di [`HistoryScreen.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/features/user/screens/HistoryScreen.tsx) ke rute `TransactionDetail`.
+   - Hubungkan `onPress` pada `renderTransactionItem` di [`HistoryScreen.tsx`](Wallet/src/features/user/screens/HistoryScreen.tsx) ke rute `TransactionDetail`.
 4. **Thematic Layout Architecture:**
    - Sediakan opsi prop varian tema (`variant="auth" | "user" | "payment" | "admin"`) pada layout pembungkus antarmuka.
 
@@ -297,6 +297,6 @@ Given pengguna berada di TransactionDetailScreen berstatus sukses
 
 | Peran Tanggung Jawab | Entitas Pelaksana | Status | Catatan Validasi PO |
 |:---|:---|:---:|:---|
-| **Lead Product Owner** | Senior Product Owner (`product-owner`) | **APPROVED** | Kebijakan Rp 0, 4 Aset Tematik, dan Layar Struk ke-26 resmi dikunci. |
-| **UI/UX Design Lead** | Principal Designer (`ui-ux-designer`) | **READY** | Siap mengeksekusi aset kartu, backdrop tematik, dan mockup struk. |
-| **Tech Architecture Lead** | Principal Architect (`tech-architecture-lead`) | **READY** | Siap mengonfigurasi rute navigasi dan eliminasi Alert primitif. |
+| **Lead Product Owner** | Senior Product Owner (Product Owner) | **APPROVED** | Kebijakan Rp 0, 4 Aset Tematik, dan Layar Struk ke-26 resmi dikunci. |
+| **UI/UX Design Lead** | Principal Designer (UI/UX Designer) | **READY** | Siap mengeksekusi aset kartu, backdrop tematik, dan mockup struk. |
+| **Tech Architecture Lead** | Principal Architect (Tech Architecture Lead) | **READY** | Siap mengonfigurasi rute navigasi dan eliminasi Alert primitif. |

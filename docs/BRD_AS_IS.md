@@ -2,14 +2,14 @@
 
 > **Arsip Historis / Baseline Codebase v2.1.0**  
 > Dokumen ini menyimpan spesifikasi kebutuhan *As-Is* yang diekstrak langsung secara *reverse-engineering* dari kode sumber eksisting (`e-wallet-backend` dan `Wallet`).  
-> **Target Dokumen Pembaruan:** Lihat [`docs/BRD.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/docs/BRD.md) untuk target evolusi produk v3.0.0 (Audiens, Bisnis, Desain & Arsitektur Terpadu).
+> **Target Dokumen Pembaruan:** Lihat [`docs/BRD.md`](docs/BRD.md) untuk target evolusi produk v3.0.0 (Audiens, Bisnis, Desain & Arsitektur Terpadu).
 
 ---
 
 **Dokumen Versi:** 2.1.0 (As-Is Baseline)  
 **Tanggal Diperbarui:** 16 September 2026  
 **Status:** Archived Baseline  
-**Peran Pembuat:** Senior Product Owner & Business Analyst (Reverse-Engineering Audit)  
+**Peran Pembuat:** Senior Product Owner & Business Analyst  
 **Dasar Acuan:** 
 - Brief Mini-Proyek: `File Santri MP - E-Wallet.docx`
 - Spesifikasi Backend: `Reshful-API.txt` (GreenPay E-Wallet Enterprise API v1.0.0)

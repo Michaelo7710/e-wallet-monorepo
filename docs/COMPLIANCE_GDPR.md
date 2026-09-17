@@ -94,8 +94,8 @@ Under European **Directive (EU) 2015/2366 (PSD2)** and the EBA Regulatory Techni
 
 | EU Regulatory Requirement | Article / Reference | GreenPay Implementation | Evidence in Codebase |
 |:---|:---|:---|:---|
-| **Privacy by Design** | GDPR Art. 25 | Clean Architecture separation; zero credentials in local DB | [`storage.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/core/storage.ts) |
-| **Right to Erasure** | GDPR Art. 17 | Cryptographic anonymization preserving ledger integrity | [`userService.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/e-wallet-backend/src/services/userService.js) |
-| **Security of Processing** | GDPR Art. 32 | Argon2 hashing, CSPRNG OTP, SecureStore hardware isolation | [`authService.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/e-wallet-backend/src/services/authService.js) |
-| **Strong Authentication** | PSD2 Art. 97 | Dual-Token JWT rotation, 2FA challenge on high-value transfer | [`paymentRoutes.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/e-wallet-backend/src/routes/paymentRoutes.js) |
-| **Audit Trail & Integrity** | 5AMLD Art. 40 | Non-repudiation correlation ID & immutable transaction records | [`correlationMiddleware.js`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/e-wallet-backend/src/middlewares/correlationMiddleware.js) |
+| **Privacy by Design** | GDPR Art. 25 | Clean Architecture separation; zero credentials in local DB | [`storage.ts`](Wallet/src/core/storage.ts) |
+| **Right to Erasure** | GDPR Art. 17 | Cryptographic anonymization preserving ledger integrity | [`userService.js`](e-wallet-backend/src/services/userService.js) |
+| **Security of Processing** | GDPR Art. 32 | Argon2 hashing, CSPRNG OTP, SecureStore hardware isolation | [`authService.js`](e-wallet-backend/src/services/authService.js) |
+| **Strong Authentication** | PSD2 Art. 97 | Dual-Token JWT rotation, 2FA challenge on high-value transfer | [`paymentRoutes.js`](e-wallet-backend/src/routes/paymentRoutes.js) |
+| **Audit Trail & Integrity** | 5AMLD Art. 40 | Non-repudiation correlation ID & immutable transaction records | [`correlationMiddleware.js`](e-wallet-backend/src/middlewares/correlationMiddleware.js) |
