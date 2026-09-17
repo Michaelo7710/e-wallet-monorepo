@@ -4,7 +4,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { colors } from '@core/theme';
 import { deviceIntegrityService } from '@core/security/deviceIntegrity.service';
-import { DeviceSecurityBlockedScreen } from '@shared/components';
+import { DeviceSecurityBlockedScreen, GlobalFeedbackProvider } from '@shared/components';
 import { telemetryService } from '@core/telemetry/telemetry.service';
 
 import AuthStack from './AuthStack';
@@ -70,15 +70,17 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
-      {!isAuthenticated ? (
-        <AuthStack />
-      ) : user?.role === 'admin' ? (
-        <AdminStack />
-      ) : (
-        <UserStack />
-      )}
-    </NavigationContainer>
+    <GlobalFeedbackProvider>
+      <NavigationContainer>
+        {!isAuthenticated ? (
+          <AuthStack />
+        ) : user?.role === 'admin' ? (
+          <AdminStack />
+        ) : (
+          <UserStack />
+        )}
+      </NavigationContainer>
+    </GlobalFeedbackProvider>
   );
 };
 

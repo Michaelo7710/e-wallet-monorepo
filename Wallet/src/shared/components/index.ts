@@ -6,3 +6,6 @@ export type { WalletCardProps } from './WalletCard';
 export { default as PinModal } from './PinModal';
 export { default as NetworkStatusBanner } from './NetworkStatusBanner';
 export { default as DeviceSecurityBlockedScreen } from './DeviceSecurityBlockedScreen';
+export { GlobalDialogModal } from './GlobalDialogModal';
+export { GlobalToast } from './GlobalToast';
+export { GlobalFeedbackProvider } from './GlobalFeedbackProvider';

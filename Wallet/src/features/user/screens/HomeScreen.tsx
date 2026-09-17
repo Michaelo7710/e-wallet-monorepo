@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -105,7 +105,7 @@ const HomeScreen = () => {
               badgeText="Perbaikan"
               onPress={() => {
                 if (!isTransferEnabled) {
-                  Alert.alert('Fitur Sedang Pemeliharaan', transferNotice);
+                  feedback.dialog.warning('Fitur Sedang Pemeliharaan', transferNotice);
                   return;
                 }
                 navigation.navigate('Transfer');
@@ -119,7 +119,7 @@ const HomeScreen = () => {
               badgeText="Perbaikan"
               onPress={() => {
                 if (!isTopUpEnabled) {
-                  Alert.alert('Fitur Sedang Pemeliharaan', topUpNotice);
+                  feedback.dialog.warning('Fitur Sedang Pemeliharaan', topUpNotice);
                   return;
                 }
                 navigation.navigate('TopUp');
@@ -133,7 +133,7 @@ const HomeScreen = () => {
               badgeText="Perbaikan"
               onPress={() => {
                 if (!isWithdrawEnabled) {
-                  Alert.alert('Fitur Sedang Pemeliharaan', withdrawNotice);
+                  feedback.dialog.warning('Fitur Sedang Pemeliharaan', withdrawNotice);
                   return;
                 }
                 navigation.navigate('Withdraw');

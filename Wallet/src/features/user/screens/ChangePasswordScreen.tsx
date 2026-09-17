@@ -1,12 +1,12 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
@@ -53,14 +53,16 @@ const ChangePasswordScreen = () => {
       },
       {
         onSuccess: () => {
-          Alert.alert('Sukses', 'Kata sandi akun Anda berhasil diperbarui.', [
-            { text: 'Kembali', onPress: () => navigation.goBack() },
-          ]);
+          feedback.dialog.success(
+            'Sukses',
+            'Kata sandi akun Anda berhasil diperbarui.',
+            () => navigation.goBack()
+          );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Gagal mengubah kata sandi';
-          Alert.alert('Gagal Mengubah Sandi', errorMessage);
+          feedback.dialog.error('Gagal Mengubah Sandi', errorMessage);
         },
       }
     );

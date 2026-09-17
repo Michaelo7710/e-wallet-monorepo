@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Switch,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -102,8 +102,7 @@ const ProfileScreen = () => {
       if (verified) {
         await setBiometricsEnabled(true);
       } else {
-        Alert.alert(
-          'Aktivasi Dibatalkan',
+        feedback.toast.warning(
           'Gagal memverifikasi biometrik. Pengaturan tidak diubah.'
         );
       }
@@ -130,7 +129,7 @@ const ProfileScreen = () => {
 
   const handleTwoFactorPress = () => {
     if (user?.twoFactorEnabled) {
-      Alert.alert(
+      feedback.dialog.alert(
         'Proteksi 2FA Aktif',
         'Akun Anda telah diamankan dengan autentikator dua faktor berbasis TOTP.'
       );
@@ -140,20 +139,16 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Keluar dari Akun',
-      'Apakah Anda yakin ingin keluar dari dompet digital Anda?',
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Keluar',
-          style: 'destructive',
-          onPress: async () => {
-            await logoutSession();
-          },
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Keluar dari Akun',
+      message: 'Apakah Anda yakin ingin keluar dari dompet digital Anda?',
+      confirmText: 'Keluar',
+      cancelText: 'Batal',
+      isDestructive: true,
+      onConfirm: async () => {
+        await logoutSession();
+      },
+    });
   };
 
   const renderMenuRow = (menu: MenuType) => (

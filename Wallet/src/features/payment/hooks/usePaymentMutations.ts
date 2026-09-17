@@ -31,7 +31,7 @@ export const useTransferMutation = () => {
 export const useWithdrawalMutation = () => {
   return useMutation({
     mutationFn: async (params: WithdrawalParams) => {
-      await paymentRepository.requestWithdrawal(params);
+      return await paymentRepository.requestWithdrawal(params);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER.PROFILE });

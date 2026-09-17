@@ -1,5 +1,6 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { feedback } from '@core/feedback';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,21 +33,16 @@ const ForgotPasswordScreen = () => {
       { email: data.email },
       {
         onSuccess: () => {
-          Alert.alert(
+          feedback.dialog.success(
             'OTP Terkirim',
             'Jika email terdaftar, kode pemulihan telah dikirimkan ke email Anda.',
-            [
-              {
-                text: 'Lanjut',
-                onPress: () => navigation.navigate('ResetPassword', { email: data.email }),
-              },
-            ]
+            () => navigation.navigate('ResetPassword', { email: data.email })
           );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Gagal mengirim kode OTP';
-          Alert.alert('Gagal', errorMessage);
+          feedback.dialog.error('Gagal', errorMessage);
         },
       }
     );

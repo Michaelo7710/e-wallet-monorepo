@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { feedback } from '@core/feedback';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -54,14 +55,12 @@ const LoginScreen = () => {
     try {
       const success = await fastLoginWithBiometrics();
       if (!success) {
-        Alert.alert(
-          'Autentikasi Dibatalkan',
-          'Silakan gunakan email dan kata sandi Anda untuk masuk.'
+        feedback.toast.info(
+          'Autentikasi biometrik dibatalkan. Silakan gunakan kata sandi.'
         );
       }
     } catch {
-      Alert.alert(
-        'Autentikasi Gagal',
+      feedback.toast.error(
         'Gagal memverifikasi biometrik. Silakan gunakan kata sandi.'
       );
     } finally {
@@ -87,7 +86,7 @@ const LoginScreen = () => {
       onError: (error: any) => {
         const message =
           error.response?.data?.message || error.message || 'Login Gagal';
-        Alert.alert('Gagal Masuk', message);
+        feedback.dialog.error('Gagal Masuk', message);
       },
     });
   };
