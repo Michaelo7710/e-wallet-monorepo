@@ -1,5 +1,6 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { feedback } from '@core/feedback';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -44,10 +45,10 @@ const ResetPasswordScreen = () => {
 
   const onSubmit = (data: ResetPasswordFormValues) => {
     if (!email) {
-      Alert.alert(
+      feedback.dialog.error(
         'Email Tidak Ditemukan',
         'Informasi email tidak valid. Silakan ajukan permintaan lupa sandi kembali.',
-        [{ text: 'Kembali', onPress: () => navigation.navigate('ForgotPassword') }]
+        () => navigation.navigate('ForgotPassword')
       );
       return;
     }
@@ -56,16 +57,16 @@ const ResetPasswordScreen = () => {
       { email, otp: data.otp, newPassword: data.newPassword },
       {
         onSuccess: () => {
-          Alert.alert(
+          feedback.dialog.success(
             'Sandi Berhasil Diubah',
             'Kata sandi Anda telah diperbarui. Silakan masuk menggunakan kata sandi baru.',
-            [{ text: 'Masuk Sekarang', onPress: () => navigation.navigate('Login') }]
+            () => navigation.navigate('Login')
           );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Gagal mengubah kata sandi';
-          Alert.alert('Gagal Mengubah Sandi', errorMessage);
+          feedback.dialog.error('Gagal Mengubah Sandi', errorMessage);
         },
       }
     );

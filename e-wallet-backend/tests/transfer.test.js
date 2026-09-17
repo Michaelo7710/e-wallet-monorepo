@@ -44,6 +44,11 @@ describe('🧪 [P2P TRANSFER & AML INTEGRATION TEST]', () => {
 
     expect(res.statusCode).toEqual(200);
     expect(res.body.data.status).toBe('success');
+    expect(res.body.data.reference_number).toMatch(/^GP-TRF-\d{8}-[A-F0-9]{8}$/);
+    expect(res.body.data.transaction_id).toBeDefined();
+    expect(res.body.data.amount).toBe(500000);
+    expect(res.body.data.is_high_value).toBe(false);
+    expect(res.body.data.remaining_balance).toBe(19500000);
 
     // Cek Mutasi Saldo di Memory DB
     const updatedSender = await Wallet.findOne({ user_id: senderUser._id });
@@ -66,6 +71,10 @@ describe('🧪 [P2P TRANSFER & AML INTEGRATION TEST]', () => {
     expect(res.statusCode).toEqual(200);
     expect(res.body.data.status).toBe('pending_approval');
     expect(res.body.data.is_high_value).toBe(true);
+    expect(res.body.data.reference_number).toMatch(/^GP-TRF-\d{8}-[A-F0-9]{8}$/);
+    expect(res.body.data.transaction_id).toBeDefined();
+    expect(res.body.data.amount).toBe(15000000);
+    expect(res.body.data.remaining_balance).toBe(5000000);
 
     // Saldo pengirim dipotong, TAPI saldo penerima BELUM bertambah (ditahan)
     const updatedSender = await Wallet.findOne({ user_id: senderUser._id });

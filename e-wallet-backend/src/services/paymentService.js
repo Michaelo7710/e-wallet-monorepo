@@ -207,10 +207,12 @@ exports.handleMidtransWebhook = async (notificationBody) => {
       await Transaction.create([{
         reference_id: topUpRequest._id,
         reference_model: 'TopUpRequest',
+        reference_number: topUpRequest.reference_number,
         sender_id: null, 
         receiver_id: topUpRequest.user_id,
         amount: parseFloat(gross_amount),
         type: 'topup',
+        status: 'success',
         is_flagged: false
       }], { session });
 
@@ -310,10 +312,12 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
       await Transaction.create([{
         reference_id: withdrawalRequest[0]._id,
         reference_model: 'WithdrawalRequest',
+        reference_number: referenceNumber,
         sender_id: userId,
         receiver_id: null,
         amount: parseFloat(amount),
         type: 'withdrawal',
+        status: 'success',
         is_flagged: false
       }], options);
     }
@@ -323,9 +327,11 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
 
     return {
       reference_number: referenceNumber,
-      amount,
+      transaction_id: withdrawalRequest[0]._id,
+      amount: parseFloat(amount),
       status: initialStatus,
-      is_high_value: isHighValue
+      is_high_value: isHighValue,
+      remaining_balance: wallet.balance
     };
 
   } catch (error) {
@@ -377,10 +383,12 @@ exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedR
       await Transaction.create([{
         reference_id: request._id,
         reference_model: 'WithdrawalRequest',
+        reference_number: request.reference_number,
         sender_id: request.user_id,
         receiver_id: null,
         amount: request.amount,
         type: 'withdrawal',
+        status: 'success',
         is_flagged: false
       }], options);
       
@@ -504,6 +512,7 @@ exports.transferP2P = async (senderId, transferData) => {
     console.log(`   -> Saldo pengirim berhasil diamankan. Sisa: Rp ${senderWallet.balance}`);
 
     const txId = new mongoose.Types.ObjectId();
+    const referenceNumber = generateReferenceNumber('TRF');
 
     if (!isHighValue) {
       // KONDISI A: Nominal Kecil (< 10 Juta) -> Saldo penerima langsung bertambah instan secara atomik
@@ -517,6 +526,7 @@ exports.transferP2P = async (senderId, transferData) => {
         _id: txId,
         reference_id: txId,
         reference_model: 'Transaction',
+        reference_number: referenceNumber,
         sender_id: senderId,
         receiver_id: receiver._id,
         amount: parseFloat(amount),
@@ -531,6 +541,7 @@ exports.transferP2P = async (senderId, transferData) => {
         _id: txId,
         reference_id: txId,
         reference_model: 'Transaction',
+        reference_number: referenceNumber,
         sender_id: senderId,
         receiver_id: receiver._id,
         amount: parseFloat(amount),
@@ -552,8 +563,9 @@ exports.transferP2P = async (senderId, transferData) => {
     session?.endSession();
 
     return {
+      reference_number: referenceNumber,
       transaction_id: txId,
-      amount,
+      amount: parseFloat(amount),
       status: isHighValue ? 'pending_approval' : 'success',
       is_high_value: isHighValue,
       remaining_balance: senderWallet.balance
@@ -621,6 +633,7 @@ exports.getTransactionHistory = async (userId, queryFilters) => {
       return {
         _id: tx._id,
         reference_id: tx.reference_id,
+        reference_number: tx.reference_number || undefined,
         reference_model: tx.reference_model,
         type: tx.type,
         status: tx.status || 'success',

@@ -1,0 +1,208 @@
+{
+  "$schema": "design-manifest-v1",
+  "project": {
+    "name": "GreenPay E-Wallet Enterprise",
+    "description": "Enterprise UI/UX Design Manifest — Emerald Elite & Thematic Asset Suite",
+    "created_at": "2026-09-16T10:40:53.446Z",
+    "updated_at": "2026-09-16T17:48:00.000Z",
+    "platform": "react-native",
+    "design_system": "Emerald Elite FinTech",
+    "status": "specified"
+  },
+  "design_tokens": {
+    "colors_file": "./tokens/colors.json",
+    "typography_file": "./tokens/typography.json",
+    "spacing_file": "./tokens/spacing.json",
+    "status": "active"
+  },
+  "thematic_assets": [
+    {
+      "name": "card-texture-platinum.png",
+      "path": "./exports/card-texture-platinum.png",
+      "target_location": "../Wallet/src/assets/images/card-texture-platinum.png",
+      "size_kb": 1099,
+      "role": "Emerald Platinum Virtual Card Texture Skin"
+    },
+    {
+      "name": "pattern-payment-flow.png",
+      "path": "./exports/pattern-payment-flow.png",
+      "target_location": "../Wallet/src/assets/images/pattern-payment-flow.png",
+      "size_kb": 481,
+      "role": "Thematic Dynamic Flow Header for Payment Module"
+    },
+    {
+      "name": "auth-mesh-bg.png",
+      "path": "./exports/auth-mesh-bg.png",
+      "target_location": "../Wallet/src/assets/images/auth-mesh-bg.png",
+      "size_kb": 540,
+      "role": "Lightweight Thematic Vault Mesh Background (<600KB vs 4.2MB)"
+    }
+  ],
+  "screens": [
+    {
+      "id": "screen-001",
+      "name": "Screen/Auth",
+      "description": "Thematic Vault Security Auth Flow (Login & Register)",
+      "priority": "P0-critical",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/auth/specs.md",
+      "mockup_file": "./exports/auth-mesh-bg.png",
+      "components": [
+        { "name": "AuthFormCard", "states_required": ["default", "loading"] },
+        { "name": "InputField", "states_required": ["default", "focus", "error", "disabled"] },
+        { "name": "ButtonPrimary", "states_required": ["default", "pressed", "disabled", "loading"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-002",
+      "name": "Screen/Home",
+      "description": "Dashboard with Emerald Platinum Virtual Card & Quick Actions",
+      "priority": "P0-critical",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/home/specs.md",
+      "mockup_file": "./exports/card-texture-platinum.png",
+      "components": [
+        { "name": "WalletCard", "states_required": ["loaded", "skeleton", "masked_balance"] },
+        { "name": "QuickActionItem", "states_required": ["default", "pressed", "disabled"] },
+        { "name": "NotificationBell", "states_required": ["default", "unread_badge", "pressed"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-003",
+      "name": "Screen/Transaction-detail",
+      "description": "Digital Receipt Voucher Card (Screen #26)",
+      "priority": "P0-critical",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/transaction-detail/specs.md",
+      "mockup_file": "./exports/pattern-payment-flow.png",
+      "components": [
+        { "name": "ReceiptStatusHeader", "states_required": ["success", "pending_aml", "failed"] },
+        { "name": "ReceiptAmountDisplay", "states_required": ["loaded", "skeleton"] },
+        { "name": "ReceiptActionShare", "states_required": ["default", "pressed", "loading"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-004",
+      "name": "Screen/Transfer",
+      "description": "P2P Transfer with Haptic PIN Modal",
+      "priority": "P0-critical",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/transfer/specs.md",
+      "mockup_file": null,
+      "components": [
+        { "name": "InputRecipient", "states_required": ["default", "focus", "error"] },
+        { "name": "PinModal", "states_required": ["default", "error_shake", "verified"] },
+        { "name": "ButtonContinue", "states_required": ["default", "pressed", "disabled", "loading"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-005",
+      "name": "Screen/Withdraw",
+      "description": "Bank Withdrawal & Cashout Flow",
+      "priority": "P1-high",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/withdraw/specs.md",
+      "mockup_file": null,
+      "components": [
+        { "name": "BankDropdown", "states_required": ["default", "active", "selected"] },
+        { "name": "InputAccount", "states_required": ["default", "focus", "error"] },
+        { "name": "ButtonWithdraw", "states_required": ["default", "pressed", "disabled", "loading"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-006",
+      "name": "Screen/History",
+      "description": "Transaction History Ledger with Category Filter",
+      "priority": "P1-high",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/history/specs.md",
+      "mockup_file": null,
+      "components": [
+        { "name": "FilterChip", "states_required": ["default", "active"] },
+        { "name": "TransactionCardItem", "states_required": ["default", "pressed", "loading_skeleton"] },
+        { "name": "EmptyStateWidget", "states_required": ["visible", "hidden"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-007",
+      "name": "Screen/Admin-dashboard",
+      "description": "Executive Governance & Clearing Backoffice",
+      "priority": "P1-high",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/admin-dashboard/specs.md",
+      "mockup_file": null,
+      "components": [
+        { "name": "StatCard", "states_required": ["loaded", "loading_skeleton"] },
+        { "name": "AdminMenuCard", "states_required": ["default", "pressed"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    },
+    {
+      "id": "screen-008",
+      "name": "Screen/Showcase-README",
+      "description": "Recruiter Visual Showcase Gallery & FinTech Architecture Display",
+      "priority": "P0-critical",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/showcase/specs.md",
+      "mockup_file": null,
+      "components": [
+        { "name": "WalletCardShowcase", "states_required": ["default", "masked", "verified"] },
+        { "name": "DigitalReceiptVoucher", "states_required": ["server_verified", "unverified_warning"] },
+        { "name": "AuthSecurityShowcase", "states_required": ["2fa_prompt", "dialog_blocking"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
+    }
+  ],
+  "metadata": {
+    "total_screens": 8,
+    "screens_specified": 8,
+    "completion_percentage": 100,
+    "generated_by": "ui-ux-designer skill"
+  }
+}

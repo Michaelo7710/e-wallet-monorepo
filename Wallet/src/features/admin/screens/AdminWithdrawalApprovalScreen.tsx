@@ -5,10 +5,10 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
@@ -38,41 +38,37 @@ const AdminWithdrawalApprovalScreen = () => {
   const { mutate: reject, isPending: isRejecting } = useRejectWithdrawalMutation();
 
   const handleApprove = (item: PendingWithdrawal) => {
-    Alert.alert(
-      'Konfirmasi Pencairan',
-      `Setujui pencairan Rp ${item.amount.toLocaleString('id-ID')} ke ${item.bankName} (${item.accountNumber}) a.n ${item.accountName}?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Setujui',
-          onPress: () => {
-            approve(item.id, {
-              onSuccess: () => Alert.alert('Sukses', 'Penarikan dana berhasil disetujui.'),
-              onError: (err: any) => Alert.alert('Gagal', err.message || 'Gagal memproses'),
-            });
-          },
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Konfirmasi Pencairan',
+      message: `Setujui pencairan Rp ${item.amount.toLocaleString('id-ID')} ke ${item.bankName} (${item.accountNumber}) a.n ${item.accountName}?`,
+      confirmText: 'Setujui',
+      cancelText: 'Batal',
+      onConfirm: () => {
+        approve(item.id, {
+          onSuccess: () => feedback.toast.success('Penarikan dana berhasil disetujui.'),
+          onError: (err: any) => feedback.dialog.error('Gagal', err.message || 'Gagal memproses'),
+        });
+      },
+    });
   };
 
   const handleReject = (item: PendingWithdrawal) => {
-    Alert.alert('Tolak Permintaan', `Tolak pencairan dana untuk ${item.username}?`, [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Tolak',
-        style: 'destructive',
-        onPress: () => {
-          reject(
-            { id: item.id, reason: 'Ditolak oleh Administrator' },
-            {
-              onSuccess: () => Alert.alert('Selesai', 'Permintaan penarikan telah ditolak.'),
-              onError: (err: any) => Alert.alert('Gagal', err.message || 'Gagal menolak'),
-            }
-          );
-        },
+    feedback.dialog.confirm({
+      title: 'Tolak Permintaan',
+      message: `Tolak pencairan dana untuk ${item.username}?`,
+      confirmText: 'Tolak',
+      cancelText: 'Batal',
+      isDestructive: true,
+      onConfirm: () => {
+        reject(
+          { id: item.id, reason: 'Ditolak oleh Administrator' },
+          {
+            onSuccess: () => feedback.toast.success('Permintaan penarikan telah ditolak.'),
+            onError: (err: any) => feedback.dialog.error('Gagal', err.message || 'Gagal menolak'),
+          }
+        );
       },
-    ]);
+    });
   };
 
   const renderItem = ({ item }: { item: PendingWithdrawal }) => (

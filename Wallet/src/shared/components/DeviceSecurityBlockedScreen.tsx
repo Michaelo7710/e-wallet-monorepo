@@ -5,9 +5,9 @@ import {
   StyleSheet,
   BackHandler,
   Platform,
-  Alert,
   ScrollView,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '@core/theme';
 import ButtonCustom from './ButtonCustom';
@@ -23,10 +23,9 @@ export const DeviceSecurityBlockedScreen = ({
     if (Platform.OS === 'android') {
       BackHandler.exitApp();
     } else {
-      Alert.alert(
+      feedback.dialog.alert(
         'Keluar Aplikasi',
-        'Silakan tekan tombol Home atau geser layar ke atas untuk menutup GreenPay demi keamanan data Anda.',
-        [{ text: 'Mengerti' }]
+        'Silakan tekan tombol Home atau geser layar ke atas untuk menutup GreenPay demi keamanan data Anda.'
       );
     }
   };
