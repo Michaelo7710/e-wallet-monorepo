@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '@core/theme';
+import { colors, typography } from '@core/theme';
 import { useFeedbackStore, FeedbackType } from '@core/feedback/feedback.store';
 
 const { width } = Dimensions.get('window');

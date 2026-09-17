@@ -15,7 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import dayjs from 'dayjs';
 
-import { colors, typography, spacing } from '@core/theme';
+import { colors, typography } from '@core/theme';
 import { feedback } from '@core/feedback';
 
 export interface TransactionDetailParams {

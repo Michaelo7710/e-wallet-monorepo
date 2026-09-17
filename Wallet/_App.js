@@ -6,14 +6,14 @@ import {
   View,
   TouchableOpacity,
   StatusBar,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 
 
 const App = () => {
   // Fungsi yang dijalankan saat tombol ditekan
   const handlePress = () => {
-    Alert.alert('Halo!', 'Kamu baru saja menekan tombol Mulai.');
+    feedback.dialog.alert('Halo!', 'Kamu baru saja menekan tombol Mulai.');
   };
 
   return (

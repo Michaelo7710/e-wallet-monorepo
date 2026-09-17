@@ -4,7 +4,6 @@ import ReactTestRenderer from 'react-test-renderer';
 import * as Clipboard from 'expo-clipboard';
 
 import TransactionDetailScreen from '../src/features/payment/screens/TransactionDetailScreen';
-import { feedback } from '../src/core/feedback/feedback.service';
 import { useFeedbackStore } from '../src/core/feedback/feedback.store';
 
 // Mocks

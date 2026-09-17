@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
   Text,
@@ -19,6 +19,23 @@ export const GlobalToast: React.FC = () => {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(-20)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDismiss = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: -20,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      hideToast();
+    });
+  }, [hideToast, opacityAnim, translateYAnim]);
 
   useEffect(() => {
     if (toast && toast.isVisible) {
@@ -66,24 +83,12 @@ export const GlobalToast: React.FC = () => {
         clearTimeout(timerRef.current);
       }
     };
-  }, [toast?.isVisible, toast?.message]);
-
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateYAnim, {
-        toValue: -20,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      hideToast();
-    });
-  };
+  }, [
+    toast,
+    handleDismiss,
+    opacityAnim,
+    translateYAnim,
+  ]);
 
   if (!toast || !toast.isVisible) {
     return null;

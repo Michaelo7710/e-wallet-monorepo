@@ -1,4 +1,4 @@
-import { useFeedbackStore, DialogOptions, FeedbackType } from './feedback.store';
+import { useFeedbackStore, FeedbackType } from './feedback.store';
 
 class FeedbackService {
   // ==========================================
