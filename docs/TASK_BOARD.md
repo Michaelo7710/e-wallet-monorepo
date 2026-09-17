@@ -10,7 +10,7 @@
 
 | Tugas Aktif Untuk Dikerjakan | 🟡 Sedang Dikerjakan (IN_PROGRESS) | 🔴 Menunggu Antrean (TODO) | 📦 Diarsipkan (DONE) |
 |:---:|:---:|:---:|:---:|
-| **3** | **0** | **3** | [**33 Selesai (100%)**](file:///C:/Users/latih/ReactNativeApp/Wallet_App/docs/TASK_ARCHIVE.md) |
+| **2** | **0** | **2** | [**34 Selesai (100%)**](file:///C:/Users/latih/ReactNativeApp/Wallet_App/docs/TASK_ARCHIVE.md) |
 
 ---
 
@@ -22,7 +22,6 @@
 
 | ID Task | Asal Delegasi | Pelaksana Target | Deskripsi Tugas & Target Berkas | Status | Kriteria Verifikasi Lulus (DoD) |
 |:---|:---|:---|:---|:---:|:---|
-| `TASK-DOC-01` | `product-owner` | `tech-architecture-lead` | **Integrasi Visual Showcase & Recruiter Highlights ke README:** Perbarui [`README.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/README.md) dengan menyematkan galeri visual hasil rancangan UI/UX, ringkasan arsitektur 30 detik untuk HR/Hiring Manager, tabel kepatuhan FinTech (GDPR/PSD2/UU PDP), dan badge metrik pengujian 100%. | 🔴 **TODO** | [`README.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/README.md) memuat galeri visual yang ter-render sempurna, link gambar valid, dan lolos pratinjau markdown. |
 | `TASK-REPO-01` | `product-owner` | `tech-architecture-lead` | **Optimasi Metadata Repositori & Topics FinTech via GitHub API/MCP:** Perbarui deskripsi repositori GitHub dan pasang 12+ topik pencarian rekruter (`react-native`, `clean-architecture`, `fintech`, `typescript`, `devsecops`, `gdpr`, `express`, `mongodb`, `codeql`, `cyclonedx`, `idempotency`) pada `Michaelo7710/e-wallet-monorepo`. | 🔴 **TODO** | Metadata repositori dan topik terpasang rapi di halaman utama GitHub, terverifikasi via GitHub API check. |
 | `TASK-DEVOPS-03` | `tech-architecture-lead` | `devops-engineer` | **Triase & Pemeliharaan Dependabot PRs (#20, #21, #22, #23):** Audit dan uji kompatibilitas 4 pembaruan dependensi dev (@babel/preset-env, @babel/runtime, typescript, react-native-safe-area-context) terhadap test suite lokal. Lakukan merge atau update branch untuk menjaga skor supply chain security. | 🔴 **TODO** | PR dependabot diaudit, test suite tetap 100% PASS, dan status ketergantungan paket aman tanpa breaking change. |
 
