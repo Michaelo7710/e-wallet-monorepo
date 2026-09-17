@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +15,7 @@ import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { useWithdrawalMutation } from '../hooks/usePaymentMutations';
 import { useFeatureFlagStore } from '@core/config/featureFlags';
+import { feedback } from '@core/feedback';
 
 const POPULAR_BANKS = ['BCA', 'BRI', 'Mandiri', 'BNI', 'CIMB Niaga'];
 
@@ -42,24 +42,24 @@ const WithdrawScreen = () => {
   const handleWithdraw = () => {
     // Graceful Degradation Guard: Blokir eksekusi penarikan saat partner bank offline
     if (!isWithdrawEnabled) {
-      Alert.alert('Fitur Sedang Pemeliharaan', withdrawNotice);
+      feedback.toast.warning(withdrawNotice);
       return;
     }
 
     if (!accountNumber || accountNumber.length < 6) {
-      Alert.alert('Data Tidak Lengkap', 'Nomor rekening wajib diisi dengan benar.');
+      feedback.toast.error('Nomor rekening wajib diisi minimal 6 digit.');
       return;
     }
     if (!accountName || accountName.length < 3) {
-      Alert.alert('Data Tidak Lengkap', 'Nama pemilik rekening wajib diisi.');
+      feedback.toast.error('Nama pemilik rekening wajib diisi.');
       return;
     }
     if (numericAmount < 50000) {
-      Alert.alert('Nominal Minimal', 'Penarikan saldo minimal Rp 50.000.');
+      feedback.toast.warning('Penarikan saldo minimal Rp 50.000.');
       return;
     }
     if (numericAmount > currentBalance) {
-      Alert.alert('Saldo Tidak Cukup', 'Saldo Anda tidak mencukupi untuk melakukan penarikan ini.');
+      feedback.toast.error('Saldo Anda tidak mencukupi untuk melakukan penarikan ini.');
       return;
     }
 
@@ -72,23 +72,23 @@ const WithdrawScreen = () => {
       },
       {
         onSuccess: () => {
-          if (numericAmount >= 10000000) {
-            Alert.alert(
-              'Pengajuan Penarikan Tertahan',
-              `Pengajuan penarikan dana bernilai besar sebesar Rp ${numericAmount.toLocaleString('id-ID')} sedang menunggu verifikasi kepatuhan oleh Administrator.`,
-              [{ text: 'Kembali', onPress: () => navigation.goBack() }]
-            );
-          } else {
-            Alert.alert(
-              'Penarikan Berhasil Diproses',
-              `Penarikan dana sebesar Rp ${numericAmount.toLocaleString('id-ID')} ke ${selectedBank} (${accountNumber}) a.n ${accountName} berhasil diproses instan.`,
-              [{ text: 'Kembali', onPress: () => navigation.goBack() }]
-            );
-          }
+          navigation.navigate('TransactionDetail', {
+            transaction: {
+              type: 'withdrawal',
+              amount: numericAmount,
+              bankName: selectedBank,
+              accountNumber,
+              accountName,
+              description: `Tarik tunai ke ${selectedBank}`,
+              status: numericAmount >= 10000000 ? 'pending_approval' : 'success',
+              isHighValue: numericAmount >= 10000000,
+              createdAt: new Date().toISOString(),
+            },
+          });
         },
         onError: (err: any) => {
-          const msg = err.response?.data?.message || err.message || 'Penarikan gagal';
-          Alert.alert('Gagal Penarikan', msg);
+          const msg = err.response?.data?.message || err.message || 'Penarikan gagal diproses';
+          feedback.toast.error(msg);
         },
       }
     );

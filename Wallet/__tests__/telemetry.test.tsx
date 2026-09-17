@@ -23,6 +23,10 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn().mockResolvedValue(true),
+}));
+
 describe('TASK-B2-08: PII Sanitizer Unit Tests', () => {
   it('harus menyamarkan nomor telepon sesuai format 0812****7890', () => {
     expect(maskPhoneNumber('081234567890')).toBe('0812****7890');

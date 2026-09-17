@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { feedback } from '@core/feedback';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -52,17 +53,17 @@ const VerifyEmailScreen = () => {
           _id: user._id || user.id,
         };
         await loginSession(sessionUser as any, accessToken, refreshToken);
-        Alert.alert('Selamat Datang!', 'Email Anda berhasil diverifikasi. Sesi Anda telah aktif.');
+        feedback.toast.success('Email Anda berhasil diverifikasi. Sesi Anda telah aktif.');
         // Navigasi otomatis di-handle oleh perubahan state authStore di AppNavigator
         return;
       }
 
       // Fallback jika backend cloud belum mengembalikan token (Legacy Backend Fallback):
       console.warn(' [VERIFY_EMAIL] Server tidak mengembalikan token sesi lengkap. Mengalihkan ke Login manual.');
-      Alert.alert(
+      feedback.dialog.success(
         'Verifikasi Berhasil',
         'Email Anda telah terverifikasi. Silakan masuk dengan kata sandi Anda.',
-        [{ text: 'Masuk Sekarang', onPress: () => navigation.navigate('Login') }]
+        () => navigation.navigate('Login')
       );
     } catch (err) {
       console.error(' [VERIFY_EMAIL] Gagal memproses sesi:', err);
@@ -72,10 +73,10 @@ const VerifyEmailScreen = () => {
 
   const onSubmit = (data: VerifyEmailFormValues) => {
     if (!email) {
-      Alert.alert(
+      feedback.dialog.error(
         'Email Tidak Ditemukan',
         'Informasi email tidak valid. Silakan lakukan registrasi atau masuk kembali.',
-        [{ text: 'Kembali', onPress: () => navigation.navigate('Login') }]
+        () => navigation.navigate('Login')
       );
       return;
     }
@@ -87,7 +88,7 @@ const VerifyEmailScreen = () => {
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Verifikasi Gagal';
-          Alert.alert('Verifikasi Gagal', errorMessage);
+          feedback.dialog.error('Verifikasi Gagal', errorMessage);
         },
       }
     );

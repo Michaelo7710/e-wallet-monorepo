@@ -5,10 +5,10 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
@@ -38,44 +38,36 @@ const AdminTopUpApprovalScreen = () => {
   const { mutate: cancelTopUp, isPending: isCanceling } = useCancelTopUpMutation();
 
   const handleApprove = (item: PendingTopUp) => {
-    Alert.alert(
-      'Konfirmasi Top Up',
-      `Setujui penambahan saldo Rp ${item.amount.toLocaleString('id-ID')} untuk ${item.user.username}?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Setujui',
-          onPress: () => {
-            approveTopUp(item.id, {
-              onSuccess: () => Alert.alert('Sukses', 'Permohonan top up berhasil disetujui.'),
-              onError: (err: any) =>
-                Alert.alert('Gagal', err.response?.data?.message || err.message || 'Gagal memproses top up'),
-            });
-          },
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Konfirmasi Top Up',
+      message: `Setujui penambahan saldo Rp ${item.amount.toLocaleString('id-ID')} untuk ${item.user.username}?`,
+      confirmText: 'Setujui',
+      cancelText: 'Batal',
+      onConfirm: () => {
+        approveTopUp(item.id, {
+          onSuccess: () => feedback.toast.success('Permohonan top up berhasil disetujui.'),
+          onError: (err: any) =>
+            feedback.dialog.error('Gagal', err.response?.data?.message || err.message || 'Gagal memproses top up'),
+        });
+      },
+    });
   };
 
   const handleCancel = (item: PendingTopUp) => {
-    Alert.alert(
-      'Batalkan Permohonan',
-      `Batalkan permohonan top up untuk ${item.user.username}?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Batalkan',
-          style: 'destructive',
-          onPress: () => {
-            cancelTopUp(item.id, {
-              onSuccess: () => Alert.alert('Selesai', 'Permohonan top up telah dibatalkan.'),
-              onError: (err: any) =>
-                Alert.alert('Gagal', err.response?.data?.message || err.message || 'Gagal membatalkan top up'),
-            });
-          },
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Batalkan Permohonan',
+      message: `Batalkan permohonan top up untuk ${item.user.username}?`,
+      confirmText: 'Batalkan',
+      cancelText: 'Batal',
+      isDestructive: true,
+      onConfirm: () => {
+        cancelTopUp(item.id, {
+          onSuccess: () => feedback.toast.success('Permohonan top up telah dibatalkan.'),
+          onError: (err: any) =>
+            feedback.dialog.error('Gagal', err.response?.data?.message || err.message || 'Gagal membatalkan top up'),
+        });
+      },
+    });
   };
 
   const renderItem = ({ item }: { item: PendingTopUp }) => (

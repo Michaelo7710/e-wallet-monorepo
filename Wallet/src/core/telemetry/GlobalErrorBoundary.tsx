@@ -13,9 +13,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   StatusBar,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@core/theme';
@@ -31,6 +31,7 @@ export interface GlobalErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   correlationId: string | null;
+  copied?: boolean;
 }
 
 export class GlobalErrorBoundary extends Component<
@@ -43,6 +44,7 @@ export class GlobalErrorBoundary extends Component<
       hasError: false,
       error: null,
       correlationId: null,
+      copied: false,
     };
   }
 
@@ -75,13 +77,11 @@ export class GlobalErrorBoundary extends Component<
     }
   };
 
-  handleCopyCorrelationId = (): void => {
+  handleCopyCorrelationId = async (): Promise<void> => {
     const id = this.state.correlationId || 'N/A';
-    Alert.alert(
-      'ID Pelacakan Tersedia',
-      `ID Referensi Tiket CS:\n${id}\n\nSilakan salin ID ini untuk dilaporkan ke Customer Care GreenPay.`,
-      [{ text: 'Mengerti', style: 'default' }]
-    );
+    await Clipboard.setStringAsync(id);
+    this.setState({ copied: true });
+    setTimeout(() => this.setState({ copied: false }), 3000);
   };
 
   render(): ReactNode {
@@ -127,7 +127,11 @@ export class GlobalErrorBoundary extends Component<
             <Text selectable style={styles.codeText}>
               ID Pelacakan: {trackingId}
             </Text>
-            <Text style={styles.codeHint}>Ketuk untuk melihat detail pelacakan tiket</Text>
+            <Text style={styles.codeHint}>
+              {this.state.copied
+                ? '✓ ID Pelacakan berhasil disalin ke papan klip!'
+                : 'Ketuk untuk menyalin ID referensi tiket'}
+            </Text>
           </TouchableOpacity>
 
           {/* Tombol Aksi Pemulihan */}

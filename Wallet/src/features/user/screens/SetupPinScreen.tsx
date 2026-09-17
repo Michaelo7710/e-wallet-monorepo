@@ -1,12 +1,12 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
@@ -53,14 +53,16 @@ const SetupPinScreen = () => {
       { pin: data.pin },
       {
         onSuccess: () => {
-          Alert.alert('PIN Berhasil Dibuat', 'PIN transaksi Anda telah aktif.', [
-            { text: 'Selesai', onPress: () => navigation.goBack() },
-          ]);
+          feedback.dialog.success(
+            'PIN Berhasil Dibuat',
+            'PIN transaksi Anda telah aktif.',
+            () => navigation.goBack()
+          );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Gagal mengatur PIN transaksi';
-          Alert.alert('Gagal Mengatur PIN', errorMessage);
+          feedback.dialog.error('Gagal Mengatur PIN', errorMessage);
         },
       }
     );

@@ -5,13 +5,13 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Modal,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
@@ -99,11 +99,11 @@ const AdminBankManagementScreen = () => {
         { id: selectedBank.id, payload: data },
         {
           onSuccess: () => {
-            Alert.alert('Sukses', 'Data rekening master berhasil diperbarui.');
+            feedback.toast.success('Data rekening master berhasil diperbarui.');
             handleCloseModal();
           },
           onError: (err: any) => {
-            Alert.alert(
+            feedback.dialog.error(
               'Gagal',
               err.response?.data?.message || err.message || 'Gagal memperbarui rekening'
             );
@@ -113,11 +113,11 @@ const AdminBankManagementScreen = () => {
     } else {
       createBank(data, {
         onSuccess: () => {
-          Alert.alert('Sukses', 'Rekening master baru berhasil didaftarkan.');
+          feedback.toast.success('Rekening master baru berhasil didaftarkan.');
           handleCloseModal();
         },
         onError: (err: any) => {
-          Alert.alert(
+          feedback.dialog.error(
             'Gagal',
             err.response?.data?.message || err.message || 'Gagal menambahkan rekening'
           );
@@ -127,27 +127,23 @@ const AdminBankManagementScreen = () => {
   };
 
   const handleDelete = (bank: AdminBank) => {
-    Alert.alert(
-      'Hapus Rekening',
-      `Apakah Anda yakin ingin menghapus rekening ${bank.bankName} - ${bank.accountNumber}?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Hapus',
-          style: 'destructive',
-          onPress: () => {
-            deleteBank(bank.id, {
-              onSuccess: () => Alert.alert('Sukses', 'Rekening master berhasil dihapus.'),
-              onError: (err: any) =>
-                Alert.alert(
-                  'Gagal',
-                  err.response?.data?.message || err.message || 'Gagal menghapus rekening'
-                ),
-            });
-          },
-        },
-      ]
-    );
+    feedback.dialog.confirm({
+      title: 'Hapus Rekening',
+      message: `Apakah Anda yakin ingin menghapus rekening ${bank.bankName} - ${bank.accountNumber}?`,
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      isDestructive: true,
+      onConfirm: () => {
+        deleteBank(bank.id, {
+          onSuccess: () => feedback.toast.success('Rekening master berhasil dihapus.'),
+          onError: (err: any) =>
+            feedback.dialog.error(
+              'Gagal',
+              err.response?.data?.message || err.message || 'Gagal menghapus rekening'
+            ),
+        });
+      },
+    });
   };
 
   const renderItem = ({ item }: { item: AdminBank }) => (
