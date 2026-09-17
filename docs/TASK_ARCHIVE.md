@@ -5,7 +5,7 @@
 
 ---
 
-## 🟢 Riwayat Tugas Selesai Terverifikasi (31 Tugas)
+## 🟢 Riwayat Tugas Selesai Terverifikasi (32 Tugas)
 
 ### 1. Proyek Aplikasi (Wallet App) — Batch 1 & 2
 
@@ -52,4 +52,11 @@
 | `TASK-FE-07` | `tech-architecture-lead` | `frontend-developer` | **Defensive Clipboard & Unmount Cleanup pada GlobalErrorBoundary:** Tambahkan penanganan `try/catch` pada `Clipboard.setStringAsync` di [`GlobalErrorBoundary.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/core/telemetry/GlobalErrorBoundary.tsx), dan bersihkan timer timeout saat `componentWillUnmount`. | 🟢 **DONE** | Error boundary kebal terhadap unhandled promise rejection clipboard dan bebas dari memory leak pasca-unmount, kompilasi `tsc --noEmit` exit code 0, 18/18 Jest tests pass di [`telemetry.test.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/telemetry.test.tsx). |
 | `TASK-FE-08` | `tech-architecture-lead` | `frontend-developer` | **Pengamanan Konkurensi & Rantai Callback Feedback Store:** Cegah penimpaan state modal saat `onConfirm` memanggil dialog baru secara beruntun pada [`feedback.store.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/core/feedback/feedback.store.ts) dan [`GlobalDialogModal.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/src/shared/components/GlobalDialogModal.tsx). | 🟢 **DONE** | State modal terproteksi dengan Dialog ID unik, penolakan target ID usang pada penutupan berantai, dialogQueue FIFO, concurrency lock `isProcessing`, 19/19 Jest tests pass di [`feedbackService.test.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/feedbackService.test.ts), kompilasi `tsc --noEmit` exit code 0. |
 | `TASK-QA-03` | `tech-architecture-lead` | `qa-engineer` | **Comprehensive Integration & Boundary Test Suite:** Tulis unit & integration test untuk memvalidasi: (1) resi berbasis canonical data server, (2) masking data pada share payload, (3) penolakan resi tanpa server reference, dan (4) multi-line detection guard-anti-alert. | 🟢 **DONE** | Seluruh 4 pilar terverifikasi konkret di [`comprehensiveBoundaryIntegration.test.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/comprehensiveBoundaryIntegration.test.tsx), 13/13 tests pass, full regression suite 81/81 pass (total 94 assertions pass), `tsc --noEmit` exit code 0, CI static guard 100% clean. |
+
+### 4. Kesiapan Industri & Daya Tarik Rekruter (Recruiter Showcase & CI Perfection)
+
+| ID Task | Asal Delegasi | Pelaksana Target | Deskripsi Tugas & Target File | Status | Bukti Keberhasilan / Verifikasi |
+|:---|:---|:---|:---|:---:|:---|
+| `TASK-CI-01` | `tech-architecture-lead` | `frontend-developer` | **Eliminasi 2 Unused Variables ESLint & Pemulihan Green CI:** Hapus import tidak terpakai `stripComments` pada [`antiAlertGuard.test.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/antiAlertGuard.test.ts) dan `Clipboard` pada [`comprehensiveBoundaryIntegration.test.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/comprehensiveBoundaryIntegration.test.tsx). Jalankan linting lokal, commit, dan push ke `main`. | 🟢 **DONE** | `npm run lint` menghasilkan 0 error (13 warnings, exit code 0), 24/24 Jest tests pass, branch `main` steril dari unused variables untuk memulihkan status CI pipeline ke hijau. |
+
 

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Share, TouchableOpacity, Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
-import * as Clipboard from 'expo-clipboard';
 
 import TransactionDetailScreen from '../src/features/payment/screens/TransactionDetailScreen';
 import { useFeedbackStore } from '../src/core/feedback/feedback.store';

@@ -2,7 +2,7 @@ declare const __dirname: string;
 
 const { execSync } = require('child_process');
 const path = require('path');
-const { auditContent, stripComments } = require('../scripts/ci/guard-anti-alert.js');
+const { auditContent } = require('../scripts/ci/guard-anti-alert.js');
 
 describe('TASK-DEVOPS-01: CI Anti-Regression Guard Tests', () => {
   const guardScriptPath = path.resolve(__dirname, '../scripts/ci/guard-anti-alert.js');
