@@ -39,3 +39,5 @@
 - [x] Kartu virtual *Emerald Platinum* memberikan *perceived value* tinggi bagi pengguna dompet digital.
 - [x] Rincian bukti transfer memiliki tombol *Native Share Sheet* untuk memudahkan pembagian bukti bayar via WhatsApp.
 - [x] Indikator status transaksi membedakan secara tegas antara transaksi sukses dan penahanan kepatuhan AML.
+- [x] Galeri Showcase Visual terbit di [`design-assets/screens/showcase/specs.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/design-assets/screens/showcase/specs.md) siap disematkan ke `README.md`.
+

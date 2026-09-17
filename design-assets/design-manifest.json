@@ -177,11 +177,31 @@
         "touch_targets_verified": true,
         "dynamic_type_verified": true
       }
+    },
+    {
+      "id": "screen-008",
+      "name": "Screen/Showcase-README",
+      "description": "Recruiter Visual Showcase Gallery & FinTech Architecture Display",
+      "priority": "P0-critical",
+      "phase": "mvp",
+      "status": "specified",
+      "specs_file": "./screens/showcase/specs.md",
+      "mockup_file": null,
+      "components": [
+        { "name": "WalletCardShowcase", "states_required": ["default", "masked", "verified"] },
+        { "name": "DigitalReceiptVoucher", "states_required": ["server_verified", "unverified_warning"] },
+        { "name": "AuthSecurityShowcase", "states_required": ["2fa_prompt", "dialog_blocking"] }
+      ],
+      "a11y": {
+        "contrast_verified": true,
+        "touch_targets_verified": true,
+        "dynamic_type_verified": true
+      }
     }
   ],
   "metadata": {
-    "total_screens": 7,
-    "screens_specified": 7,
+    "total_screens": 8,
+    "screens_specified": 8,
     "completion_percentage": 100,
     "generated_by": "ui-ux-designer skill"
   }

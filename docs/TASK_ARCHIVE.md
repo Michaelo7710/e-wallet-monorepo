@@ -5,7 +5,7 @@
 
 ---
 
-## 🟢 Riwayat Tugas Selesai Terverifikasi (32 Tugas)
+## 🟢 Riwayat Tugas Selesai Terverifikasi (33 Tugas)
 
 ### 1. Proyek Aplikasi (Wallet App) — Batch 1 & 2
 
@@ -58,5 +58,7 @@
 | ID Task | Asal Delegasi | Pelaksana Target | Deskripsi Tugas & Target File | Status | Bukti Keberhasilan / Verifikasi |
 |:---|:---|:---|:---|:---:|:---|
 | `TASK-CI-01` | `tech-architecture-lead` | `frontend-developer` | **Eliminasi 2 Unused Variables ESLint & Pemulihan Green CI:** Hapus import tidak terpakai `stripComments` pada [`antiAlertGuard.test.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/antiAlertGuard.test.ts) dan `Clipboard` pada [`comprehensiveBoundaryIntegration.test.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/comprehensiveBoundaryIntegration.test.tsx). Jalankan linting lokal, commit, dan push ke `main`. | 🟢 **DONE** | `npm run lint` menghasilkan 0 error (13 warnings, exit code 0), 24/24 Jest tests pass, branch `main` steril dari unused variables untuk memulihkan status CI pipeline ke hijau. |
+| `TASK-UI-04` | `product-owner` + `ui-ux-designer` | `ui-ux-designer` | **Perancangan Visual Showcase Layout & Mockup Gallery:** Susun spesifikasi galeri visual antarmuka untuk `README.md` memanfaatkan aset riil pada [`design-assets/exports/`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/design-assets/exports/) (Kartu Emerald Elite Platinum, Digital Voucher Struk Screen #26, Auth Mesh Background, dan Payment Flow Pattern) lengkap dengan layout perbandingan mobile. | 🟢 **DONE** | Spesifikasi teknis [`design-assets/screens/showcase/specs.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/design-assets/screens/showcase/specs.md) terbit dengan arsitektur Opsi A (Split-Card Showcase), terdaftar di `design-manifest.json` (screen-008), dan lolos audit checklist desain. |
+
 
 
