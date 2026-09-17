@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import { UserLayout } from '@shared/layouts';
@@ -19,6 +20,7 @@ import { useTransactionHistory } from '../hooks/useUserData';
 dayjs.locale('id');
 
 const HistoryScreen = () => {
+  const navigation = useNavigation<any>();
   const {
     data,
     isLoading,
@@ -46,7 +48,11 @@ const HistoryScreen = () => {
     const amountPrefix = isIncome ? '+ ' : '- ';
 
     return (
-      <TouchableOpacity style={styles.transactionCard} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.transactionCard}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('TransactionDetail', { transaction: item })}
+      >
         <View style={styles.leftSection}>
           <View style={[styles.iconBox, { backgroundColor: `${iconColor}15` }]}>
             <Ionicons name={iconName} size={24} color={iconColor} />

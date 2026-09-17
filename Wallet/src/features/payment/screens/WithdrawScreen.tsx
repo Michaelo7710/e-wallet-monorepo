@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +15,7 @@ import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { useWithdrawalMutation } from '../hooks/usePaymentMutations';
 import { useFeatureFlagStore } from '@core/config/featureFlags';
+import { feedback } from '@core/feedback';
 
 const POPULAR_BANKS = ['BCA', 'BRI', 'Mandiri', 'BNI', 'CIMB Niaga'];
 
@@ -42,24 +42,24 @@ const WithdrawScreen = () => {
   const handleWithdraw = () => {
     // Graceful Degradation Guard: Blokir eksekusi penarikan saat partner bank offline
     if (!isWithdrawEnabled) {
-      Alert.alert('Fitur Sedang Pemeliharaan', withdrawNotice);
+      feedback.dialog.error('Layanan Ditangguhkan', withdrawNotice);
       return;
     }
 
     if (!accountNumber || accountNumber.length < 6) {
-      Alert.alert('Data Tidak Lengkap', 'Nomor rekening wajib diisi dengan benar.');
+      feedback.dialog.error('Nomor Rekening Tidak Valid', 'Nomor rekening wajib diisi minimal 6 digit.');
       return;
     }
     if (!accountName || accountName.length < 3) {
-      Alert.alert('Data Tidak Lengkap', 'Nama pemilik rekening wajib diisi.');
+      feedback.dialog.error('Nama Pemilik Rekening Tidak Valid', 'Nama pemilik rekening wajib diisi minimal 3 karakter.');
       return;
     }
     if (numericAmount < 50000) {
-      Alert.alert('Nominal Minimal', 'Penarikan saldo minimal Rp 50.000.');
+      feedback.dialog.error('Batas Minimal Penarikan', 'Penarikan saldo minimal Rp 50.000.');
       return;
     }
     if (numericAmount > currentBalance) {
-      Alert.alert('Saldo Tidak Cukup', 'Saldo Anda tidak mencukupi untuk melakukan penarikan ini.');
+      feedback.dialog.error('Saldo Tidak Mencukupi', 'Saldo Anda tidak mencukupi untuk melakukan penarikan ini.');
       return;
     }
 
@@ -71,24 +71,29 @@ const WithdrawScreen = () => {
         amount: numericAmount,
       },
       {
-        onSuccess: () => {
-          if (numericAmount >= 10000000) {
-            Alert.alert(
-              'Pengajuan Penarikan Tertahan',
-              `Pengajuan penarikan dana bernilai besar sebesar Rp ${numericAmount.toLocaleString('id-ID')} sedang menunggu verifikasi kepatuhan oleh Administrator.`,
-              [{ text: 'Kembali', onPress: () => navigation.goBack() }]
-            );
-          } else {
-            Alert.alert(
-              'Penarikan Berhasil Diproses',
-              `Penarikan dana sebesar Rp ${numericAmount.toLocaleString('id-ID')} ke ${selectedBank} (${accountNumber}) a.n ${accountName} berhasil diproses instan.`,
-              [{ text: 'Kembali', onPress: () => navigation.goBack() }]
-            );
-          }
+        onSuccess: (data) => {
+          navigation.navigate('TransactionDetail', {
+            transaction: {
+              id: data.transactionId,
+              transactionId: data.transactionId,
+              referenceNumber: data.referenceNumber,
+              referenceId: data.referenceNumber,
+              type: 'withdrawal',
+              amount: data.amount || numericAmount,
+              bankName: selectedBank,
+              accountNumber,
+              accountName,
+              description: `Tarik tunai ke ${selectedBank}`,
+              status: data.status || (numericAmount >= 10000000 ? 'pending_approval' : 'success'),
+              isHighValue: data.isHighValue ?? numericAmount >= 10000000,
+              remainingBalance: data.remainingBalance,
+              createdAt: new Date().toISOString(),
+            },
+          });
         },
         onError: (err: any) => {
-          const msg = err.response?.data?.message || err.message || 'Penarikan gagal';
-          Alert.alert('Gagal Penarikan', msg);
+          const msg = err.response?.data?.message || err.message || 'Penarikan gagal diproses';
+          feedback.dialog.error('Penarikan Gagal', msg);
         },
       }
     );

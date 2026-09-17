@@ -44,6 +44,11 @@ const transactionSchema = new mongoose.Schema({
     required: [true, 'Nama model referensi wajib didefinisikan'],
     enum: ['TopUpRequest', 'WithdrawalRequest', 'TransferP2P', 'Transaction'] // Membatasi asal usul mutasi
   },
+  reference_number: {
+    type: String,
+    index: true,
+    sparse: true
+  },
   sender_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -67,6 +72,11 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     enum: ['topup', 'transfer', 'withdrawal'],
     required: [true, 'Tipe transaksi wajib ditentukan secara spesifik']
+  },
+  status: {
+    type: String,
+    enum: ['success', 'pending_approval', 'processing', 'rejected', 'failed'],
+    default: 'success'
   },
   is_flagged: {
     type: Boolean,

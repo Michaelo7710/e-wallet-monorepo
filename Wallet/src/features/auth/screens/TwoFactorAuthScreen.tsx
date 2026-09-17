@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { feedback } from '@core/feedback';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -42,20 +43,20 @@ const TwoFactorAuthScreen = () => {
 
   useEffect(() => {
     if (!isSessionValid() || !preAuthToken) {
-      Alert.alert(
+      feedback.dialog.warning(
         'Sesi Berakhir',
         'Sesi login sementara telah kedaluwarsa. Silakan masuk kembali.',
-        [{ text: 'Kembali ke Login', onPress: handleCancel }]
+        handleCancel
       );
     }
   }, [isSessionValid, preAuthToken, handleCancel]);
 
   const onSubmit = (data: TwoFactorFormValues) => {
     if (!preAuthToken) {
-      Alert.alert(
+      feedback.dialog.warning(
         'Sesi Tidak Valid',
         'Informasi login sementara tidak ditemukan. Silakan masuk kembali.',
-        [{ text: 'Kembali ke Login', onPress: handleCancel }]
+        handleCancel
       );
       return;
     }
@@ -76,7 +77,7 @@ const TwoFactorAuthScreen = () => {
             err.response?.data?.message ||
             err.message ||
             'Kode otentikasi salah atau kedaluwarsa.';
-          Alert.alert('Verifikasi 2FA Gagal', errorMessage);
+          feedback.dialog.error('Verifikasi 2FA Gagal', errorMessage);
         },
       }
     );

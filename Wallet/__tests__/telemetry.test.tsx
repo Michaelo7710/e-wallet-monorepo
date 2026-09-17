@@ -23,6 +23,10 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn().mockResolvedValue(true),
+}));
+
 describe('TASK-B2-08: PII Sanitizer Unit Tests', () => {
   it('harus menyamarkan nomor telepon sesuai format 0812****7890', () => {
     expect(maskPhoneNumber('081234567890')).toBe('0812****7890');
@@ -258,7 +262,105 @@ describe('TASK-B2-08: GlobalErrorBoundary Component Tests', () => {
       hasError: false,
       error: null,
       correlationId: null,
+      copied: false,
     });
     expect(onResetMock).toHaveBeenCalled();
   });
+
+  describe('TASK-FE-07: Defensive Clipboard & Memory Safety Tests', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('harus menyalin correlation ID ke clipboard dan mengatur reset timer 3 detik', async () => {
+      jest.useFakeTimers();
+      const boundary = new GlobalErrorBoundary({ children: <GoodComponent /> });
+      boundary.state = {
+        hasError: true,
+        error: new Error('Crash'),
+        correlationId: 'corr-copy-test-123',
+        copied: false,
+      };
+      boundary.setState = jest.fn((patch) => {
+        Object.assign(boundary.state, patch);
+      });
+
+      await boundary.handleCopyCorrelationId();
+
+      const Clipboard = require('expo-clipboard');
+      expect(Clipboard.setStringAsync).toHaveBeenCalledWith('corr-copy-test-123');
+      expect(boundary.setState).toHaveBeenCalledWith({ copied: true });
+
+      // Fast-forward 3000ms
+      jest.advanceTimersByTime(3000);
+      expect(boundary.setState).toHaveBeenCalledWith({ copied: false });
+
+      jest.useRealTimers();
+    });
+
+    it('harus menangani kegagalan Clipboard.setStringAsync secara defensif tanpa unhandled rejection', async () => {
+      const Clipboard = require('expo-clipboard');
+      Clipboard.setStringAsync.mockRejectedValueOnce(new Error('Hardware Clipboard Error'));
+
+      const boundary = new GlobalErrorBoundary({ children: <GoodComponent /> });
+      boundary.state = {
+        hasError: true,
+        error: new Error('Crash'),
+        correlationId: 'corr-fail-123',
+        copied: false,
+      };
+      boundary.setState = jest.fn();
+
+      await expect(boundary.handleCopyCorrelationId()).resolves.not.toThrow();
+      expect(boundary.setState).not.toHaveBeenCalledWith({ copied: true });
+    });
+
+    it('harus membersihkan timeout aktif saat componentWillUnmount untuk mencegah memory leak', async () => {
+      jest.useFakeTimers();
+      const boundary = new GlobalErrorBoundary({ children: <GoodComponent /> });
+      boundary.state = {
+        hasError: true,
+        error: new Error('Crash'),
+        correlationId: 'corr-unmount-test',
+        copied: false,
+      };
+      boundary.setState = jest.fn();
+
+      await boundary.handleCopyCorrelationId();
+
+      // Unmount komponen sebelum 3 detik
+      expect(() => boundary.componentWillUnmount()).not.toThrow();
+
+      // Pastikan setelah unmount tidak ada eksekusi setState copied: false tertinggal
+      jest.advanceTimersByTime(3000);
+      expect(boundary.setState).not.toHaveBeenCalledWith({ copied: false });
+
+      jest.useRealTimers();
+    });
+
+    it('harus membersihkan timer timeout saat handleReset dipanggil sebelum 3 detik', async () => {
+      jest.useFakeTimers();
+      const boundary = new GlobalErrorBoundary({ children: <GoodComponent /> });
+      boundary.state = {
+        hasError: true,
+        error: new Error('Crash'),
+        correlationId: 'corr-reset-test',
+        copied: false,
+      };
+      boundary.setState = jest.fn();
+
+      await boundary.handleCopyCorrelationId();
+      boundary.handleReset();
+
+      expect(boundary.setState).toHaveBeenCalledWith({
+        hasError: false,
+        error: null,
+        correlationId: null,
+        copied: false,
+      });
+
+      jest.useRealTimers();
+    });
+  });
 });
+

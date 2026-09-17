@@ -11,6 +11,7 @@ import ChangeEmailScreen from '@features/user/screens/ChangeEmailScreen';
 import KycVerificationScreen from '@features/user/screens/KycVerificationScreen';
 import TwoFactorSetupScreen from '@features/user/screens/TwoFactorSetupScreen';
 import SnapPaymentWebViewScreen from '@features/payment/screens/SnapPaymentWebViewScreen';
+import TransactionDetailScreen from '@features/payment/screens/TransactionDetailScreen';
 
 export type UserStackParamList = {
   MainTab: undefined;
@@ -24,6 +25,7 @@ export type UserStackParamList = {
   KycVerification: undefined;
   TwoFactorSetup: undefined;
   SnapPaymentWebView: { redirectUrl: string; referenceId?: string; amount?: number };
+  TransactionDetail: { transaction?: any; transactionId?: string };
 };
 
 const Stack = createNativeStackNavigator<UserStackParamList>();
@@ -42,6 +44,7 @@ const UserStack = () => {
       <Stack.Screen name="KycVerification" component={KycVerificationScreen} />
       <Stack.Screen name="TwoFactorSetup" component={TwoFactorSetupScreen} />
       <Stack.Screen name="SnapPaymentWebView" component={SnapPaymentWebViewScreen} />
+      <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
     </Stack.Navigator>
   );
 };

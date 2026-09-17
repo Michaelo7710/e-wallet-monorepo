@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -58,76 +58,73 @@ const KycVerificationScreen = () => {
 
   const selectedPhoto = watch('idCardPhoto');
 
-  const handlePickImage = async () => {
-    Alert.alert(
-      'Unggah Foto KTP',
-      'Pilih metode pengambilan dokumen fisik identitas Anda',
-      [
-        {
-          text: 'Kamera',
-          onPress: async () => {
-            try {
-              const { status } = await ImagePicker.requestCameraPermissionsAsync();
-              if (status !== 'granted') {
-                Alert.alert(
-                  'Izin Kamera Ditolak',
-                  'Aplikasi membutuhkan izin kamera untuk memotret fisik KTP Anda.'
-                );
-                return;
-              }
+  const takePhotoWithCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        feedback.dialog.error(
+          'Izin Kamera Ditolak',
+          'Aplikasi membutuhkan izin kamera untuk memotret fisik KTP Anda.'
+        );
+        return;
+      }
 
-              const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                quality: 0.7,
-                base64: true,
-              });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.7,
+        base64: true,
+      });
 
-              if (!result.canceled && result.assets && result.assets[0]) {
-                const asset = result.assets[0];
-                const photoString = asset.base64
-                  ? `data:image/jpeg;base64,${asset.base64}`
-                  : asset.uri;
-                setValue('idCardPhoto', photoString, { shouldValidate: true });
-              }
-            } catch (err: any) {
-              Alert.alert('Gagal Mengakses Kamera', err.message || 'Terjadi kesalahan sistem.');
-            }
-          },
-        },
-        {
-          text: 'Galeri Foto',
-          onPress: async () => {
-            try {
-              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-              if (status !== 'granted') {
-                Alert.alert(
-                  'Izin Galeri Ditolak',
-                  'Aplikasi membutuhkan izin galeri untuk memilih foto dokumen KTP.'
-                );
-                return;
-              }
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const photoString = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        setValue('idCardPhoto', photoString, { shouldValidate: true });
+      }
+    } catch (err: any) {
+      feedback.toast.error(err.message || 'Gagal mengakses kamera');
+    }
+  };
 
-              const result = await ImagePicker.launchImageLibraryAsync({
-                allowsEditing: true,
-                quality: 0.7,
-                base64: true,
-              });
+  const pickImageFromGallery = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        feedback.dialog.error(
+          'Izin Galeri Ditolak',
+          'Aplikasi membutuhkan izin galeri untuk memilih foto dokumen KTP.'
+        );
+        return;
+      }
 
-              if (!result.canceled && result.assets && result.assets[0]) {
-                const asset = result.assets[0];
-                const photoString = asset.base64
-                  ? `data:image/jpeg;base64,${asset.base64}`
-                  : asset.uri;
-                setValue('idCardPhoto', photoString, { shouldValidate: true });
-              }
-            } catch (err: any) {
-              Alert.alert('Gagal Membuka Galeri', err.message || 'Terjadi kesalahan sistem.');
-            }
-          },
-        },
-        { text: 'Batal', style: 'cancel' },
-      ]
-    );
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const photoString = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        setValue('idCardPhoto', photoString, { shouldValidate: true });
+      }
+    } catch (err: any) {
+      feedback.toast.error(err.message || 'Gagal membuka galeri');
+    }
+  };
+
+  const handlePickImage = () => {
+    feedback.dialog.confirm({
+      title: 'Unggah Foto KTP',
+      message: 'Pilih sumber foto identitas Anda. Pilih Kamera untuk potret langsung atau Galeri untuk memilih dari penyimpanan perangkat.',
+      confirmText: 'Buka Kamera',
+      cancelText: 'Buka Galeri',
+      onConfirm: takePhotoWithCamera,
+      onCancel: pickImageFromGallery,
+    });
   };
 
   const onSubmit = (data: KycFormValues) => {
@@ -139,10 +136,10 @@ const KycVerificationScreen = () => {
       },
       {
         onSuccess: () => {
-          Alert.alert(
+          feedback.dialog.success(
             'Verifikasi Berhasil!',
             'Akun Anda resmi ditingkatkan ke status Premium dengan limit saldo Rp 50.000.000.',
-            [{ text: 'Selesai', onPress: () => navigation.goBack() }]
+            () => navigation.goBack()
           );
         },
         onError: (err: any) => {
@@ -150,7 +147,7 @@ const KycVerificationScreen = () => {
             err.response?.data?.message ||
             err.message ||
             'Gagal memproses verifikasi KYC.';
-          Alert.alert('Verifikasi Gagal', errorMessage);
+          feedback.dialog.error('Verifikasi Gagal', errorMessage);
         },
       }
     );

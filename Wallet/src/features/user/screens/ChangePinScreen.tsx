@@ -1,12 +1,12 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { feedback } from '@core/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
@@ -68,14 +68,16 @@ const ChangePinScreen = () => {
       },
       {
         onSuccess: () => {
-          Alert.alert('Sukses', 'PIN transaksi Anda berhasil diperbarui.', [
-            { text: 'Kembali', onPress: () => navigation.goBack() },
-          ]);
+          feedback.dialog.success(
+            'Sukses',
+            'PIN transaksi Anda berhasil diperbarui.',
+            () => navigation.goBack()
+          );
         },
         onError: (err: any) => {
           const errorMessage =
             err.response?.data?.message || err.message || 'Gagal memperbarui PIN transaksi';
-          Alert.alert('Gagal Memperbarui PIN', errorMessage);
+          feedback.dialog.error('Gagal Memperbarui PIN', errorMessage);
         },
       }
     );

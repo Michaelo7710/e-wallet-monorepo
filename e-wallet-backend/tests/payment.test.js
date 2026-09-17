@@ -31,6 +31,11 @@ describe('🧪 [PAYMENT & TRANSACTION INTEGRATION TEST]', () => {
     expect(res.statusCode).toEqual(200);
     expect(res.body.status).toBe('success');
     expect(res.body.data.amount).toBe(500000);
+    expect(res.body.data.reference_number).toMatch(/^GP-WD-\d{8}-[A-F0-9]{8}$/);
+    expect(res.body.data.transaction_id).toBeDefined();
+    expect(res.body.data.status).toBe('success');
+    expect(res.body.data.is_high_value).toBe(false);
+    expect(res.body.data.remaining_balance).toBe(1500000);
   });
 
   it('3. Harus menolak penarikan dana jika saldo dompet tidak mencukupi (400)', async () => {
