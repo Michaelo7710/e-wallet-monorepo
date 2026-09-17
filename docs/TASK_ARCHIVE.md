@@ -5,7 +5,7 @@
 
 ---
 
-## 🟢 Riwayat Tugas Selesai Terverifikasi (34 Tugas)
+## 🟢 Riwayat Tugas Selesai Terverifikasi (35 Tugas)
 
 ### 1. Proyek Aplikasi (Wallet App) — Batch 1 & 2
 
@@ -60,6 +60,7 @@
 | `TASK-CI-01` | `tech-architecture-lead` | `frontend-developer` | **Eliminasi 2 Unused Variables ESLint & Pemulihan Green CI:** Hapus import tidak terpakai `stripComments` pada [`antiAlertGuard.test.ts`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/antiAlertGuard.test.ts) dan `Clipboard` pada [`comprehensiveBoundaryIntegration.test.tsx`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/Wallet/__tests__/comprehensiveBoundaryIntegration.test.tsx). Jalankan linting lokal, commit, dan push ke `main`. | 🟢 **DONE** | `npm run lint` menghasilkan 0 error (13 warnings, exit code 0), 24/24 Jest tests pass, branch `main` steril dari unused variables untuk memulihkan status CI pipeline ke hijau. |
 | `TASK-UI-04` | `product-owner` + `ui-ux-designer` | `ui-ux-designer` | **Perancangan Visual Showcase Layout & Mockup Gallery:** Susun spesifikasi galeri visual antarmuka untuk `README.md` memanfaatkan aset riil pada [`design-assets/exports/`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/design-assets/exports/) (Kartu Emerald Elite Platinum, Digital Voucher Struk Screen #26, Auth Mesh Background, dan Payment Flow Pattern) lengkap dengan layout perbandingan mobile. | 🟢 **DONE** | Spesifikasi teknis [`design-assets/screens/showcase/specs.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/design-assets/screens/showcase/specs.md) terbit dengan arsitektur Opsi A (Split-Card Showcase), terdaftar di `design-manifest.json` (screen-008), dan lolos audit checklist desain. |
 | `TASK-DOC-01` | `product-owner` | `tech-architecture-lead` | **Integrasi Visual Showcase & Recruiter Highlights ke README:** Perbarui [`README.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/README.md) dengan menyematkan galeri visual hasil rancangan UI/UX, ringkasan arsitektur 30 detik untuk HR/Hiring Manager, tabel kepatuhan FinTech (GDPR/PSD2/UU PDP), dan badge metrik pengujian 100%. | 🟢 **DONE** | [`README.md`](file:///C:/Users/latih/ReactNativeApp/Wallet_App/README.md) terbarui dengan 3-pilar showcase visual ber-rendering presisi, hook eksekutif 30-detik, matriks kepatuhan 5-standar (UU PDP, GDPR Art. 17/25, PSD2 RTS SCA, OJK/ISO 27001), dan badge status CI/CD hijau. |
+| `TASK-REPO-01` | `product-owner` | `tech-architecture-lead` | **Optimasi Metadata Repositori & Topics FinTech via GitHub API/MCP:** Perbarui deskripsi repositori GitHub dan pasang 12+ topik pencarian rekruter (`react-native`, `clean-architecture`, `fintech`, `typescript`, `devsecops`, `gdpr`, `express`, `mongodb`, `codeql`, `cyclonedx`, `idempotency`) pada `Michaelo7710/e-wallet-monorepo`. | 🟢 **DONE** | Deskripsi repositori diperbarui dan 14 topik FinTech/DevSecOps berhasil dipasang secara remote via GitHub REST API/MCP, terverifikasi dengan respon sukses 200 OK. |
 
 
 
