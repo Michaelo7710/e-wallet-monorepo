@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,8 @@ type TwoFactorSetupFormValues = z.infer<typeof twoFactorSetupSchema>;
 const TwoFactorSetupScreen = () => {
   const navigation = useNavigation<any>();
   const [copied, setCopied] = useState<boolean>(false);
+  const isVerifiedRef = useRef<boolean>(false);
+  const hasConfirmedExitRef = useRef<boolean>(false);
 
   const {
     mutate: generate2FA,
@@ -56,6 +58,40 @@ const TwoFactorSetupScreen = () => {
     generate2FA();
   }, [generate2FA]);
 
+  useEffect(() => {
+    if (!navigation?.addListener) return;
+
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      // Jika rahasia TOTP belum di-generate, atau verifikasi sudah sukses, atau konfirmasi keluar sudah disetujui
+      if (!generateData?.secret || isVerifiedRef.current || hasConfirmedExitRef.current) {
+        return;
+      }
+
+      // Cegah navigasi keluar default
+      e.preventDefault();
+
+      // Tampilkan dialog modal konfirmasi pembatalan penyiapan 2FA
+      feedback.dialog.confirm({
+        title: 'Batalkan Penyiapan 2FA?',
+        message:
+          'Kunci rahasia telah dibuat tetapi belum diverifikasi. Jika Anda keluar sekarang, Anda harus mengulang proses penyiapan dari awal.',
+        confirmText: 'Ya, Batalkan',
+        cancelText: 'Lanjut Penyiapan',
+        isDestructive: true,
+        onConfirm: () => {
+          hasConfirmedExitRef.current = true;
+          if (e.data?.action) {
+            navigation.dispatch(e.data.action);
+          } else {
+            navigation.goBack();
+          }
+        },
+      });
+    });
+
+    return unsubscribe;
+  }, [navigation, generateData?.secret]);
+
   const handleCopySecret = async () => {
     if (!generateData?.secret) return;
     await Clipboard.setStringAsync(generateData.secret);
@@ -69,6 +105,7 @@ const TwoFactorSetupScreen = () => {
       { token: data.code },
       {
         onSuccess: async () => {
+          isVerifiedRef.current = true;
           const user = useAuthStore.getState().user;
           if (user) {
             const updatedUser = { ...user, twoFactorEnabled: true };
