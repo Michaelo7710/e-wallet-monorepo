@@ -320,8 +320,9 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
 
     expect(res.statusCode).toEqual(200);
     expect(res.body.status).toBe('success');
-    expect(res.body.data.nik).toBe(kycPayload.nik);
-    expect(res.body.data.id_card_photo).toBe(kycPayload.id_card_photo);
+    // TASK-BE-04: NIK & id_card_photo tidak boleh bocor di response JSON
+    expect(res.body.data.nik).toBeUndefined();
+    expect(res.body.data.id_card_photo).toBeUndefined();
     expect(res.body.data.bio).toBe(kycPayload.bio);
     expect(res.body.data.is_kyc_verified).toBe(true);
     expect(res.body.data.account_tier).toBe('premium');

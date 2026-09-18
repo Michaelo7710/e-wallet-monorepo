@@ -98,8 +98,6 @@ exports.updateKYC = catchAsync(async (req, res, next) => {
       email: user.email,
       phone_number: user.phone_number,
       role: user.role,
-      nik: user.nik,
-      id_card_photo: user.id_card_photo,
       bio: user.bio,
       is_verified: user.is_verified,
       is_kyc_verified: user.is_kyc_verified,
