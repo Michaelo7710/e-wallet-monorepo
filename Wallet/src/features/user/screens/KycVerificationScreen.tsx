@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { UserLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
+import { maskNik } from '@shared/utils';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { useUpdateKycMutation } from '../hooks/useUserData';
 
@@ -312,8 +313,17 @@ const KycVerificationScreen = () => {
             placeholder="Contoh: 3201123456780001"
             keyboardType="number-pad"
             maxLength={16}
+            isPassword={true}
             accessibilityLabel="Nomor Induk Kependudukan 16 Digit"
           />
+          {watch('nik') && watch('nik').length === 16 ? (
+            <View style={styles.nikProtectionBadge}>
+              <Ionicons name="shield-checkmark" size={14} color={colors.primary} />
+              <Text style={styles.nikProtectionText}>
+                Terlindungi UU PDP: {maskNik(watch('nik'))}
+              </Text>
+            </View>
+          ) : null}
 
           <ControlledInput
             control={control}
@@ -568,6 +578,22 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: spacing.md,
+  },
+  nikProtectionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${colors.primary}12`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: spacing.radius.sm,
+    marginTop: -4,
+    marginBottom: spacing.sm,
+  },
+  nikProtectionText: {
+    fontSize: typography.size.xs,
+    color: colors.primaryDark,
+    fontWeight: typography.weight.medium as any,
   },
 });
 

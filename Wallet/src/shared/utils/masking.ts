@@ -44,6 +44,26 @@ export const maskPhoneNumber = (phoneNumber?: string | null): string => {
 };
 
 /**
+ * Masks a NIK (Nomor Induk Kependudukan 16 Digit), preserving the first 4 and last 4 digits,
+ * replacing the middle 8 digits with asterisks in standard 4-digit block format: 3201 **** **** 0001.
+ * Example: '3201123456780001' -> '3201 **** **** 0001'
+ */
+export const maskNik = (nik?: string | null): string => {
+  if (!nik) return '-';
+  const clean = nik.trim();
+  if (clean.length === 0) return '-';
+  if (clean.length < 8) return '*'.repeat(clean.length);
+  if (clean.length < 16) {
+    const prefix = clean.slice(0, 4);
+    const suffix = clean.slice(-4);
+    return `${prefix} **** ${suffix}`;
+  }
+  const prefix = clean.slice(0, 4);
+  const suffix = clean.slice(-4);
+  return `${prefix} **** **** ${suffix}`;
+};
+
+/**
  * Generic masking helper for sensitive identifiers (e.g. NIK, card numbers).
  */
 export const maskIdentifier = (id?: string | null, visibleLast: number = 4): string => {

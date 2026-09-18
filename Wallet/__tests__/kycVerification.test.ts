@@ -11,6 +11,7 @@ import { useAuthStore } from '../src/core/storage/useAuthStore';
 import { User } from '../src/domain/entities/user';
 import { UserMapper } from '../src/data/mappers/userMapper';
 import { UserDTO } from '../src/data/models/userDTO';
+import { maskNik } from '../src/shared/utils/masking';
 
 const kycSchema = z.object({
   nik: z
@@ -240,6 +241,39 @@ describe('TASK-QA-04: Multi-Factor KYC Verification Engine & Gate', () => {
           isKycVerified: true,
         })
       );
+    });
+  });
+
+  describe('4. [TASK-FE-11 DoD] NIK Display Masking & Anti-Shoulder Surfing Protection', () => {
+    it('harus menyamarkan 16-digit NIK dengan format 3201 **** **** 0001 demi privasi UU PDP', () => {
+      const rawNik = '3201123456780001';
+      const masked = maskNik(rawNik);
+      expect(masked).toBe('3201 **** **** 0001');
+      expect(masked).not.toBe(rawNik);
+      expect(masked.startsWith('3201')).toBe(true);
+      expect(masked.endsWith('0001')).toBe(true);
+    });
+
+    it('harus menangani edge cases maskNik dengan aman (null, undefined, short string)', () => {
+      expect(maskNik(null)).toBe('-');
+      expect(maskNik(undefined)).toBe('-');
+      expect(maskNik('')).toBe('-');
+      expect(maskNik('12345')).toBe('*****');
+      expect(maskNik('320112345678')).toBe('3201 **** 5678');
+    });
+
+    it('harus memastikan payload form tetap menyimpan raw string 16-digit murni saat validasi Zod', () => {
+      const rawNik = '3201123456780001';
+      const formData = {
+        nik: rawNik,
+        bio: 'Pengusaha distribusi sembako kota',
+        idCardPhoto: 'data:image/jpeg;base64,ktpvalidbase64',
+      };
+
+      const parsed = kycSchema.parse(formData);
+      expect(parsed.nik).toBe(rawNik);
+      expect(parsed.nik.length).toBe(16);
+      expect(/^\d{16}$/.test(parsed.nik)).toBe(true);
     });
   });
 });
