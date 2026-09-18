@@ -157,7 +157,9 @@ const userSchema = new mongoose.Schema({
   },
   nik: {
     type: String,
-    default: null
+    default: null,
+    index: true,
+    sparse: true
   },
   is_email_verified: {
     type: Boolean,

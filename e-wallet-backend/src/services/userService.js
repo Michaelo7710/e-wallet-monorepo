@@ -331,6 +331,12 @@ exports.updateKYC = async (userId, kycData) => {
     throw new AppError('Akun Anda sudah berstatus terverifikasi premium.', StatusCodes.BAD_REQUEST);
   }
 
+  // Benteng 4 (Deduplikasi NIK):
+  const existingUserWithNik = await User.findOne({ nik, _id: { $ne: userId } });
+  if (existingUserWithNik) {
+    throw new AppError('NIK sudah terdaftar pada akun lain.', StatusCodes.BAD_REQUEST);
+  }
+
   // Mutasi Akun Premium:
   user.nik = nik;
   user.id_card_photo = id_card_photo;

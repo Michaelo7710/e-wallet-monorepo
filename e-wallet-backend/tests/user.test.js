@@ -367,4 +367,49 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(resRepeat.statusCode).toEqual(400);
     expect(resRepeat.body.message).toMatch(/sudah berstatus terverifikasi premium/i);
   });
+
+  it('12. [TASK-BE-08 DoD] Harus menolak pengajuan KYC jika NIK sudah digunakan oleh akun lain (400 Bad Request)', async () => {
+    // User A: Berhasil submit KYC dengan NIK tertentu
+    const { accessToken: tokenA } = await createTestUser({
+      two_factor_enabled: true,
+      is_verified: false,
+      account_tier: 'basic',
+      is_kyc_verified: false,
+    });
+
+    const sharedNik = '3201012345678901';
+
+    const resUserA = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        nik: sharedNik,
+        id_card_photo: 'data:image/jpeg;base64,ktpuserA',
+        bio: 'Pengusaha retail dan distribusi barang',
+      });
+
+    expect(resUserA.statusCode).toEqual(200);
+    expect(resUserA.body.status).toBe('success');
+
+    // User B: Coba mengajukan KYC menggunakan NIK yang sama persis
+    const { accessToken: tokenB } = await createTestUser({
+      two_factor_enabled: true,
+      is_verified: false,
+      account_tier: 'basic',
+      is_kyc_verified: false,
+    });
+
+    const resUserB = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${tokenB}`)
+      .send({
+        nik: sharedNik,
+        id_card_photo: 'data:image/jpeg;base64,ktpuserB',
+        bio: 'Pebisnis online transaksi harian',
+      });
+
+    expect(resUserB.statusCode).toEqual(400);
+    expect(resUserB.body.status).toBe('fail');
+    expect(resUserB.body.message).toMatch(/NIK sudah terdaftar pada akun lain/i);
+  });
 });
