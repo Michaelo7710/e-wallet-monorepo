@@ -122,7 +122,66 @@ exports.updatePassword = async (userId, passwordData) => {
 };
 
 // ========================================================
-// 4. SERVICE LAYER: DYNAMIC CHANGE EMAIL (DIAGRAM ALUR SINKRON)
+// 4. SERVICE LAYER: REQUEST OTP FOR CHANGE EMAIL
+// ========================================================
+exports.requestChangeEmailOtp = async (userId, newEmail) => {
+  if (!newEmail) {
+    throw new AppError('Email baru wajib disertakan.', StatusCodes.BAD_REQUEST);
+  }
+
+  const cleanEmail = String(newEmail).trim().toLowerCase();
+  const isEmailTaken = await User.findOne({ email: cleanEmail, _id: { $ne: userId } });
+  if (isEmailTaken) {
+    throw new AppError('Email tersebut sudah digunakan oleh akun lain.', StatusCodes.BAD_REQUEST);
+  }
+
+  const user = await User.findById(userId).select('+two_factor_enabled');
+  if (!user) {
+    throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
+  }
+
+  if (user.two_factor_enabled) {
+    return {
+      message: 'Akun Anda mengaktifkan 2FA. Silakan gunakan kode dari aplikasi autentikator Anda.',
+      two_factor: true,
+    };
+  }
+
+  const otpCode = crypto.randomInt(100000, 999999).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  // Invalidate previous unused change_email OTPs
+  await VerificationCode.updateMany(
+    { user_id: userId, type: 'change_email', is_used: false },
+    { is_used: true }
+  );
+
+  await VerificationCode.create([{
+    user_id: userId,
+    code: otpCode,
+    type: 'change_email',
+    expires_at: expiresAt,
+  }]);
+
+  try {
+    const sendEmail = require('../utils/email');
+    sendEmail({
+      email: cleanEmail,
+      subject: 'GreenPay - Kode Verifikasi Perubahan Email',
+      message: `Halo,\n\nKode verifikasi OTP untuk perubahan email akun GreenPay Anda adalah: ${otpCode}\n\nKode ini berlaku selama 10 menit. Jangan berikan kode ini kepada siapa pun.`
+    }).catch((err) => console.error('Gagal mengirim email OTP change_email:', err.message));
+  } catch (err) {
+    // Ignore in local / mock environments
+  }
+
+  return {
+    message: 'Kode OTP verifikasi berhasil dikirimkan ke email baru Anda.',
+    two_factor: false,
+  };
+};
+
+// ========================================================
+// 5. SERVICE LAYER: DYNAMIC CHANGE EMAIL (DIAGRAM ALUR SINKRON)
 // ========================================================
 // Spesifikasi Gambar: Input Email Baru -> Verifikasi OTP -> Verifikasi PIN -> Eksekusi
 exports.updateEmailSecurely = async (userId, emailData) => {

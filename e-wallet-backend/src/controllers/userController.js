@@ -50,7 +50,20 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 });
 
 // ========================================================
-// 4. KENDALI: UBAH EMAIL BERPROTEKSI PIN & OTP
+// 4. KENDALI: PERMINTAAN KODE OTP PERUBAHAN EMAIL
+// ========================================================
+exports.requestChangeEmailOtp = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+  const result = await userService.requestChangeEmailOtp(userId, req.body.new_email);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    ...result,
+  });
+});
+
+// ========================================================
+// 5. KENDALI: UBAH EMAIL BERPROTEKSI PIN & OTP
 // ========================================================
 exports.updateEmailSecurely = catchAsync(async (req, res, next) => {
   const userId = req.user._id;

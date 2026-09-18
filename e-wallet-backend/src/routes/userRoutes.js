@@ -16,6 +16,8 @@ router.post('/setup-pin', userController.setupPin);
 router.patch('/update-password', userController.updatePassword);
 
 // Sirkuit Modifikasi Sensitif Sesuai Alur Diagram Keamanan Berlapis
+router.post('/change-email/request-otp', userController.requestChangeEmailOtp);
+router.post('/request-change-email-otp', userController.requestChangeEmailOtp);
 router.patch('/update-email', userController.updateEmailSecurely);
 router.patch('/update-pin', userController.updatePinSecurely);
 

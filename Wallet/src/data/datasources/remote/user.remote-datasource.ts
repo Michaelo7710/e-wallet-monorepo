@@ -29,6 +29,13 @@ export class UserRemoteDataSource {
     return response.data;
   }
 
+  async requestChangeEmailOtp(newEmail: string): Promise<{ status: string; message: string; two_factor?: boolean }> {
+    const response = await api.post<{ status: string; message: string; two_factor?: boolean }>('/users/change-email/request-otp', {
+      new_email: newEmail,
+    });
+    return response.data;
+  }
+
   async updateEmail(newEmail: string, otp: string, pin: string): Promise<{ status: string; email: string }> {
     const response = await api.patch<{ status: string; email: string }>('/users/update-email', {
       new_email: newEmail,

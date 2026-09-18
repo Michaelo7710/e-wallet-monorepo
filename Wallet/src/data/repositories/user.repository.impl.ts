@@ -47,6 +47,14 @@ export class UserRepositoryImpl implements IUserRepository {
     await this.remoteDataSource.updatePassword(oldPassword, newPassword, confirmNewPassword);
   }
 
+  async requestChangeEmailOtp(newEmail: string): Promise<{ message: string; twoFactor?: boolean }> {
+    const raw = await this.remoteDataSource.requestChangeEmailOtp(newEmail);
+    return {
+      message: raw.message,
+      twoFactor: raw.two_factor,
+    };
+  }
+
   async updateEmail(newEmail: string, otp: string, pin: string): Promise<{ email: string }> {
     const raw = await this.remoteDataSource.updateEmail(newEmail, otp, pin);
     return { email: raw.email };

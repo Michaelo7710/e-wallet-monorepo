@@ -101,6 +101,14 @@ export const useUpdatePasswordMutation = () => {
   });
 };
 
+export const useRequestChangeEmailOtpMutation = () => {
+  return useMutation({
+    mutationFn: async (newEmail: string) => {
+      return await userRepository.requestChangeEmailOtp(newEmail);
+    },
+  });
+};
+
 export const useUpdateEmailMutation = () => {
   return useMutation({
     mutationFn: async ({ newEmail, otp, pin }: UpdateEmailPayload) => {
