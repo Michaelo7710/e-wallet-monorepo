@@ -558,4 +558,33 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     const userInDb = await User.findById(userB._id);
     expect(userInDb.email).toBe(expectedCleanEmail);
   });
+
+  it('16. [TASK-FE-12 DoD] Harus sukses memproses KYC via multipart/form-data upload file foto KTP (200 OK)', async () => {
+    const { accessToken } = await createTestUser({
+      two_factor_enabled: true,
+      is_verified: false,
+      account_tier: 'basic',
+      is_kyc_verified: false,
+    });
+
+    const uniqueNik = `3201${Date.now().toString().slice(-12)}`;
+
+    const res = await request(app)
+      .patch('/api/v1/users/update-kyc')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('nik', uniqueNik)
+      .field('bio', 'Pedagang grosir elektronik pasar kota')
+      .attach('id_card_photo', Buffer.from('fake image binary content for ktp'), 'ktp_scan.jpg');
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.status).toBe('success');
+    expect(res.body.data.is_kyc_verified).toBe(true);
+    expect(res.body.data.nik).toBeUndefined(); // UU PDP redaction preserved
+    expect(res.body.data.id_card_photo).toBeUndefined(); // UU PDP redaction preserved
+
+    // Verifikasi di database bahwa path yang tersimpan adalah URL path berkas statis, bukan base64
+    const updatedUserInDb = await User.findOne({ nik: uniqueNik }).select('+id_card_photo');
+    expect(updatedUserInDb.id_card_photo).toMatch(/^\/uploads\/kyc\/ktp-/);
+    expect(updatedUserInDb.id_card_photo).not.toMatch(/^data:image/);
+  });
 });

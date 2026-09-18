@@ -1,6 +1,7 @@
 const express = require('express');
 const userController = require('../controllers/userController');
 const { protect } = require('../middlewares/authMiddleware');
+const { uploadKycPhoto } = require('../middlewares/uploadMiddleware');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.patch('/update-email', userController.updateEmailSecurely);
 router.patch('/update-pin', userController.updatePinSecurely);
 
 // Jalur Kliring Akun Premium Portofolio (KYC)
-router.patch('/update-kyc', userController.updateKYC);
+router.patch('/update-kyc', uploadKycPhoto.single('id_card_photo'), userController.updateKYC);
 
 router.get('/contacts', userController.getSavedContacts);
 

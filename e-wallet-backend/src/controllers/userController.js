@@ -100,7 +100,17 @@ exports.updateKYC = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
 
   console.log(`🎮 [USER CONTROLLER] Eksekusi validasi KYC & pengajuan akun premium.`);
-  const user = await userService.updateKYC(userId, req.body);
+
+  const idCardPhoto = req.file
+    ? `/uploads/kyc/${req.file.filename}`
+    : req.body.id_card_photo;
+
+  const kycPayload = {
+    ...req.body,
+    id_card_photo: idCardPhoto,
+  };
+
+  const user = await userService.updateKYC(userId, kycPayload);
 
   res.status(StatusCodes.OK).json({
     status: 'success',

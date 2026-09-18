@@ -1,5 +1,6 @@
 // src/app.js
 const express = require('express');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { StatusCodes } = require('http-status-codes');
 
@@ -54,6 +55,9 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(mongoSanitize());
+
+// 🗄️ Penyajian Berkas Statis Unggahan (KTP, Dokumen KYC)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 🍃 Middleware Pemicu Koneksi MongoDB Atlas (Safe Serverless Connection Pool)
 app.use(async (req, res, next) => {
