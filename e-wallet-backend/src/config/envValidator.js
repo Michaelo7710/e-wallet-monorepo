@@ -291,6 +291,7 @@ function validateEnv(options = {}) {
     EMAIL_PASS: emailPass,
     USE_TRANSACTIONS: useTransactions,
     TOTP_WINDOW_STEPS: totpWindowSteps,
+    TOTP_ENCRYPTION_KEY: envSource.TOTP_ENCRYPTION_KEY ? String(envSource.TOTP_ENCRYPTION_KEY).trim() : 'greenpay-default-totp-aes-256-gcm-master-key-32chars',
     IS_PRODUCTION: nodeEnv === 'production',
     IS_DEVELOPMENT: nodeEnv === 'development',
     IS_TEST: nodeEnv === 'test',
@@ -318,6 +319,7 @@ function validateEnv(options = {}) {
     process.env.EMAIL_PASS = parsedEnv.EMAIL_PASS;
     process.env.USE_TRANSACTIONS = String(parsedEnv.USE_TRANSACTIONS);
     process.env.TOTP_WINDOW_STEPS = String(parsedEnv.TOTP_WINDOW_STEPS);
+    process.env.TOTP_ENCRYPTION_KEY = parsedEnv.TOTP_ENCRYPTION_KEY;
     cachedEnv = Object.freeze(parsedEnv);
   }
 

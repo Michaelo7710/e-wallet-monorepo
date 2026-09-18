@@ -257,6 +257,12 @@ describe('🧪 [AUTH ENGINE INTEGRATION TEST]', () => {
     expect(loginRes.body.data).not.toHaveProperty('access_token');
     expect(loginRes.body.data).not.toHaveProperty('refresh_token');
 
+    // [TASK-BE-05 DoD]: Verifikasi rahasia di MongoDB tersimpan terenkripsi AES-256-GCM (bukan plaintext Base32)
+    const storedUser = await User.findById(user._id).select('+two_factor_secret');
+    expect(storedUser.two_factor_secret).toBeDefined();
+    expect(storedUser.two_factor_secret.startsWith('enc:')).toBe(true);
+    expect(storedUser.two_factor_secret).not.toBe(secret);
+
     // 8. Sukses tukar pre_auth_token + TOTP menjadi token sesi sah
     const preAuthToken = loginRes.body.data.pre_auth_token;
     const totpToken = generateTOTPCode(secret);

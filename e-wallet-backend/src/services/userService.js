@@ -1,6 +1,7 @@
 const { User, Wallet, SavedContact, VerificationCode } = require('../models');
 const { StatusCodes } = require('http-status-codes');
 const AppError = require('../utils/AppError');
+const { decryptTOTPSecret } = require('../utils/crypto');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
@@ -27,8 +28,9 @@ const base32Decode = (str) => {
 const verifyTOTP = (token, secret) => {
   if (!secret || !token) return false;
   try {
+    const plainSecret = decryptTOTPSecret(secret);
     const counter = Math.floor(Date.now() / 30000);
-    const secretBuffer = base32Decode(secret);
+    const secretBuffer = base32Decode(plainSecret);
     const windowSteps = parseInt(process.env.TOTP_WINDOW_STEPS, 10) || 1;
 
     for (let i = -windowSteps; i <= windowSteps; i++) {

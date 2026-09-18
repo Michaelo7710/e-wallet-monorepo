@@ -109,6 +109,7 @@
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { encryptTOTPSecret } = require('../utils/crypto');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -240,6 +241,11 @@ userSchema.pre('save', async function () {
   // 2. Eksekusi Enkripsi PIN (jika dimodifikasi & tidak null)
   if (this.isModified('pin') && this.pin) {
     this.pin = await bcrypt.hash(this.pin, 12);
+  }
+
+  // 3. Eksekusi Enkripsi Kunci Rahasia TOTP 2FA (AES-256-GCM jika dimodifikasi & belum terenkripsi)
+  if (this.isModified('two_factor_secret') && this.two_factor_secret && !this.two_factor_secret.startsWith('enc:')) {
+    this.two_factor_secret = encryptTOTPSecret(this.two_factor_secret);
   }
 });
 

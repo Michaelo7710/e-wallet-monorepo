@@ -212,6 +212,7 @@ const AppError = require('../utils/AppError');
 const sendEmail = require('../utils/email');
 const { StatusCodes } = require('http-status-codes');
 const { signAccessToken, signRefreshToken, signPreAuthToken, verifyPreAuthToken } = require('../utils/jwt');
+const { encryptTOTPSecret, decryptTOTPSecret } = require('../utils/crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
@@ -770,7 +771,7 @@ exports.generate2FASecret = async (userId) => {
   const randomBytes = crypto.randomBytes(20);
   const secret = base32Encode(randomBytes);
 
-  user.two_factor_secret = secret;
+  user.two_factor_secret = encryptTOTPSecret(secret);
   await user.save({ validateBeforeSave: false });
 
   return {
@@ -826,7 +827,8 @@ exports.verify2FAToken = async (userId, token) => {
   }
 
   const counter = Math.floor(Date.now() / 30000);
-  const secretBuffer = base32Decode(user.two_factor_secret);
+  const plainSecret = decryptTOTPSecret(user.two_factor_secret);
+  const secretBuffer = base32Decode(plainSecret);
 
   // [CLEAN CODE] Tarik toleransi jendela dari .env, default 1 jika tidak diset
   const windowSteps = parseInt(process.env.TOTP_WINDOW_STEPS, 10) || 1;
@@ -884,7 +886,8 @@ exports.verify2FALogin = async (preAuthToken, totpCode) => {
   }
 
   const counter = Math.floor(Date.now() / 30000);
-  const secretBuffer = base32Decode(user.two_factor_secret);
+  const plainSecret = decryptTOTPSecret(user.two_factor_secret);
+  const secretBuffer = base32Decode(plainSecret);
   const windowSteps = parseInt(process.env.TOTP_WINDOW_STEPS, 10) || 1;
 
   let isValid = false;
