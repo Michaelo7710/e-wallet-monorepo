@@ -80,7 +80,8 @@ exports.getUserProfile = async (userId) => {
 // 2. SERVICE LAYER: SETUP PIN PERDANA (FIRST TIME ONLY)
 // ========================================================
 exports.setupPin = async (userId, pin) => {
-  if (!pin || pin.length !== 6 || isNaN(pin)) {
+  const pinStr = (pin !== undefined && pin !== null) ? String(pin).trim() : '';
+  if (!/^\d{6}$/.test(pinStr)) {
     throw new AppError('PIN transaksi wajib berupa 6 digit angka murni.', StatusCodes.BAD_REQUEST);
   }
 
@@ -88,7 +89,7 @@ exports.setupPin = async (userId, pin) => {
   if (!user) throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
   if (user.pin) throw new AppError('PIN sudah dikonfigurasi sebelumnya.', StatusCodes.BAD_REQUEST);
 
-  user.pin = pin;
+  user.pin = pinStr;
   await user.save();
 
   return { message: 'PIN transaksi berhasil diaktifkan.' };
@@ -186,19 +187,23 @@ exports.updatePinSecurely = async (userId, pinData) => {
 
   console.log(`🔐 [USER SERVICE] Memproses pergantian PIN bersyarat untuk User ID: ${userId}`);
 
-  if (!old_pin || !otp || !new_pin || !confirm_new_pin) {
+  if (old_pin === undefined || old_pin === null || !otp || new_pin === undefined || new_pin === null || confirm_new_pin === undefined || confirm_new_pin === null) {
     throw new AppError('Seluruh parameter otentikasi PIN dan OTP wajib diisi.', StatusCodes.BAD_REQUEST);
   }
 
-  if (new_pin !== confirm_new_pin) throw new AppError('Konfirmasi PIN baru tidak cocok.', StatusCodes.BAD_REQUEST);
-  if (new_pin.length !== 6 || isNaN(new_pin)) throw new AppError('PIN baru wajib berupa 6 digit angka.', StatusCodes.BAD_REQUEST);
+  const oldPinStr = String(old_pin).trim();
+  const newPinStr = String(new_pin).trim();
+  const confirmNewPinStr = String(confirm_new_pin).trim();
+
+  if (newPinStr !== confirmNewPinStr) throw new AppError('Konfirmasi PIN baru tidak cocok.', StatusCodes.BAD_REQUEST);
+  if (!/^\d{6}$/.test(newPinStr)) throw new AppError('PIN baru wajib berupa 6 digit angka.', StatusCodes.BAD_REQUEST);
 
   const user = await User.findById(userId).select('+pin +two_factor_secret +two_factor_enabled');
   if (!user) throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
 
   // Benteng 1: Cek Keaslian PIN Lama (Sesuai Diagram)
   if (!user.pin) throw new AppError('Aktivasi PIN Anda terlebih dahulu sebelum mengubah data sensitif.', StatusCodes.BAD_REQUEST);
-  const isOldPinValid = await user.correctPin(old_pin, user.pin);
+  const isOldPinValid = await user.correctPin(oldPinStr, user.pin);
   if (!isOldPinValid) throw new AppError('PIN lama yang Anda masukkan salah.', StatusCodes.BAD_REQUEST);
 
   // Benteng 2: Cek OTP / 2FA (Sesuai Diagram)
@@ -225,7 +230,7 @@ exports.updatePinSecurely = async (userId, pinData) => {
   }
 
   // Eksekusi Pemuatan Data Baru
-  user.pin = new_pin;
+  user.pin = newPinStr;
   await user.save();
 
   return { message: 'PIN transaksi Anda berhasil dimutasi dan dikunci kembali.' };

@@ -71,6 +71,36 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(res.body.status).toBe('fail');
   });
 
+  it('3b. [TASK-BE-07 DoD] Harus menerima PIN berupa integer 123456 dan menolak non-digit "12345a" atau digit kurang', async () => {
+    // User tanpa PIN
+    const { accessToken: tokenNoPin } = await createTestUser({ pin: null });
+
+    // 1. Kirim "12345a" -> harus ditolak 400
+    const resAlpha = await request(app)
+      .post('/api/v1/users/setup-pin')
+      .set('Authorization', `Bearer ${tokenNoPin}`)
+      .send({ pin: '12345a' });
+    expect(resAlpha.statusCode).toEqual(400);
+    expect(resAlpha.body.message).toMatch(/6 digit angka murni/i);
+
+    // 2. Kirim "12345" (5 digit) -> harus ditolak 400
+    const resShort = await request(app)
+      .post('/api/v1/users/setup-pin')
+      .set('Authorization', `Bearer ${tokenNoPin}`)
+      .send({ pin: '12345' });
+    expect(resShort.statusCode).toEqual(400);
+    expect(resShort.body.message).toMatch(/6 digit angka murni/i);
+
+    // 3. Kirim integer 123456 (number) -> harus diterima 200
+    const resInteger = await request(app)
+      .post('/api/v1/users/setup-pin')
+      .set('Authorization', `Bearer ${tokenNoPin}`)
+      .send({ pin: 123456 });
+    expect(resInteger.statusCode).toEqual(200);
+    expect(resInteger.body.status).toBe('success');
+    expect(resInteger.body.message).toMatch(/berhasil diaktifkan/i);
+  });
+
   it('4. Harus sukses memperbarui email dengan tiket VerificationCode (type: change_email) yang valid (200)', async () => {
     const { accessToken, user } = await createTestUser();
     const newEmail = `updated_${Date.now()}@test.com`;
