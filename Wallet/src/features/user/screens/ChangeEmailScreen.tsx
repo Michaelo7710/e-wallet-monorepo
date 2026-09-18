@@ -244,6 +244,7 @@ const ChangeEmailScreen = () => {
                 placeholder="6 Digit OTP"
                 keyboardType="number-pad"
                 maxLength={6}
+                isPassword={true}
               />
 
               <ButtonCustom
