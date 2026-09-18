@@ -122,7 +122,31 @@ const ProfileScreen = () => {
       case '3':
         navigation.navigate('ChangeEmail');
         break;
+      case '4':
+        feedback.dialog.alert(
+          'Rekening Bank Penarikan',
+          'Pengelolaan daftar rekening bank tujuan penarikan dana saat ini dilakukan secara langsung saat mengajukan penarikan pada menu Tarik Saldo.'
+        );
+        break;
+      case '5':
+        feedback.dialog.confirm({
+          title: 'Pusat Bantuan GreenPay',
+          message: 'Layanan pelanggan GreenPay siap membantu Anda 24/7. Hubungi kami melalui email resmi support@greenpay.com atau live support.',
+          confirmText: 'Hubungi Bantuan',
+          cancelText: 'Tutup',
+          onConfirm: () => {
+            feedback.toast.info('Menghubungkan ke saluran bantuan support@greenpay.com');
+          },
+        });
+        break;
+      case '6':
+        feedback.dialog.alert(
+          'Syarat & Ketentuan Layanan',
+          'GreenPay E-Wallet beroperasi sesuai regulasi sistem pembayaran Bank Indonesia dan UU Perlindungan Data Pribadi (UU PDP No. 27/2022). Seluruh saldo dan transaksi diamankan dengan enkripsi simetris end-to-end, multi-factor TOTP, dan pengawasan anti-fraud real-time.'
+        );
+        break;
       default:
+        feedback.toast.info('Fitur sedang dipersiapkan');
         break;
     }
   };
