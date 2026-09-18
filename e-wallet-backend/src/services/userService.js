@@ -1,4 +1,4 @@
-const { User, Wallet, SavedContact, VerificationCode } = require('../models');
+const { User, Wallet, SavedContact, VerificationCode, RefreshToken } = require('../models');
 const { StatusCodes } = require('http-status-codes');
 const AppError = require('../utils/AppError');
 const { decryptTOTPSecret } = require('../utils/crypto');
@@ -118,6 +118,9 @@ exports.updatePassword = async (userId, passwordData) => {
   user.password = new_password;
   await user.save();
 
+  // [TASK-BE-09] Invalidasi seluruh refresh token sesi aktif setelah ganti password
+  await RefreshToken.deleteMany({ user_id: userId });
+
   return { message: 'Password akun Anda berhasil diperbarui.' };
 };
 
@@ -233,6 +236,9 @@ exports.updateEmailSecurely = async (userId, emailData) => {
   // Eksekusi Pembaruan Data
   user.email = new_email;
   await user.save();
+
+  // [TASK-BE-09] Invalidasi seluruh refresh token sesi aktif setelah ganti email
+  await RefreshToken.deleteMany({ user_id: userId });
 
   return { message: 'Email Anda sukses diperbarui sesuai verifikasi otentikasi.', email: user.email };
 };

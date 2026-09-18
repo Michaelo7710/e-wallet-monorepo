@@ -1,7 +1,7 @@
 // tests/user.test.js
 const request = require('supertest');
 const app = require('../app');
-const { User, VerificationCode } = require('../src/models');
+const { User, VerificationCode, RefreshToken } = require('../src/models');
 const { createTestUser } = require('./helpers/testFactory');
 const crypto = require('crypto');
 
@@ -411,5 +411,89 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(resUserB.statusCode).toEqual(400);
     expect(resUserB.body.status).toBe('fail');
     expect(resUserB.body.message).toMatch(/NIK sudah terdaftar pada akun lain/i);
+  });
+
+  it('13. [TASK-BE-09 DoD] Harus menginvalidasi seluruh active refresh token setelah pengguna mengganti password (401 saat refresh)', async () => {
+    const { user, accessToken, refreshToken } = await createTestUser({ password: 'OldPassword123!' });
+
+    // Simulasikan session aktif dengan mencatat refresh token di database
+    await RefreshToken.create({
+      user_id: user._id,
+      token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    const activeTokensBefore = await RefreshToken.find({ user_id: user._id });
+    expect(activeTokensBefore.length).toBe(1);
+
+    // Pengguna mengganti kata sandi
+    const resUpdate = await request(app)
+      .patch('/api/v1/users/update-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_password: 'OldPassword123!',
+        new_password: 'NewPassword123!',
+        confirm_new_password: 'NewPassword123!',
+      });
+
+    expect(resUpdate.statusCode).toEqual(200);
+    expect(resUpdate.body.status).toBe('success');
+
+    // Seluruh refresh token untuk user tersebut wajib telah dimusnahkan
+    const activeTokensAfter = await RefreshToken.find({ user_id: user._id });
+    expect(activeTokensAfter.length).toBe(0);
+
+    // Refresh token lama wajib ditolak saat dicoba untuk refresh access token (401)
+    const resRefresh = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .send({ refresh_token: refreshToken });
+
+    expect(resRefresh.statusCode).toEqual(401);
+    expect(resRefresh.body.message).toMatch(/Refresh token tidak valid atau telah kedaluwarsa/i);
+  });
+
+  it('14. [TASK-BE-09 DoD] Harus menginvalidasi seluruh active refresh token setelah pengguna mengganti email (401 saat refresh)', async () => {
+    const { user, accessToken, refreshToken } = await createTestUser();
+
+    // Simulasikan session aktif dengan mencatat refresh token di database
+    await RefreshToken.create({
+      user_id: user._id,
+      token: refreshToken,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    // Generate VerificationCode untuk change_email
+    const otpCode = '654321';
+    await VerificationCode.create({
+      user_id: user._id,
+      code: otpCode,
+      type: 'change_email',
+      expires_at: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    // Pengguna mengganti email
+    const resUpdateEmail = await request(app)
+      .patch('/api/v1/users/update-email')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        new_email: `invalidated_session_${Date.now()}@test.com`,
+        otp: otpCode,
+        pin: '123456',
+      });
+
+    expect(resUpdateEmail.statusCode).toEqual(200);
+    expect(resUpdateEmail.body.status).toBe('success');
+
+    // Seluruh refresh token untuk user tersebut wajib telah dimusnahkan
+    const activeTokensAfter = await RefreshToken.find({ user_id: user._id });
+    expect(activeTokensAfter.length).toBe(0);
+
+    // Refresh token lama wajib ditolak (401)
+    const resRefresh = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .send({ refresh_token: refreshToken });
+
+    expect(resRefresh.statusCode).toEqual(401);
+    expect(resRefresh.body.message).toMatch(/Refresh token tidak valid atau telah kedaluwarsa/i);
   });
 });
