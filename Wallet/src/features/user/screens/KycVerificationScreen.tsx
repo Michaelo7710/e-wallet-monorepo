@@ -72,16 +72,13 @@ const KycVerificationScreen = () => {
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        quality: 0.7,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        const photoString = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
-        setValue('idCardPhoto', photoString, { shouldValidate: true });
+        setValue('idCardPhoto', asset.uri, { shouldValidate: true });
       }
     } catch (err: any) {
       feedback.toast.error(err.message || 'Gagal mengakses kamera');
@@ -101,16 +98,13 @@ const KycVerificationScreen = () => {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         allowsEditing: true,
-        quality: 0.7,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        const photoString = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
-        setValue('idCardPhoto', photoString, { shouldValidate: true });
+        setValue('idCardPhoto', asset.uri, { shouldValidate: true });
       }
     } catch (err: any) {
       feedback.toast.error(err.message || 'Gagal membuka galeri');

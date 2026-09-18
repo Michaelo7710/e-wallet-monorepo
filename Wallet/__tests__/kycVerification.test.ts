@@ -42,6 +42,14 @@ jest.mock('../src/core/di/container', () => ({
 
 jest.mock('../src/core/database/sqlite');
 jest.mock('@core/network/api', () => ({
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  },
   STORAGE_KEYS: {
     ACCESS_TOKEN: 'access_token',
     REFRESH_TOKEN: 'refresh_token',
@@ -274,6 +282,53 @@ describe('TASK-QA-04: Multi-Factor KYC Verification Engine & Gate', () => {
       expect(parsed.nik).toBe(rawNik);
       expect(parsed.nik.length).toBe(16);
       expect(/^\d{16}$/.test(parsed.nik)).toBe(true);
+    });
+  });
+
+  describe('5. [TASK-FE-12 DoD] Multipart/FormData File Upload Integration', () => {
+    it('harus memvalidasi pengiriman URI file lokal (file://) tanpa konversi base64', () => {
+      const fileUriData = {
+        nik: '3201123456780001',
+        bio: 'Pengusaha distribusi sembako kota',
+        idCardPhoto: 'file:///data/user/0/host.exp.exponent/cache/ExperienceData/ImagePicker/test-ktp.jpg',
+      };
+
+      const parsed = kycSchema.parse(fileUriData);
+      expect(parsed.idCardPhoto.startsWith('file://')).toBe(true);
+      expect(parsed.idCardPhoto.endsWith('.jpg')).toBe(true);
+      expect(parsed.idCardPhoto).not.toMatch(/^data:image/);
+    });
+
+    it('harus menyusun FormData multipart secara benar di UserRemoteDataSource', async () => {
+      const { UserRemoteDataSource } = require('../src/data/datasources/remote/user.remote-datasource');
+      const api = require('@core/network/api').default;
+      api.patch.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: {
+            _id: 'usr-123',
+            username: 'testuser',
+            is_kyc_verified: true,
+          },
+        },
+      });
+
+      const dataSource = new UserRemoteDataSource();
+      await dataSource.updateKyc({
+        nik: '3201123456780001',
+        bio: 'Pengusaha distribusi sembako kota',
+        idCardPhoto: 'file:///path/to/ktp.jpg',
+      });
+
+      expect(api.patch).toHaveBeenCalledWith(
+        '/users/update-kyc',
+        expect.any(FormData),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'multipart/form-data',
+          }),
+        })
+      );
     });
   });
 });

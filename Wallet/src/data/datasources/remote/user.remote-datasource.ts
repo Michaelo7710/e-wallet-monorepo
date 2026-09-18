@@ -60,7 +60,32 @@ export class UserRemoteDataSource {
     id_card_photo: string;
     bio: string;
   }): Promise<{ status: string; data: UserDTO }> {
-    const response = await api.patch<{ status: string; data: UserDTO }>('/users/update-kyc', payload);
+    const formData = new FormData();
+    formData.append('nik', payload.nik);
+    formData.append('bio', payload.bio);
+
+    const photoPath = payload.id_card_photo;
+    if (
+      typeof photoPath === 'string' &&
+      (photoPath.startsWith('file://') || photoPath.startsWith('content://') || photoPath.startsWith('/'))
+    ) {
+      const filename = photoPath.split('/').pop() || 'ktp_photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      formData.append('id_card_photo', {
+        uri: photoPath,
+        name: filename,
+        type,
+      } as any);
+    } else {
+      formData.append('id_card_photo', photoPath as any);
+    }
+
+    const response = await api.patch<{ status: string; data: UserDTO }>('/users/update-kyc', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 }
