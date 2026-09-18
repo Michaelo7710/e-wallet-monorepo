@@ -124,6 +124,9 @@ exports.updatePassword = async (userId, passwordData) => {
   return { message: 'Password akun Anda berhasil diperbarui.' };
 };
 
+// Regex ketat validasi format email di Service Layer (RFC 5322 simplified standard)
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // ========================================================
 // 4. SERVICE LAYER: REQUEST OTP FOR CHANGE EMAIL
 // ========================================================
@@ -133,6 +136,10 @@ exports.requestChangeEmailOtp = async (userId, newEmail) => {
   }
 
   const cleanEmail = String(newEmail).trim().toLowerCase();
+  if (!EMAIL_REGEX.test(cleanEmail)) {
+    throw new AppError('Format email baru tidak valid.', StatusCodes.BAD_REQUEST);
+  }
+
   const isEmailTaken = await User.findOne({ email: cleanEmail, _id: { $ne: userId } });
   if (isEmailTaken) {
     throw new AppError('Email tersebut sudah digunakan oleh akun lain.', StatusCodes.BAD_REQUEST);
@@ -197,8 +204,16 @@ exports.updateEmailSecurely = async (userId, emailData) => {
     throw new AppError('Email baru, token OTP, dan PIN transaksi wajib disertakan.', StatusCodes.BAD_REQUEST);
   }
 
-  // Benteng 2: Validasi Duplikasi Global
-  const isEmailTaken = await User.findOne({ email: new_email, _id: { $ne: userId } });
+  // [TASK-BE-10] Sanitasi & Normalisasi Email Baru (Lowercase & Trim)
+  const cleanEmail = String(new_email).trim().toLowerCase();
+
+  // [TASK-BE-10] Validasi Format Email Ketat di Service Layer
+  if (!EMAIL_REGEX.test(cleanEmail)) {
+    throw new AppError('Format email baru tidak valid.', StatusCodes.BAD_REQUEST);
+  }
+
+  // Benteng 2: Validasi Duplikasi Global (Case-Insensitive & Sanitized)
+  const isEmailTaken = await User.findOne({ email: cleanEmail, _id: { $ne: userId } });
   if (isEmailTaken) throw new AppError('Email tersebut sudah digunakan oleh akun lain.', StatusCodes.BAD_REQUEST);
 
   // Tarik user beserta field terisolasi (pin dan 2fa)
@@ -233,8 +248,8 @@ exports.updateEmailSecurely = async (userId, emailData) => {
     await otpRecord.save();
   }
 
-  // Eksekusi Pembaruan Data
-  user.email = new_email;
+  // Eksekusi Pembaruan Data dengan Nilai Normalisasi
+  user.email = cleanEmail;
   await user.save();
 
   // [TASK-BE-09] Invalidasi seluruh refresh token sesi aktif setelah ganti email

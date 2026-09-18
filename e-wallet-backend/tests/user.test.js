@@ -496,4 +496,66 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(resRefresh.statusCode).toEqual(401);
     expect(resRefresh.body.message).toMatch(/Refresh token tidak valid atau telah kedaluwarsa/i);
   });
+
+  it('15. [TASK-BE-10 DoD] Harus menolak email cacat dan menganggap TEST@EMAIL.COM identik dengan test@email.com saat duplikasi', async () => {
+    // 1. Setup User A dengan email huruf kecil
+    const emailA = `user_a_${Date.now()}@test.com`;
+    await createTestUser({ email: emailA });
+
+    // 2. Setup User B yang akan mencoba mengubah email
+    const { user: userB, accessToken: tokenB } = await createTestUser();
+
+    // Buat OTP valid untuk User B
+    const otpCode = '112233';
+    await VerificationCode.create({
+      user_id: userB._id,
+      code: otpCode,
+      type: 'change_email',
+      expires_at: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    // Sub-test A: Coba ganti email dengan format cacat (tanpa domain / simbol @ salah)
+    const resInvalidFormat = await request(app)
+      .patch('/api/v1/users/update-email')
+      .set('Authorization', `Bearer ${tokenB}`)
+      .send({
+        new_email: 'bukan-email-valid',
+        otp: otpCode,
+        pin: '123456',
+      });
+
+    expect(resInvalidFormat.statusCode).toEqual(400);
+    expect(resInvalidFormat.body.message).toMatch(/Format email baru tidak valid/i);
+
+    // Sub-test B: Coba ganti email menggunakan email User A dengan HURUF BESAR & spasi (Case-Insensitive Duplication)
+    const resDuplicateCase = await request(app)
+      .patch('/api/v1/users/update-email')
+      .set('Authorization', `Bearer ${tokenB}`)
+      .send({
+        new_email: `  ${emailA.toUpperCase()}  `,
+        otp: otpCode,
+        pin: '123456',
+      });
+
+    expect(resDuplicateCase.statusCode).toEqual(400);
+    expect(resDuplicateCase.body.message).toMatch(/Email tersebut sudah digunakan oleh akun lain/i);
+
+    // Sub-test C: Sukses update email baru dengan huruf besar, tersimpan otomatis lowercase & trimmed
+    const uniqueEmailUpper = `  NEW_NORMALIZED_${Date.now()}@TEST.COM  `;
+    const resSuccess = await request(app)
+      .patch('/api/v1/users/update-email')
+      .set('Authorization', `Bearer ${tokenB}`)
+      .send({
+        new_email: uniqueEmailUpper,
+        otp: otpCode,
+        pin: '123456',
+      });
+
+    expect(resSuccess.statusCode).toEqual(200);
+    const expectedCleanEmail = uniqueEmailUpper.trim().toLowerCase();
+    expect(resSuccess.body.email).toBe(expectedCleanEmail);
+
+    const userInDb = await User.findById(userB._id);
+    expect(userInDb.email).toBe(expectedCleanEmail);
+  });
 });
