@@ -190,7 +190,16 @@ const userSchema = new mongoose.Schema({
   },
   is_suspended: {
     type: Boolean,
-    default: false
+    default: false,
+    index: true
+  },
+  suspend_reason: {
+    type: String,
+    default: null
+  },
+  suspended_at: {
+    type: Date,
+    default: null
   },
   two_factor_enabled: {
     type: Boolean,

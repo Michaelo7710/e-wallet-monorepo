@@ -2,7 +2,7 @@ const midtransClient = require('midtrans-client');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const { StatusCodes } = require('http-status-codes');
-const { TopUpRequest, Wallet, Transaction, User, WithdrawalRequest, SavedContact } = require('../models');
+const { TopUpRequest, Wallet, Transaction, User, WithdrawalRequest, SavedContact, AdminAuditLog } = require('../models');
 const AppError = require('../utils/AppError');
 
 // ========================================================
@@ -345,7 +345,7 @@ exports.requestWithdrawal = async (userId, withdrawalData) => {
 // ========================================================
 // 6. SERVICE LAYER: OTORITAS KLIRING ADMIN (ADMIN CHECKSIDE)
 // ========================================================
-exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedReason = null) => {
+exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedReason = null, meta = {}) => {
   console.log(`🛡️  [ADMIN DECISION] Admin ID: ${adminId} mengeksekusi keputusan [${decision}] pada dokumen: ${withdrawalId}`);
 
   // Cari permintaan dana yang tertahan di antrean
@@ -391,6 +391,23 @@ exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedR
         status: 'success',
         is_flagged: false
       }], options);
+
+      // Audit Log Immutability Record
+      await AdminAuditLog.create([{
+        admin_id: adminId,
+        action: 'WITHDRAWAL_APPROVAL',
+        target_id: request._id,
+        target_type: 'WithdrawalRequest',
+        details: {
+          reference_number: request.reference_number,
+          amount: request.amount,
+          user_id: request.user_id,
+          bank_name: request.bank_name,
+          account_number: request.account_number,
+        },
+        ip_address: meta?.ip || null,
+        user_agent: meta?.userAgent || null,
+      }], options);
       
       console.log(`✅ [ADMIN APPROVED] Dana Rp ${request.amount} resmi keluar permanen dari ekosistem.`);
 
@@ -407,6 +424,22 @@ exports.processAdminDecision = async (withdrawalId, adminId, decision, rejectedR
         { returnDocument: 'after', ...options }
       );
       if (!wallet) throw new Error('Dompet Wallet pengguna tidak ditemukan saat proses refund.');
+
+      // Audit Log Immutability Record
+      await AdminAuditLog.create([{
+        admin_id: adminId,
+        action: 'WITHDRAWAL_REJECT',
+        target_id: request._id,
+        target_type: 'WithdrawalRequest',
+        details: {
+          reference_number: request.reference_number,
+          amount: request.amount,
+          user_id: request.user_id,
+          rejected_reason: request.rejected_reason,
+        },
+        ip_address: meta?.ip || null,
+        user_agent: meta?.userAgent || null,
+      }], options);
       
       console.log(`❌ [ADMIN REJECTED] Transaksi digagalkan. Dana Rp ${request.amount} dipulangkan ke User.`);
     }

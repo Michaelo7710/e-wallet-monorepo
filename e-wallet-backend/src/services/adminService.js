@@ -41,6 +41,9 @@ const {
   Wallet,
   Transaction,
   WithdrawalRequest,
+  User,
+  RefreshToken,
+  AdminAuditLog,
 } = require('../models');
 
 const { StatusCodes } = require('http-status-codes');
@@ -103,10 +106,51 @@ const formatCursorResults = (items, limitNum) => {
 };
 
 // ========================================================
+// HELPER: AUDIT TRAIL LOGGING
+// ========================================================
+
+const logAdminAction = async ({
+  adminId,
+  action,
+  targetId,
+  targetType,
+  details = {},
+  meta = {},
+  session = null,
+}) => {
+  if (!adminId) return;
+
+  const logPayload = {
+    admin_id: adminId,
+    action,
+    target_id: targetId,
+    target_type: targetType,
+    details,
+    ip_address: meta?.ip || null,
+    user_agent: meta?.userAgent || null,
+  };
+
+  const options = session ? { session } : {};
+
+  try {
+    if (session) {
+      await AdminAuditLog.create([logPayload], options);
+    } else {
+      await AdminAuditLog.create(logPayload);
+    }
+  } catch (err) {
+    console.error('⚠️ [AUDIT LOG ERROR] Gagal mencatat log audit admin:', err.message);
+    if (session) {
+      throw err;
+    }
+  }
+};
+
+// ========================================================
 // A. MANAJEMEN REKENING PLATFORM (ADMIN BANK)
 // ========================================================
 
-exports.createBank = async (bankData) => {
+exports.createBank = async (bankData, adminId = null, meta = {}) => {
   const payload = {
     bank_name: bankData.bank_name,
     account_number: bankData.account_number,
@@ -114,7 +158,24 @@ exports.createBank = async (bankData) => {
       bankData.account_name || bankData.account_holder_name,
   };
 
-  return AdminBank.create(payload);
+  const bank = await AdminBank.create(payload);
+
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      action: 'BANK_CREATE',
+      targetId: bank._id,
+      targetType: 'AdminBank',
+      details: {
+        bank_name: bank.bank_name,
+        account_number: bank.account_number,
+        account_name: bank.account_name,
+      },
+      meta,
+    });
+  }
+
+  return bank;
 };
 
 exports.getAllBanks = async () => {
@@ -123,7 +184,7 @@ exports.getAllBanks = async () => {
     .lean();
 };
 
-exports.updateBank = async (bankId, updateData) => {
+exports.updateBank = async (bankId, updateData, adminId = null, meta = {}) => {
   const bank = await AdminBank.findByIdAndUpdate(
     bankId,
     updateData,
@@ -140,10 +201,25 @@ exports.updateBank = async (bankId, updateData) => {
     );
   }
 
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      action: 'BANK_UPDATE',
+      targetId: bank._id,
+      targetType: 'AdminBank',
+      details: {
+        updated_fields: Object.keys(updateData),
+        bank_name: bank.bank_name,
+        account_number: bank.account_number,
+      },
+      meta,
+    });
+  }
+
   return bank;
 };
 
-exports.deleteBank = async (bankId) => {
+exports.deleteBank = async (bankId, adminId = null, meta = {}) => {
   const bank = await AdminBank.findByIdAndDelete(bankId);
 
   if (!bank) {
@@ -151,6 +227,20 @@ exports.deleteBank = async (bankId) => {
       'Rekening master tidak ditemukan.',
       StatusCodes.NOT_FOUND
     );
+  }
+
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      action: 'BANK_DELETE',
+      targetId: bank._id,
+      targetType: 'AdminBank',
+      details: {
+        bank_name: bank.bank_name,
+        account_number: bank.account_number,
+      },
+      meta,
+    });
   }
 
   return {
@@ -185,7 +275,8 @@ exports.getPendingTopUps = async (cursor, limit) => {
 exports.processTopUpDecision = async (
   topUpId,
   adminId,
-  decision
+  decision,
+  meta = {}
 ) => {
   if (!['approve', 'cancel'].includes(decision)) {
     throw new AppError(
@@ -251,6 +342,19 @@ exports.processTopUpDecision = async (
         ],
         options
       );
+
+      await logAdminAction({
+        adminId,
+        action: 'TOPUP_APPROVAL',
+        targetId: request._id,
+        targetType: 'TopUpRequest',
+        details: {
+          amount: request.amount,
+          user_id: request.user_id,
+        },
+        meta,
+        session,
+      });
     }
 
     if (decision === 'cancel') {
@@ -258,6 +362,19 @@ exports.processTopUpDecision = async (
       request.admin_id = adminId;
 
       await request.save(options);
+
+      await logAdminAction({
+        adminId,
+        action: 'TOPUP_CANCEL',
+        targetId: request._id,
+        targetType: 'TopUpRequest',
+        details: {
+          amount: request.amount,
+          user_id: request.user_id,
+        },
+        meta,
+        session,
+      });
     }
 
     if (session) {
@@ -278,7 +395,7 @@ exports.processTopUpDecision = async (
   }
 };
 
-exports.deleteTopUpRecord = async (topUpId) => {
+exports.deleteTopUpRecord = async (topUpId, adminId = null, meta = {}) => {
   const request = await TopUpRequest.findById(topUpId);
 
   if (!request) {
@@ -298,6 +415,22 @@ exports.deleteTopUpRecord = async (topUpId) => {
   request.deleted_at = new Date();
 
   await request.save();
+
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      action: 'TOPUP_DELETE',
+      targetId: request._id,
+      targetType: 'TopUpRequest',
+      details: {
+        amount: request.amount,
+        user_id: request.user_id,
+        status: request.status,
+        deleted_at: request.deleted_at,
+      },
+      meta,
+    });
+  }
 
   return {
     message:
@@ -328,19 +461,68 @@ exports.executeKliringDecision = async (
   withdrawalId,
   adminId,
   decision,
-  rejectedReason
+  rejectedReason = null,
+  meta = {}
 ) => {
   return paymentService.processAdminDecision(
     withdrawalId,
     adminId,
     decision,
-    rejectedReason
+    rejectedReason,
+    meta
   );
 };
 
 // ========================================================
-// D. DASHBOARD KEUANGAN
+// D. DASHBOARD KEUANGAN & EKSEKUTIF STATS
 // ========================================================
+
+exports.getDashboardStats = async () => {
+  const [
+    totalUsers,
+    volumeAggregation,
+    pendingWithdrawalsCount,
+    pendingTopupsCount,
+    pendingTransfersCount,
+    walletAggregation,
+  ] = await Promise.all([
+    User.countDocuments({ role: { $ne: 'admin' } }),
+    Transaction.aggregate([
+      {
+        $match: {
+          type: { $in: ['transfer', 'withdrawal'] },
+          status: 'success',
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalVolume: { $sum: '$amount' },
+        },
+      },
+    ]),
+    WithdrawalRequest.countDocuments({ status: 'pending_approval' }),
+    TopUpRequest.countDocuments({ status: 'pending', deleted_at: null }),
+    Transaction.countDocuments({ type: 'transfer', status: 'pending_approval' }),
+    Wallet.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalLiquidity: { $sum: '$balance' },
+        },
+      },
+    ]),
+  ]);
+
+  return {
+    total_users: totalUsers,
+    total_volume: volumeAggregation[0]?.totalVolume || 0,
+    pending_withdrawals_count: pendingWithdrawalsCount,
+    pending_topups_count: pendingTopupsCount,
+    pending_transfers_count: pendingTransfersCount,
+    total_liquidity: walletAggregation[0]?.totalLiquidity || 0,
+  };
+};
 
 exports.getFinancialDashboard = async (
   filterType = 'daily',
@@ -484,7 +666,8 @@ exports.processTransferDecision = async (
   transactionId,
   adminId,
   decision,
-  rejectedReason = null
+  rejectedReason = null,
+  meta = {}
 ) => {
   if (!['approve', 'reject'].includes(decision)) {
     throw new AppError(
@@ -535,6 +718,21 @@ exports.processTransferDecision = async (
       transaction.status = 'success';
 
       await transaction.save(options);
+
+      await logAdminAction({
+        adminId,
+        action: 'TRANSFER_APPROVAL',
+        targetId: transaction._id,
+        targetType: 'Transaction',
+        details: {
+          reference_number: transaction.reference_number,
+          amount: transaction.amount,
+          sender_id: transaction.sender_id,
+          receiver_id: transaction.receiver_id,
+        },
+        meta,
+        session,
+      });
     }
 
     if (decision === 'reject') {
@@ -559,6 +757,22 @@ exports.processTransferDecision = async (
       transaction.rejected_reason = rejectedReason;
 
       await transaction.save(options);
+
+      await logAdminAction({
+        adminId,
+        action: 'TRANSFER_REJECT',
+        targetId: transaction._id,
+        targetType: 'Transaction',
+        details: {
+          reference_number: transaction.reference_number,
+          amount: transaction.amount,
+          sender_id: transaction.sender_id,
+          receiver_id: transaction.receiver_id,
+          rejected_reason: rejectedReason,
+        },
+        meta,
+        session,
+      });
     }
 
     if (session) {
@@ -578,3 +792,209 @@ exports.processTransferDecision = async (
     }
   }
 };
+
+// ========================================================
+// F. SIRKUIT ANTI-FRAUD MANAJEMEN PENGGUNA (USER GOVERNANCE)
+// ========================================================
+
+exports.getAdminUsers = async (queryParams = {}) => {
+  const { search, tier, is_suspended, cursor, limit } = queryParams;
+
+  const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+  const filter = {};
+
+  // 1. Filter Search (NIK, Email, Username, Phone Number)
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    const safeSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(safeSearch, 'i');
+    filter.$or = [
+      { username: searchRegex },
+      { email: searchRegex },
+      { phone_number: searchRegex },
+      { nik: searchRegex },
+    ];
+  }
+
+  // 2. Filter Account Tier
+  if (tier && ['basic', 'premium'].includes(tier)) {
+    filter.account_tier = tier;
+  }
+
+  // 3. Filter Suspension Status
+  if (is_suspended !== undefined && is_suspended !== '') {
+    filter.is_suspended = String(is_suspended) === 'true';
+  }
+
+  // 4. Keyset Cursor Pagination (Descending order - terbaru dulu)
+  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+    filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+  }
+
+  // Eksekusi Query Pengguna (Hilangkan field kredensial sensitif)
+  const users = await User.find(filter)
+    .select('-password -pin -two_factor_secret')
+    .sort({ _id: -1 })
+    .limit(limitNum + 1)
+    .lean();
+
+  const hasMore = users.length > limitNum;
+  const results = hasMore ? users.slice(0, limitNum) : users;
+  const nextCursor = hasMore ? results[results.length - 1]._id.toString() : null;
+
+  // Optimasi 0x N+1: Tarik saldo dompet secara kolektif
+  const userIds = results.map((u) => u._id);
+  const wallets = await Wallet.find({ user_id: { $in: userIds } }).lean();
+  const walletMap = new Map(wallets.map((w) => [w.user_id.toString(), w.balance]));
+
+  const usersWithWallet = results.map((u) => ({
+    ...u,
+    balance: walletMap.get(u._id.toString()) || 0,
+  }));
+
+  return {
+    users: usersWithWallet,
+    next_cursor: nextCursor,
+    has_more: hasMore,
+  };
+};
+
+exports.freezeUser = async (userId, adminId, reason, meta = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new AppError('Format ID Pengguna tidak valid.', StatusCodes.BAD_REQUEST);
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
+  }
+
+  if (user.role === 'admin') {
+    throw new AppError('Tidak dapat membekukan akun administrator.', StatusCodes.BAD_REQUEST);
+  }
+
+  const suspendReason = reason ? String(reason).trim() : 'Ditangguhkan oleh Administrator';
+  user.is_suspended = true;
+  user.suspend_reason = suspendReason;
+  user.suspended_at = new Date();
+
+  await user.save({ validateBeforeSave: false });
+
+  // [BENTENG ANTI-FRAUD KRITIS] Musnahkan seluruh active refresh tokens sesi pengguna
+  const deletedTokensResult = await RefreshToken.deleteMany({ user_id: user._id });
+  console.log(`🛡️  [ANTI-FRAUD] Akun ${user.email} dibekukan. ${deletedTokensResult.deletedCount} refresh tokens dihapus.`);
+
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      action: 'USER_FREEZE',
+      targetId: user._id,
+      targetType: 'User',
+      details: {
+        email: user.email,
+        username: user.username,
+        reason: suspendReason,
+        revoked_sessions_count: deletedTokensResult.deletedCount,
+      },
+      meta,
+    });
+  }
+
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.pin;
+  delete userResponse.two_factor_secret;
+
+  return userResponse;
+};
+
+exports.unfreezeUser = async (userId, adminId, meta = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new AppError('Format ID Pengguna tidak valid.', StatusCodes.BAD_REQUEST);
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('Pengguna tidak ditemukan.', StatusCodes.NOT_FOUND);
+  }
+
+  user.is_suspended = false;
+  user.suspend_reason = null;
+  user.suspended_at = null;
+
+  await user.save({ validateBeforeSave: false });
+  console.log(`🛡️  [ANTI-FRAUD] Pembekuan akun ${user.email} telah dibuka.`);
+
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      action: 'USER_UNFREEZE',
+      targetId: user._id,
+      targetType: 'User',
+      details: {
+        email: user.email,
+        username: user.username,
+      },
+      meta,
+    });
+  }
+
+  const userResponse = user.toObject();
+  delete userResponse.password;
+  delete userResponse.pin;
+  delete userResponse.two_factor_secret;
+
+  return userResponse;
+};
+
+// ========================================================
+// G. SIRKUIT AUDIT TRAIL ADMINISTRATIF (COMPLIANCE & AUDIT)
+// ========================================================
+
+exports.getAdminAuditLogs = async (queryParams = {}) => {
+  const { admin_id, action, target_type, target_id, cursor, limit } = queryParams;
+
+  const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 50);
+  const filter = {};
+
+  // 1. Filter Admin ID
+  if (admin_id && mongoose.Types.ObjectId.isValid(admin_id)) {
+    filter.admin_id = new mongoose.Types.ObjectId(admin_id);
+  }
+
+  // 2. Filter Action
+  if (action && typeof action === 'string' && action.trim() !== '') {
+    filter.action = action.trim();
+  }
+
+  // 3. Filter Target Type
+  if (target_type && typeof target_type === 'string' && target_type.trim() !== '') {
+    filter.target_type = target_type.trim();
+  }
+
+  // 4. Filter Target ID
+  if (target_id && mongoose.Types.ObjectId.isValid(target_id)) {
+    filter.target_id = new mongoose.Types.ObjectId(target_id);
+  }
+
+  // 5. Keyset Cursor Pagination (Descending order - terbaru dulu via _id)
+  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+    filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+  }
+
+  const logs = await AdminAuditLog.find(filter)
+    .populate('admin_id', 'username email role')
+    .sort({ _id: -1 })
+    .limit(limitNum + 1)
+    .lean();
+
+  const hasMore = logs.length > limitNum;
+  const results = hasMore ? logs.slice(0, limitNum) : logs;
+  const nextCursor = hasMore ? results[results.length - 1]._id.toString() : null;
+
+  return {
+    audit_logs: results,
+    next_cursor: nextCursor,
+    has_more: hasMore,
+  };
+};
+

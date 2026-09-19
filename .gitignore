@@ -23,9 +23,3 @@ npm-debug.log*
 yarn-debug.log*
 .DS_Store
 Thumbs.db
-
-# Internal Project Management (Local Only)
-docs/TASK_BOARD.md
-docs/TASK_ARCHIVE.md
-design-assets/design-requirements.csv
-design-assets/design-checklist.md

@@ -7,6 +7,7 @@ import {
   PendingTransfer,
   AdminBank,
   FinancialReport,
+  AdminUser,
 } from '@domain/repositories/admin.repository.interface';
 import {
   AdminRemoteDataSource,
@@ -14,6 +15,7 @@ import {
   RawPendingTopUpDTO,
   RawPendingTransferDTO,
   RawAdminBankDTO,
+  RawAdminUserDTO,
 } from '../datasources/remote/admin.remote-datasource';
 
 export class AdminRepositoryImpl implements IAdminRepository {
@@ -25,6 +27,9 @@ export class AdminRepositoryImpl implements IAdminRepository {
       totalUsers: res.data.total_users || 0,
       totalVolume: res.data.total_volume || 0,
       pendingWithdrawalsCount: res.data.pending_withdrawals_count || 0,
+      pendingTopupsCount: res.data.pending_topups_count || 0,
+      pendingTransfersCount: res.data.pending_transfers_count || 0,
+      totalLiquidity: res.data.total_liquidity || 0,
     };
   }
 
@@ -220,6 +225,55 @@ export class AdminRepositoryImpl implements IAdminRepository {
         rangeStart: dto.meta?.range_start || '',
         rangeEnd: dto.meta?.range_end || '',
       },
+    };
+  }
+
+  async getUsers(params?: {
+    search?: string;
+    tier?: 'basic' | 'premium';
+    is_suspended?: boolean;
+    cursor?: string;
+    limit?: number;
+  }): Promise<AdminPaginatedResult<AdminUser>> {
+    const res = await this.remoteDataSource.getUsers(params);
+    const rawList: RawAdminUserDTO[] = Array.isArray(res.data) ? res.data : [];
+    const items = rawList.map((dto: RawAdminUserDTO) => this.mapUserDTOToDomain(dto));
+
+    return {
+      items,
+      nextCursor: res.meta?.next_cursor || null,
+      hasMore: !!res.meta?.has_more,
+    };
+  }
+
+  async freezeUser(id: string, reason?: string): Promise<AdminUser> {
+    const res = await this.remoteDataSource.freezeUser(id, reason);
+    return this.mapUserDTOToDomain(res.data.user);
+  }
+
+  async unfreezeUser(id: string): Promise<AdminUser> {
+    const res = await this.remoteDataSource.unfreezeUser(id);
+    return this.mapUserDTOToDomain(res.data.user);
+  }
+
+  private mapUserDTOToDomain(dto: RawAdminUserDTO): AdminUser {
+    return {
+      id: dto._id,
+      username: dto.username,
+      email: dto.email,
+      phoneNumber: dto.phone_number,
+      avatar: dto.avatar,
+      accountTier: dto.account_tier,
+      isVerified: dto.is_verified,
+      isEmailVerified: dto.is_email_verified,
+      isKycVerified: dto.is_kyc_verified,
+      isSuspended: dto.is_suspended,
+      suspendReason: dto.suspend_reason,
+      suspendedAt: dto.suspended_at,
+      nik: dto.nik,
+      role: dto.role,
+      balance: dto.balance ?? 0,
+      createdAt: dto.createdAt,
     };
   }
 }

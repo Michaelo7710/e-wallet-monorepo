@@ -4,6 +4,29 @@ export interface RawAdminStatsDTO {
   total_users: number;
   total_volume: number;
   pending_withdrawals_count: number;
+  pending_topups_count: number;
+  pending_transfers_count: number;
+  total_liquidity?: number;
+}
+
+export interface RawAdminUserDTO {
+  _id: string;
+  username: string;
+  email: string;
+  phone_number: string;
+  avatar?: string | null;
+  account_tier: 'basic' | 'premium';
+  is_verified: boolean;
+  is_email_verified: boolean;
+  is_kyc_verified: boolean;
+  is_suspended: boolean;
+  suspend_reason?: string | null;
+  suspended_at?: string | null;
+  nik?: string | null;
+  role: 'user' | 'admin';
+  balance?: number;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface RawPendingWithdrawalDTO {
@@ -184,6 +207,33 @@ export class AdminRemoteDataSource {
     const res = await api.get('/admin/financial-report', {
       params: { filter, month },
     });
+    return res.data;
+  }
+
+  // User Governance & Anti-Fraud
+  async getUsers(params?: {
+    search?: string;
+    tier?: 'basic' | 'premium';
+    is_suspended?: boolean;
+    cursor?: string;
+    limit?: number;
+  }): Promise<{
+    data: RawAdminUserDTO[];
+    meta?: { next_cursor: string | null; has_more: boolean; limit: number };
+  }> {
+    const res = await api.get('/admin/users', {
+      params,
+    });
+    return res.data;
+  }
+
+  async freezeUser(id: string, reason?: string): Promise<{ data: { user: RawAdminUserDTO } }> {
+    const res = await api.patch(`/admin/users/${id}/freeze`, { reason });
+    return res.data;
+  }
+
+  async unfreezeUser(id: string): Promise<{ data: { user: RawAdminUserDTO } }> {
+    const res = await api.patch(`/admin/users/${id}/unfreeze`);
     return res.data;
   }
 }

@@ -7,9 +7,17 @@ const TopUpRequest = require("./TopUpRequest");
 const Transaction = require("./Transaction");
 const WithdrawalRequest = require("./WithdrawalRequest");
 const RefreshToken = require("./RefreshToken");
+const AdminAuditLog = require("./AdminAuditLog");
 
-
-
-module.exports={
-    User, VerificationCode, Wallet, AdminBank, SavedContact, TopUpRequest, Transaction, WithdrawalRequest, RefreshToken
-}
+module.exports = {
+  User,
+  VerificationCode,
+  Wallet,
+  AdminBank,
+  SavedContact,
+  TopUpRequest,
+  Transaction,
+  WithdrawalRequest,
+  RefreshToken,
+  AdminAuditLog,
+};

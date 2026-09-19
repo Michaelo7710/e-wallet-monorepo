@@ -2,6 +2,9 @@ export interface AdminStats {
   totalUsers: number;
   totalVolume: number;
   pendingWithdrawalsCount: number;
+  pendingTopupsCount: number;
+  pendingTransfersCount: number;
+  totalLiquidity: number;
 }
 
 export interface PendingWithdrawal {
@@ -76,6 +79,25 @@ export interface FinancialReport {
   };
 }
 
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  phoneNumber: string;
+  avatar?: string | null;
+  accountTier: 'basic' | 'premium';
+  isVerified: boolean;
+  isEmailVerified: boolean;
+  isKycVerified: boolean;
+  isSuspended: boolean;
+  suspendReason?: string | null;
+  suspendedAt?: string | null;
+  nik?: string | null;
+  role: 'user' | 'admin';
+  balance: number;
+  createdAt: string;
+}
+
 export interface AdminPaginatedResult<T> {
   items: T[];
   nextCursor: string | null;
@@ -99,4 +121,13 @@ export interface IAdminRepository {
   updateBank(id: string, payload: { bank_name?: string; account_number?: string; account_name?: string }): Promise<AdminBank>;
   deleteBank(id: string): Promise<void>;
   getFinancialReport(filter?: 'daily' | 'monthly', month?: number): Promise<FinancialReport>;
+  getUsers(params?: {
+    search?: string;
+    tier?: 'basic' | 'premium';
+    is_suspended?: boolean;
+    cursor?: string;
+    limit?: number;
+  }): Promise<AdminPaginatedResult<AdminUser>>;
+  freezeUser(id: string, reason?: string): Promise<AdminUser>;
+  unfreezeUser(id: string): Promise<AdminUser>;
 }

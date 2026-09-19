@@ -432,6 +432,10 @@ exports.loginUser = async (email, password) => {
     throw new AppError('Akun Anda belum terverifikasi OTP email.', StatusCodes.FORBIDDEN);
   }
 
+  if (user.is_suspended) {
+    throw new AppError('Akun Anda sedang ditangguhkan. Silakan hubungi tim Admin.', StatusCodes.FORBIDDEN);
+  }
+
   // [ZERO-TRUST 2FA CHECK] Jika pengguna mengaktifkan 2FA, tahan penerbitan token sesi
   if (user.two_factor_enabled) {
     const preAuthToken = signPreAuthToken(user._id);
@@ -885,6 +889,10 @@ exports.verify2FALogin = async (preAuthToken, totpCode) => {
     throw new AppError('Konfigurasi 2FA akun tidak valid.', StatusCodes.BAD_REQUEST);
   }
 
+  if (user.is_suspended) {
+    throw new AppError('Akun Anda sedang ditangguhkan. Silakan hubungi tim Admin.', StatusCodes.FORBIDDEN);
+  }
+
   const counter = Math.floor(Date.now() / 30000);
   const plainSecret = decryptTOTPSecret(user.two_factor_secret);
   const secretBuffer = base32Decode(plainSecret);
@@ -956,6 +964,10 @@ exports.refreshAccessToken = async (incomingRefreshToken) => {
   const user = await User.findById(decoded.id);
   if (!user) {
     throw new AppError('Pengguna pemilik token ini tidak ditemukan.', StatusCodes.UNAUTHORIZED);
+  }
+
+  if (user.is_suspended) {
+    throw new AppError('Akun Anda sedang ditangguhkan. Silakan hubungi tim Admin.', StatusCodes.FORBIDDEN);
   }
 
   // 4. Terbitkan ACCESS TOKEN BARU (15 Menit Baru)

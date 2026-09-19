@@ -256,32 +256,32 @@ Given pengguna berada di TransactionDetailScreen berstatus sukses
 
 ---
 
-## 8. Panduan Handoff Presisi untuk Downstream Skills
+## 8. Panduan Handoff Presisi Rekayasa Perangkat Lunak & Desain
 
 ```
                              [BRD v3.1.0 Baselined]
                                        │
         ┌──────────────────────────────┴──────────────────────────────┐
         ▼                                                             ▼
- [ui-ux-designer]                                          [tech-architecture-lead]
- 1. Desain 4 Thematic Backdrops:                           1. Perbarui UserStackParamList:
-    - Auth: auth-mesh-bg (<80KB)                              - Tambahkan 'TransactionDetail'
-    - User: card-texture-platinum (<60KB)                  2. Refaktor TransferScreen & WithdrawScreen:
-    - Payment: pattern-payment-flow (<40KB)                   - Hapus Alert.alert mentah
-    - Admin: pattern-admin-command                            - Navigasi ke TransactionDetailScreen
- 2. Desain Layout TransactionDetailScreen.tsx              3. Pasang onPress di HistoryScreen
- 3. Desain Komponen WalletCard Modern                      4. Terapkan Layout Thematic Container
+ [Lead UI/UX Designer]                                    [Principal Systems Architect]
+ 1. Desain 4 Thematic Backdrops:                          1. Perbarui UserStackParamList:
+    - Auth: auth-mesh-bg (<80KB)                             - Tambahkan 'TransactionDetail'
+    - User: card-texture-platinum (<60KB)                 2. Refaktor TransferScreen & WithdrawScreen:
+    - Payment: pattern-payment-flow (<40KB)                  - Hapus Alert.alert mentah
+    - Admin: pattern-admin-command                           - Navigasi ke TransactionDetailScreen
+ 2. Desain Layout TransactionDetailScreen.tsx             3. Pasang onPress di HistoryScreen
+ 3. Desain Komponen WalletCard Modern                     4. Terapkan Layout Thematic Container
 ```
 
-### A. Panduan Spesifik untuk UI/UX Designer:
-1. **Generasi Aset Nol Rupiah ([`Wallet/src/assets/images`](Wallet/src/assets/images)):**
+### A. Panduan Spesifik untuk Tim UI/UX Design:
+1. **Generasi Aset Efisien ([`Wallet/src/assets/images`](Wallet/src/assets/images)):**
    - Rancang tekstur kartu `card-texture-platinum.png` (800x500) berwarna hijau zamrud mewah dengan aksen emas untuk `WalletCard`.
    - Rancang backdrop ringan `auth-mesh-bg.webp` (<80KB) untuk menggantikan `Auth-bg.png` (4.2MB).
    - Rancang aksen grafis header melengkung `pattern-payment-flow.png` untuk modul pembayaran.
 2. **Desain Layar ke-26 (`TransactionDetailScreen.tsx`):**
    - Rancang tampilan kertas struk digital (*digital voucher/receipt card*) dengan *jagged/perforated bottom edge* modern, tipografi nominal kontras tinggi, dan tombol *Action Share Sheet*.
 
-### B. Panduan Spesifik untuk Tech Architecture Lead:
+### B. Panduan Spesifik untuk Tim Arsitektur & Mobile Engineering:
 1. **Pembaruan Navigasi ([`UserStack.tsx`](Wallet/src/app/navigation/UserStack.tsx)):**
    - Daftarkan `TransactionDetail: { transaction: Transaction | any }` ke dalam `UserStackParamList`.
 2. **Eliminasi Alert Primitif:**
@@ -297,6 +297,6 @@ Given pengguna berada di TransactionDetailScreen berstatus sukses
 
 | Peran Tanggung Jawab | Entitas Pelaksana | Status | Catatan Validasi PO |
 |:---|:---|:---:|:---|
-| **Lead Product Owner** | Senior Product Owner (Product Owner) | **APPROVED** | Kebijakan Rp 0, 4 Aset Tematik, dan Layar Struk ke-26 resmi dikunci. |
-| **UI/UX Design Lead** | Principal Designer (UI/UX Designer) | **READY** | Siap mengeksekusi aset kartu, backdrop tematik, dan mockup struk. |
-| **Tech Architecture Lead** | Principal Architect (Tech Architecture Lead) | **READY** | Siap mengonfigurasi rute navigasi dan eliminasi Alert primitif. |
+| **Lead Product Owner** | Lead Product Owner & FinTech Analyst | **APPROVED** | Kebijakan efisiensi biaya, 4 Aset Tematik, dan Layar Struk ke-26 resmi dikunci. |
+| **UI/UX Design Lead** | Principal UI/UX & Design System Architect | **READY** | Siap mengeksekusi aset kartu, backdrop tematik, dan mockup struk. |
+| **Lead Systems Architect** | Principal Mobile & Fullstack Systems Architect | **READY** | Siap mengonfigurasi rute navigasi dan eliminasi Alert primitif. |

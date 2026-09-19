@@ -35,12 +35,24 @@ const AdminDashboardScreen = () => {
     });
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: ['admin'] }),
+    ]);
+  };
+
+  const totalPendingQueue =
+    (stats?.pendingWithdrawalsCount ?? 0) +
+    (stats?.pendingTopupsCount ?? 0) +
+    (stats?.pendingTransfersCount ?? 0);
+
   return (
     <UserLayout noPadding={false}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
         contentContainerStyle={styles.container}
       >
@@ -49,26 +61,32 @@ const AdminDashboardScreen = () => {
             <Text style={styles.headerSubtitle}>Portal Administrator</Text>
             <Text style={styles.headerTitle}>Hai, {user?.username || 'Admin'}</Text>
           </View>
-          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
+          <TouchableOpacity testID="btn-logout" style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={24} color={colors.error} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.statsGrid}>
+          {/* 1. Total Pengguna Terdaftar */}
           <View style={[styles.statCard, { borderLeftColor: colors.primary }]}>
             <Text style={styles.statLabel}>Total Pengguna</Text>
-            <Text style={styles.statValue}>{stats?.totalUsers ?? 0}</Text>
-          </View>
-
-          <View style={[styles.statCard, { borderLeftColor: colors.warning }]}>
-            <Text style={styles.statLabel}>Penarikan Pending</Text>
-            <Text style={[styles.statValue, { color: colors.warning }]}>
-              {stats?.pendingWithdrawalsCount ?? 0}
+            <Text style={styles.statValue} testID="stat-total-users">
+              {stats?.totalUsers ?? 0}
             </Text>
           </View>
 
+          {/* 2. Total Antrean Pending */}
+          <View style={[styles.statCard, { borderLeftColor: colors.warning }]}>
+            <Text style={styles.statLabel}>Antrean Pending</Text>
+            <Text style={[styles.statValue, { color: colors.warning }]} testID="stat-pending-queue">
+              {totalPendingQueue}
+            </Text>
+          </View>
+
+          {/* 3. Total Volume Transaksi */}
           <TouchableOpacity
-            style={[styles.statCardFull, { borderLeftColor: colors.info }]}
+            testID="action-card-volume"
+            style={[styles.statCardFull, { borderLeftColor: colors.info, marginBottom: spacing.md }]}
             onPress={() => navigation.navigate('AdminFinancialReport')}
             activeOpacity={0.7}
           >
@@ -76,8 +94,24 @@ const AdminDashboardScreen = () => {
               <Text style={styles.statLabel}>Total Volume Transaksi</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.info} />
             </View>
-            <Text style={styles.statValueLarge}>
+            <Text style={styles.statValueLarge} testID="stat-total-volume">
               Rp {(stats?.totalVolume ?? 0).toLocaleString('id-ID')}
+            </Text>
+          </TouchableOpacity>
+
+          {/* 4. Likuiditas Dompet Beredar */}
+          <TouchableOpacity
+            testID="action-card-liquidity"
+            style={[styles.statCardFull, { borderLeftColor: colors.success }]}
+            onPress={() => navigation.navigate('AdminFinancialReport')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.statHeaderRow}>
+              <Text style={styles.statLabel}>Likuiditas Dompet Beredar</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.success} />
+            </View>
+            <Text style={[styles.statValueLarge, { color: colors.success }]} testID="stat-total-liquidity">
+              Rp {(stats?.totalLiquidity ?? 0).toLocaleString('id-ID')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -86,6 +120,7 @@ const AdminDashboardScreen = () => {
 
         {/* 1. Persetujuan Penarikan */}
         <TouchableOpacity
+          testID="action-withdrawals"
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminApprovals')}
           activeOpacity={0.7}
@@ -99,11 +134,19 @@ const AdminDashboardScreen = () => {
               <Text style={styles.actionSubtitle}>Verifikasi dan cairkan dana nasabah</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+          <View style={styles.actionRight}>
+            {(stats?.pendingWithdrawalsCount ?? 0) > 0 && (
+              <View style={styles.badge} testID="badge-pending-withdrawals">
+                <Text style={styles.badgeText}>{stats?.pendingWithdrawalsCount}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+          </View>
         </TouchableOpacity>
 
         {/* 2. Persetujuan Top Up Manual */}
         <TouchableOpacity
+          testID="action-topups"
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminTopUpApprovals')}
           activeOpacity={0.7}
@@ -117,11 +160,19 @@ const AdminDashboardScreen = () => {
               <Text style={styles.actionSubtitle}>Verifikasi permohonan deposit saldo pengguna</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+          <View style={styles.actionRight}>
+            {(stats?.pendingTopupsCount ?? 0) > 0 && (
+              <View style={styles.badge} testID="badge-pending-topups">
+                <Text style={styles.badgeText}>{stats?.pendingTopupsCount}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+          </View>
         </TouchableOpacity>
 
         {/* 3. Kliring Transfer AML */}
         <TouchableOpacity
+          testID="action-transfers"
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminTransferApprovals')}
           activeOpacity={0.7}
@@ -135,11 +186,19 @@ const AdminDashboardScreen = () => {
               <Text style={styles.actionSubtitle}>Tinjau transaksi bernilai besar (&#8805; Rp 10 Juta)</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+          <View style={styles.actionRight}>
+            {(stats?.pendingTransfersCount ?? 0) > 0 && (
+              <View style={styles.badge} testID="badge-pending-transfers">
+                <Text style={styles.badgeText}>{stats?.pendingTransfersCount}</Text>
+              </View>
+            )}
+            <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+          </View>
         </TouchableOpacity>
 
         {/* 4. Rekening Bank Master */}
         <TouchableOpacity
+          testID="action-banks"
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminBankManagement')}
           activeOpacity={0.7}
@@ -158,6 +217,7 @@ const AdminDashboardScreen = () => {
 
         {/* 5. Laporan Neraca Keuangan */}
         <TouchableOpacity
+          testID="action-financial-report"
           style={styles.actionCard}
           onPress={() => navigation.navigate('AdminFinancialReport')}
           activeOpacity={0.7}
@@ -169,6 +229,25 @@ const AdminDashboardScreen = () => {
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Laporan Neraca Keuangan</Text>
               <Text style={styles.actionSubtitle}>Analisis likuiditas, peredaran uang & arus kas</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
+        </TouchableOpacity>
+
+        {/* 6. Manajemen Pengguna */}
+        <TouchableOpacity
+          testID="action-users"
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('AdminUserManagement')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.actionLeft}>
+            <View style={[styles.iconBox, { backgroundColor: `${colors.primaryDark}15` }]}>
+              <Ionicons name="people-outline" size={26} color={colors.primaryDark} />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Manajemen Pengguna</Text>
+              <Text style={styles.actionSubtitle}>Direktori akun, status KYC & kontrol anti-fraud</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={22} color={colors.textLight} />
@@ -291,6 +370,25 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  actionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  badge: {
+    backgroundColor: colors.error,
+    borderRadius: spacing.radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold as any,
   },
 });
 

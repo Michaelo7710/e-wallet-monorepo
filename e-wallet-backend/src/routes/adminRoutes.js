@@ -34,8 +34,9 @@ router.patch('/withdrawals/:id/approve', adminController.approveWithdrawal);
 router.patch('/withdrawals/:id/reject', adminController.rejectWithdrawal);
 
 // --------------------------------------------------------
-// 4. SIRKUIT DASHBOARD AGREGASI NERACA KEUANGAN
+// 4. SIRKUIT DASHBOARD AGREGASI NERACA KEUANGAN & STATS
 // --------------------------------------------------------
+router.get('/stats', adminController.getAdminStats);
 router.get('/financial-report', adminController.getFinancialReport);
 
 // --------------------------------------------------------
@@ -44,5 +45,17 @@ router.get('/financial-report', adminController.getFinancialReport);
 router.get('/transfers/pending', adminController.getPendingTransfers);
 router.patch('/transfers/:id/approve', adminController.approveTransfer);
 router.patch('/transfers/:id/reject', adminController.rejectTransfer);
+
+// --------------------------------------------------------
+// 6. SIRKUIT ANTI-FRAUD MANAJEMEN PENGGUNA (USER GOVERNANCE)
+// --------------------------------------------------------
+router.get('/users', adminController.getAdminUsers);
+router.patch('/users/:id/freeze', adminController.freezeUser);
+router.patch('/users/:id/unfreeze', adminController.unfreezeUser);
+
+// --------------------------------------------------------
+// 7. SIRKUIT AUDIT TRAIL ADMINISTRATIF (COMPLIANCE)
+// --------------------------------------------------------
+router.get('/audit-logs', adminController.getAdminAuditLogs);
 
 module.exports = router;

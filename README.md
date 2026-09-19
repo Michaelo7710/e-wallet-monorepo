@@ -249,8 +249,8 @@ Wallet_App/
 │   ├── ARCHITECTURE.md         # System Architecture Blueprint v2.0.0
 │   ├── TESTING_COVERAGE.md     # QA Automated Testing Report v1.0.0
 │   ├── COMPLIANCE_GDPR.md      # GDPR & PSD2 Regulatory Whitepaper v1.0.0
-│   ├── TASK_BOARD.md           # Master Active Task Board (Antigravity Governance)
-│   └── TASK_ARCHIVE.md         # Archived Completed Tasks (33 Tasks Fully Verified)
+│   ├── TASK_BOARD.md           # Master Active Engineering Sprint Board
+│   └── TASK_ARCHIVE.md         # Archived Completed Engineering Tasks (Verified)
 │
 ├── scripts/                    # 🛡️ DevSecOps Tooling (SBOM, License Auditing)
 ├── docker-compose.yml          # 🐳 Konfigurasi Multi-Container (App + MongoDB 6.0)

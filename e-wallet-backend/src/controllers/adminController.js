@@ -2,12 +2,17 @@ const { StatusCodes } = require('http-status-codes');
 const adminService = require('../services/adminService');
 const catchAsync = require('../utils/catchAsync');
 
+const getRequestMeta = (req) => ({
+  ip: req.ip || req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress || null,
+  userAgent: req.headers?.['user-agent'] || null,
+});
+
 // ========================================================
 // A. CONTROLLER: MANAJEMEN REKENING BANK PLATFORM (CRUD)
 // ========================================================
 
 exports.createAdminBank = catchAsync(async (req, res, next) => {
-  const bank = await adminService.createBank(req.body);
+  const bank = await adminService.createBank(req.body, req.user?._id, getRequestMeta(req));
   res.status(StatusCodes.CREATED).json({
     status: 'success',
     message: 'Rekening master baru platform berhasil didaftarkan.',
@@ -25,7 +30,7 @@ exports.getAllAdminBanks = catchAsync(async (req, res, next) => {
 });
 
 exports.updateAdminBank = catchAsync(async (req, res, next) => {
-  const updatedBank = await adminService.updateBank(req.params.id, req.body);
+  const updatedBank = await adminService.updateBank(req.params.id, req.body, req.user?._id, getRequestMeta(req));
   res.status(StatusCodes.OK).json({
     status: 'success',
     message: 'Data rekening master berhasil diperbarui.',
@@ -34,7 +39,7 @@ exports.updateAdminBank = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteAdminBank = catchAsync(async (req, res, next) => {
-  const result = await adminService.deleteBank(req.params.id);
+  const result = await adminService.deleteBank(req.params.id, req.user?._id, getRequestMeta(req));
   res.status(StatusCodes.OK).json({
     status: 'success',
     message: result.message
@@ -62,7 +67,7 @@ exports.getPendingTopUps = catchAsync(async (req, res, next) => {
 
 exports.approveTopUp = catchAsync(async (req, res, next) => {
   const adminId = req.user._id;
-  const result = await adminService.processTopUpDecision(req.params.id, adminId, 'approve');
+  const result = await adminService.processTopUpDecision(req.params.id, adminId, 'approve', getRequestMeta(req));
   
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -73,7 +78,7 @@ exports.approveTopUp = catchAsync(async (req, res, next) => {
 
 exports.cancelTopUp = catchAsync(async (req, res, next) => {
   const adminId = req.user._id;
-  const result = await adminService.processTopUpDecision(req.params.id, adminId, 'cancel');
+  const result = await adminService.processTopUpDecision(req.params.id, adminId, 'cancel', getRequestMeta(req));
 
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -83,7 +88,7 @@ exports.cancelTopUp = catchAsync(async (req, res, next) => {
 });
 
 exports.deleteTopUpRecord = catchAsync(async (req, res, next) => {
-  const result = await adminService.deleteTopUpRecord(req.params.id);
+  const result = await adminService.deleteTopUpRecord(req.params.id, req.user?._id, getRequestMeta(req));
   res.status(StatusCodes.OK).json({
     status: 'success',
     message: result.message
@@ -111,7 +116,7 @@ exports.getPendingWithdrawals = catchAsync(async (req, res, next) => {
 
 exports.approveWithdrawal = catchAsync(async (req, res, next) => {
   const adminId = req.user._id;
-  const result = await adminService.executeKliringDecision(req.params.id, adminId, 'approve');
+  const result = await adminService.executeKliringDecision(req.params.id, adminId, 'approve', null, getRequestMeta(req));
   
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -123,7 +128,7 @@ exports.approveWithdrawal = catchAsync(async (req, res, next) => {
 exports.rejectWithdrawal = catchAsync(async (req, res, next) => {
   const adminId = req.user._id;
   const { rejected_reason } = req.body;
-  const result = await adminService.executeKliringDecision(req.params.id, adminId, 'reject', rejected_reason);
+  const result = await adminService.executeKliringDecision(req.params.id, adminId, 'reject', rejected_reason, getRequestMeta(req));
 
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -135,6 +140,16 @@ exports.rejectWithdrawal = catchAsync(async (req, res, next) => {
 // ========================================================
 // D. CONTROLLER: METRIK & NERACA KEUANGAN DASHBOARD ADMIN
 // ========================================================
+
+exports.getAdminStats = catchAsync(async (req, res, next) => {
+  const stats = await adminService.getDashboardStats();
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Statistik eksekutif dashboard admin berhasil ditarik.',
+    data: stats,
+  });
+});
 
 exports.getFinancialReport = catchAsync(async (req, res, next) => {
   // Menangkap query URL: ?filter=daily atau ?filter=monthly&month=7
@@ -170,7 +185,7 @@ exports.getPendingTransfers = catchAsync(async (req, res, next) => {
 
 exports.approveTransfer = catchAsync(async (req, res, next) => {
   const adminId = req.user._id;
-  const result = await adminService.processTransferDecision(req.params.id, adminId, 'approve');
+  const result = await adminService.processTransferDecision(req.params.id, adminId, 'approve', null, getRequestMeta(req));
 
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -182,7 +197,7 @@ exports.approveTransfer = catchAsync(async (req, res, next) => {
 exports.rejectTransfer = catchAsync(async (req, res, next) => {
   const adminId = req.user._id;
   const { rejected_reason } = req.body;
-  const result = await adminService.processTransferDecision(req.params.id, adminId, 'reject', rejected_reason);
+  const result = await adminService.processTransferDecision(req.params.id, adminId, 'reject', rejected_reason, getRequestMeta(req));
 
   res.status(StatusCodes.OK).json({
     status: 'success',
@@ -190,3 +205,64 @@ exports.rejectTransfer = catchAsync(async (req, res, next) => {
     data: result
   });
 });
+
+// ========================================================
+// F. CONTROLLER: ANTI-FRAUD MANAJEMEN PENGGUNA (USER GOVERNANCE)
+// ========================================================
+
+exports.getAdminUsers = catchAsync(async (req, res, next) => {
+  const result = await adminService.getAdminUsers(req.query);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Daftar pengguna berhasil ditarik.',
+    data: result.users,
+    meta: {
+      next_cursor: result.next_cursor,
+      has_more: result.has_more,
+      limit: parseInt(req.query.limit, 10) || 10,
+    },
+  });
+});
+
+exports.freezeUser = catchAsync(async (req, res, next) => {
+  const adminId = req.user._id;
+  const { reason } = req.body;
+  const user = await adminService.freezeUser(req.params.id, adminId, reason, getRequestMeta(req));
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Akun pengguna berhasil dibekukan (Freeze). Seluruh sesi login telah diputus.',
+    data: { user },
+  });
+});
+
+exports.unfreezeUser = catchAsync(async (req, res, next) => {
+  const adminId = req.user._id;
+  const user = await adminService.unfreezeUser(req.params.id, adminId, getRequestMeta(req));
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Pembekuan akun pengguna berhasil dibuka (Unfreeze). Akun kini aktif kembali.',
+    data: { user },
+  });
+});
+
+// ========================================================
+// G. CONTROLLER: AUDIT TRAIL ADMINISTRATIF (COMPLIANCE)
+// ========================================================
+
+exports.getAdminAuditLogs = catchAsync(async (req, res, next) => {
+  const result = await adminService.getAdminAuditLogs(req.query);
+
+  res.status(StatusCodes.OK).json({
+    status: 'success',
+    message: 'Catatan audit trail administratif berhasil ditarik.',
+    data: result.audit_logs,
+    meta: {
+      next_cursor: result.next_cursor,
+      has_more: result.has_more,
+      limit: parseInt(req.query.limit, 10) || 10,
+    },
+  });
+});
