@@ -587,4 +587,58 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     expect(updatedUserInDb.id_card_photo).toMatch(/^\/uploads\/kyc\/ktp-/);
     expect(updatedUserInDb.id_card_photo).not.toMatch(/^data:image/);
   });
+
+  it('17. [TASK-FE-15 Backend DoD] Harus menolak update password jika password baru identik dengan password lama (400 Bad Request)', async () => {
+    const originalPassword = 'Password123!';
+    const { accessToken, user } = await createTestUser({ password: originalPassword });
+
+    // Sub-test A: Coba ganti password dengan password baru yang persis sama dengan password lama
+    const resSamePassword = await request(app)
+      .patch('/api/v1/users/update-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_password: originalPassword,
+        new_password: originalPassword,
+        confirm_new_password: originalPassword,
+      });
+
+    expect(resSamePassword.statusCode).toEqual(400);
+    expect(resSamePassword.body.message).toMatch(/Password baru tidak boleh sama dengan password lama/i);
+
+    // Sub-test B: Coba ganti password dengan konfirmasi yang tidak cocok
+    const resMismatch = await request(app)
+      .patch('/api/v1/users/update-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_password: originalPassword,
+        new_password: 'BrandNewSecurePassword456!',
+        confirm_new_password: 'MismatchPassword789!',
+      });
+
+    expect(resMismatch.statusCode).toEqual(400);
+    expect(resMismatch.body.message).toMatch(/Konfirmasi password baru tidak cocok/i);
+
+    // Sub-test C: Berhasil ganti password dengan password baru yang berbeda
+    const newValidPassword = 'BrandNewSecurePassword456!';
+    const resSuccess = await request(app)
+      .patch('/api/v1/users/update-password')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_password: originalPassword,
+        new_password: newValidPassword,
+        confirm_new_password: newValidPassword,
+      });
+
+    expect(resSuccess.statusCode).toEqual(200);
+    expect(resSuccess.body.status).toBe('success');
+    expect(resSuccess.body.message).toMatch(/Password akun Anda berhasil diperbarui/i);
+
+    // Verifikasi password baru dapat digunakan untuk verifikasi hash
+    const updatedUser = await User.findById(user._id).select('+password');
+    const matchesNew = await updatedUser.correctPassword(newValidPassword, updatedUser.password);
+    expect(matchesNew).toBe(true);
+
+    const matchesOld = await updatedUser.correctPassword(originalPassword, updatedUser.password);
+    expect(matchesOld).toBe(false);
+  });
 });

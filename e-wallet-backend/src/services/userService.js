@@ -109,6 +109,10 @@ exports.updatePassword = async (userId, passwordData) => {
     throw new AppError('Konfirmasi password baru tidak cocok.', StatusCodes.BAD_REQUEST);
   }
 
+  if (new_password === old_password) {
+    throw new AppError('Password baru tidak boleh sama dengan password lama.', StatusCodes.BAD_REQUEST);
+  }
+
   const user = await User.findById(userId).select('+password');
   const isPasswordCorrect = await user.correctPassword(old_password, user.password);
   if (!isPasswordCorrect) {

@@ -18,18 +18,22 @@ import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useUpdatePasswordMutation } from '../hooks/useUserData';
 
-const changePasswordSchema = z
+export const changePasswordSchema = z
   .object({
     oldPassword: z.string().min(1, { message: 'Password lama wajib diisi' }),
     newPassword: z.string().min(8, { message: 'Password baru minimal 8 karakter' }),
     confirmNewPassword: z.string().min(8, { message: 'Konfirmasi password minimal 8 karakter' }),
+  })
+  .refine((data) => data.newPassword !== data.oldPassword, {
+    message: 'Password baru tidak boleh sama dengan password lama',
+    path: ['newPassword'],
   })
   .refine((data) => data.newPassword === data.confirmNewPassword, {
     message: 'Konfirmasi password baru tidak cocok',
     path: ['confirmNewPassword'],
   });
 
-type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
 const ChangePasswordScreen = () => {
   const navigation = useNavigation<any>();
