@@ -19,8 +19,6 @@ import { UserLayout } from '@shared/layouts';
 import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useGenerate2FAMutation, useVerify2FAMutation } from '@features/auth/hooks/useAuthMutations';
-import { useAuthStore } from '@core/storage/useAuthStore';
-import { userLocalDataSource } from '@core/di/container';
 
 const twoFactorSetupSchema = z.object({
   code: z
@@ -104,14 +102,8 @@ const TwoFactorSetupScreen = () => {
     verify2FA(
       { token: data.code },
       {
-        onSuccess: async () => {
+        onSuccess: () => {
           isVerifiedRef.current = true;
-          const user = useAuthStore.getState().user;
-          if (user) {
-            const updatedUser = { ...user, twoFactorEnabled: true };
-            useAuthStore.getState().setUser(updatedUser);
-            await userLocalDataSource.upsertProfile(updatedUser);
-          }
           feedback.dialog.success(
             '2FA Berhasil Diaktifkan!',
             'Setiap kali masuk akun, Anda akan diminta memasukkan 6 digit kode keamanan.',

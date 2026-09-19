@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { authRepository } from '@core/di/container';
+import { authRepository, userLocalDataSource } from '@core/di/container';
 import { useAuthStore } from '@core/storage/useAuthStore';
 import { queryClient } from '@core/network/queryClient';
 import { QUERY_KEYS } from '@core/network/queryKeys';
@@ -121,7 +121,13 @@ export const useVerify2FAMutation = () => {
     mutationFn: async ({ token }: Verify2FAPayload) => {
       return await authRepository.verify2FA(token);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      const user = useAuthStore.getState().user;
+      if (user) {
+        const updatedUser = { ...user, twoFactorEnabled: true };
+        useAuthStore.getState().setUser(updatedUser);
+        await userLocalDataSource.upsertProfile(updatedUser);
+      }
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER.PROFILE });
     },
   });
