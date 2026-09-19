@@ -7,7 +7,8 @@
     "security:sbom": "node scripts/security/generateSbom.js",
     "security:license": "node scripts/security/auditLicenses.js",
     "security:audit": "npm audit --audit-level=high",
-    "security:check-all": "npm run security:license && npm run security:sbom && npm run security:audit"
+    "security:kyc-guard": "node scripts/ci/guard-kyc-pii.js",
+    "security:check-all": "npm run security:license && npm run security:sbom && npm run security:audit && npm run security:kyc-guard"
   },
   "keywords": [
     "fintech",

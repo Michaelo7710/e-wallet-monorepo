@@ -1,0 +1,90 @@
+name: GreenPay Core CI & FinTech Compliance Guard
+
+on:
+  push:
+    branches:
+      - "main"
+      - "development"
+      - "staging"
+      - "feat/**"
+    paths:
+      - 'e-wallet-backend/**'
+      - 'Wallet/**'
+      - 'scripts/ci/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - "main"
+      - "development"
+      - "staging"
+      - "feat/**"
+    paths:
+      - 'e-wallet-backend/**'
+      - 'Wallet/**'
+      - 'scripts/ci/**'
+      - '.github/workflows/ci.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 🔒 GERBANG 1: PENGAMAN PRIVASI DATA KYC (UU PDP & GDPR COMPLIANCE)
+  kyc-pii-security-guard:
+    name: KYC PII Redaction & Data Privacy Guard (UU PDP)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js LTS Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 3. Audit Response KYC & Controller PII Sanitization
+        run: node scripts/ci/guard-kyc-pii.js
+
+  # 🛡️ GERBANG 2: UNIT TEST SUITE VALIDASI CI GUARD
+  guard-unit-verification:
+    name: KYC PII Guard Unit & Contract Verification
+    runs-on: ubuntu-latest
+    needs: kyc-pii-security-guard
+
+    steps:
+      - name: 1. Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js LTS Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'e-wallet-backend/package-lock.json'
+
+      - name: 3. Install Backend Dependencies
+        working-directory: ./e-wallet-backend
+        run: npm ci
+
+      - name: 4. Execute KYC PII Guard Test Suite
+        working-directory: ./e-wallet-backend
+        run: npm test -- tests/kycPiiGuard.test.js
+
+  # 📱 GERBANG 3: FRONTEND RAW ALERT REGRESSION GUARD
+  frontend-quality-guard:
+    name: Frontend Anti-Alert & Feedback System Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js LTS Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 3. Verify Zero Raw Alert Regressions
+        working-directory: ./Wallet
+        run: node scripts/ci/guard-anti-alert.js
