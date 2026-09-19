@@ -22,6 +22,10 @@ import mockRNCNetInfo from '@react-native-community/netinfo/jest/netinfo-mock.js
 import App from '../App';
 
 jest.mock('@react-native-community/netinfo', () => mockRNCNetInfo);
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn().mockResolvedValue(true),
+  getStringAsync: jest.fn().mockResolvedValue(''),
+}));
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));

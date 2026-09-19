@@ -14,14 +14,14 @@ describe('Environment Configuration Engine', () => {
     process.env = originalEnv;
   });
 
-  it('should default to local mode and resolve fallback local API URL with 192.168.43.20', () => {
+  it('should default to ngrok mode and resolve fallback ngrok API URL when unconfigured', () => {
     delete process.env.EXPO_PUBLIC_ENV_MODE;
     delete process.env.EXPO_PUBLIC_API_URL;
 
     const { ENV, ACTIVE_MODE } = require('../src/core/config/env');
 
-    expect(ACTIVE_MODE).toBe('local');
-    expect(ENV.API_URL).toBe('http://192.168.43.20:3000/api/v1');
+    expect(ACTIVE_MODE).toBe('ngrok');
+    expect(ENV.API_URL).toBe('https://irritative-yuriko-knolly.ngrok-free.dev/api/v1');
     expect(ENV.IS_DEV).toBe(true);
     expect(ENV.IS_PROD).toBe(false);
   });
