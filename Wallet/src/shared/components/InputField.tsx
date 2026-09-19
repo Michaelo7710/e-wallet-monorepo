@@ -33,6 +33,16 @@ const InputField = ({
     return colors.border;
   };
 
+  const handleFocus = (e: any) => {
+    setIsFocused(true);
+    rest.onFocus?.(e);
+  };
+
+  const handleBlur = (e: any) => {
+    setIsFocused(false);
+    rest.onBlur?.(e);
+  };
+
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.label}>{label}</Text>
@@ -48,8 +58,6 @@ const InputField = ({
           placeholder={placeholder}
           placeholderTextColor={colors.textLight}
           secureTextEntry={isSecure}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
           accessible={true}
           accessibilityLabel={label}
           accessibilityHint={placeholder}
@@ -57,6 +65,8 @@ const InputField = ({
           aria-invalid={!!error}
           {...({ accessibilityInvalid: !!error } as any)}
           {...rest}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
         {isPassword && (
           <TouchableOpacity

@@ -20,9 +20,10 @@ import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { maskNik } from '@shared/utils';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { ENV } from '@core/config/env';
 import { useUpdateKycMutation } from '../hooks/useUserData';
 
-const kycSchema = z.object({
+export const kycSchema = z.object({
   nik: z
     .string()
     .length(16, { message: 'NIK harus tepat 16 digit angka' })
@@ -35,7 +36,7 @@ const kycSchema = z.object({
     .min(1, { message: 'Foto fisik KTP wajib dilampirkan' }),
 });
 
-type KycFormValues = z.infer<typeof kycSchema>;
+export type KycFormValues = z.infer<typeof kycSchema>;
 
 const KycVerificationScreen = () => {
   const navigation = useNavigation<any>();
@@ -58,6 +59,24 @@ const KycVerificationScreen = () => {
   });
 
   const selectedPhoto = watch('idCardPhoto');
+
+  const resolvePhotoUri = (uri?: string | null) => {
+    if (!uri) return '';
+    if (
+      uri.startsWith('http://') ||
+      uri.startsWith('https://') ||
+      uri.startsWith('file://') ||
+      uri.startsWith('content://') ||
+      uri.startsWith('data:image')
+    ) {
+      return uri;
+    }
+    if (uri.startsWith('/')) {
+      const baseUrl = ENV.API_URL.replace(/\/api\/v1\/?$/, '');
+      return `${baseUrl}${uri}`;
+    }
+    return uri;
+  };
 
   const takePhotoWithCamera = async () => {
     try {
@@ -147,6 +166,89 @@ const KycVerificationScreen = () => {
       }
     );
   };
+
+  // Pintu Gerbang 0: Status Guard Pengguna yang Sudah Terverifikasi (KYC / Premium)
+  const isAlreadyVerified = user?.isKycVerified === true || user?.accountTier === 'premium';
+
+  if (isAlreadyVerified) {
+    return (
+      <UserLayout noPadding={false}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.textMain} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Status Verifikasi KYC</Text>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.verifiedContentContainer}
+        >
+          <View style={styles.verifiedCard}>
+            <View style={styles.verifiedIconCircle}>
+              <Ionicons name="shield-checkmark" size={48} color={colors.primary} />
+            </View>
+
+            <View style={styles.platinumBadge}>
+              <Ionicons name="sparkles" size={14} color={colors.primaryDark} />
+              <Text style={styles.platinumBadgeText}>EMERALD PLATINUM TIER</Text>
+            </View>
+
+            <Text style={styles.verifiedTitle}>Akun Anda Telah Terverifikasi</Text>
+            <Text style={styles.verifiedDescription}>
+              Identitas KYC Anda telah diverifikasi secara sah. Anda telah menikmati seluruh hak istimewa akun tingkat tertinggi GreenPay.
+            </Text>
+
+            <View style={styles.verifiedDetailsBox}>
+              <View style={styles.verifiedDetailRow}>
+                <Text style={styles.verifiedDetailLabel}>Tingkat Akun</Text>
+                <View style={styles.verifiedActiveBadge}>
+                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                  <Text style={styles.verifiedActiveText}>Premium Platinum</Text>
+                </View>
+              </View>
+
+              <View style={styles.verifiedDivider} />
+
+              <View style={styles.verifiedDetailRow}>
+                <Text style={styles.verifiedDetailLabel}>Limit Saldo Dompet</Text>
+                <Text style={styles.verifiedDetailValueHighlight}>Rp 50.000.000</Text>
+              </View>
+
+              <View style={styles.verifiedDivider} />
+
+              <View style={styles.verifiedDetailRow}>
+                <Text style={styles.verifiedDetailLabel}>Batas Transfer Harian</Text>
+                <Text style={styles.verifiedDetailValue}>Rp 25.000.000</Text>
+              </View>
+
+              {user?.nik ? (
+                <>
+                  <View style={styles.verifiedDivider} />
+                  <View style={styles.verifiedDetailRow}>
+                    <Text style={styles.verifiedDetailLabel}>NIK Terdaftar</Text>
+                    <Text style={styles.verifiedDetailValue}>{maskNik(user.nik)}</Text>
+                  </View>
+                </>
+              ) : null}
+            </View>
+
+            <ButtonCustom
+              title="Kembali ke Profil"
+              onPress={() => navigation.goBack()}
+              style={styles.verifiedBackButton}
+            />
+          </View>
+        </ScrollView>
+      </UserLayout>
+    );
+  }
 
   // Pintu Gerbang 1: 2FA Security Gate
   if (!user?.twoFactorEnabled) {
@@ -252,7 +354,7 @@ const KycVerificationScreen = () => {
           {selectedPhoto ? (
             <View style={styles.idCardFrame}>
               <Image
-                source={{ uri: selectedPhoto }}
+                source={{ uri: resolvePhotoUri(selectedPhoto) }}
                 style={styles.idCardImage}
                 contentFit="cover"
                 transition={300}
@@ -307,7 +409,7 @@ const KycVerificationScreen = () => {
             placeholder="Contoh: 3201123456780001"
             keyboardType="number-pad"
             maxLength={16}
-            isPassword={true}
+            maskOnBlur={maskNik}
             accessibilityLabel="Nomor Induk Kependudukan 16 Digit"
           />
           {watch('nik') && watch('nik').length === 16 ? (
@@ -588,6 +690,114 @@ const styles = StyleSheet.create({
     fontSize: typography.size.xs,
     color: colors.primaryDark,
     fontWeight: typography.weight.medium as any,
+  },
+  verifiedContentContainer: {
+    paddingBottom: spacing.xxxl,
+    paddingTop: spacing.md,
+  },
+  verifiedCard: {
+    backgroundColor: colors.surface,
+    borderRadius: spacing.radius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: `${colors.primary}30`,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  verifiedIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: spacing.radius.full,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  platinumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: spacing.radius.full,
+    gap: 4,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  platinumBadgeText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold as any,
+    color: colors.primaryDark,
+    letterSpacing: 0.5,
+  },
+  verifiedTitle: {
+    fontSize: typography.size.xl,
+    fontWeight: typography.weight.bold as any,
+    color: colors.textMain,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  verifiedDescription: {
+    fontSize: typography.size.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xs,
+  },
+  verifiedDetailsBox: {
+    width: '100%',
+    backgroundColor: colors.background,
+    borderRadius: spacing.radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  verifiedDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  verifiedDetailLabel: {
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
+  },
+  verifiedActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  verifiedActiveText: {
+    fontSize: typography.size.xs,
+    fontWeight: typography.weight.bold as any,
+    color: colors.primaryDark,
+  },
+  verifiedDetailValueHighlight: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.bold as any,
+    color: colors.primary,
+  },
+  verifiedDetailValue: {
+    fontSize: typography.size.sm,
+    fontWeight: typography.weight.medium as any,
+    color: colors.textMain,
+  },
+  verifiedDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.xs,
+  },
+  verifiedBackButton: {
+    width: '100%',
   },
 });
 

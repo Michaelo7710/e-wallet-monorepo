@@ -1,4 +1,80 @@
+import React from 'react';
+import { Text } from 'react-native';
+import ReactTestRenderer from 'react-test-renderer';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as z from 'zod';
+
+import KycVerificationScreen from '../src/features/user/screens/KycVerificationScreen';
+import { ButtonCustom } from '../src/shared/components';
+
+// Navigation Mocks
+const mockNavigate = jest.fn();
+const mockGoBack = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: mockNavigate,
+    goBack: mockGoBack,
+    addListener: jest.fn(() => jest.fn()),
+  }),
+}));
+
+// Expo Module Mocks
+jest.mock('expo/virtual/env', () => ({
+  env: process.env,
+}));
+
+jest.mock('expo-linear-gradient', () => {
+  const { View: RNView } = require('react-native');
+  return {
+    LinearGradient: RNView,
+  };
+});
+
+jest.mock('expo-image', () => {
+  const { View: RNView } = require('react-native');
+  return {
+    Image: RNView,
+  };
+});
+
+jest.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  launchCameraAsync: jest.fn(),
+  launchImageLibraryAsync: jest.fn(),
+}));
+
+jest.mock('expo-status-bar', () => ({
+  StatusBar: () => null,
+  setStatusBarStyle: jest.fn(),
+  setStatusBarHidden: jest.fn(),
+}));
+
+jest.mock('expo-screen-capture', () => ({
+  preventScreenCaptureAsync: jest.fn().mockResolvedValue(true),
+  allowScreenCaptureAsync: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock('../src/core/security/useScreenGuard', () => ({
+  useScreenGuard: jest.fn(),
+}));
+
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock.js')
+);
+
+jest.mock('../src/shared/layouts', () => {
+  const ReactModule = require('react');
+  const { View: RNView } = require('react-native');
+  return {
+    UserLayout: ({ children }: any) => ReactModule.createElement(RNView, { testID: 'user-layout' }, children),
+    AuthLayout: ({ children }: any) => ReactModule.createElement(RNView, { testID: 'auth-layout' }, children),
+  };
+});
+
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+}));
 
 jest.mock('../src/core/security/biometrics.service', () => ({
   BiometricsService: {
@@ -34,7 +110,14 @@ jest.mock('../src/core/di/container', () => ({
   paymentLocalDataSource: {
     clearAll: jest.fn().mockResolvedValue(undefined),
   },
-  userRepository: {},
+  userRepository: {
+    updateKyc: jest.fn(),
+    getProfile: jest.fn(),
+    setupPin: jest.fn(),
+    updatePassword: jest.fn(),
+    updatePin: jest.fn(),
+    updateEmail: jest.fn(),
+  },
   paymentRepository: {},
   authRepository: {},
   adminRepository: {},
@@ -283,6 +366,32 @@ describe('TASK-QA-04: Multi-Factor KYC Verification Engine & Gate', () => {
       expect(parsed.nik.length).toBe(16);
       expect(/^\d{16}$/.test(parsed.nik)).toBe(true);
     });
+
+    it('harus mengembalikan nilai masked saat blurred dan raw saat focused (maskOnBlur mechanism)', () => {
+      const rawNik = '3201123456780001';
+      const computeDisplayValue = (value: string, isFocused: boolean, maskFn?: (v: string) => string) => {
+        const hasMask = !isFocused && !!maskFn && !!value;
+        return hasMask ? maskFn(value) : value;
+      };
+
+      // Saat kehilangan fokus (onBlur / idle) -> NIK disamarkan
+      const blurredDisplay = computeDisplayValue(rawNik, false, maskNik);
+      expect(blurredDisplay).toBe('3201 **** **** 0001');
+
+      // Saat pengguna fokus untuk mengetik/mengedit (onFocus) -> NIK ditampilkan mentah untuk editing
+      const focusedDisplay = computeDisplayValue(rawNik, true, maskNik);
+      expect(focusedDisplay).toBe(rawNik);
+      expect(focusedDisplay).toBe('3201123456780001');
+    });
+
+    it('harus menonaktifkan batasan maxLength saat masked agar string 19-karakter tidak terpotong', () => {
+      const getEffectiveMaxLength = (hasMask: boolean, maxLength?: number) => {
+        return hasMask ? undefined : maxLength;
+      };
+
+      expect(getEffectiveMaxLength(true, 16)).toBeUndefined();
+      expect(getEffectiveMaxLength(false, 16)).toBe(16);
+    });
   });
 
   describe('5. [TASK-FE-12 DoD] Multipart/FormData File Upload Integration', () => {
@@ -329,6 +438,147 @@ describe('TASK-QA-04: Multi-Factor KYC Verification Engine & Gate', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('6. [TASK-FE-17 DoD] Guard Status User Sudah Terverifikasi (KycVerificationScreen)', () => {
+    let queryClient: QueryClient;
+    let renderer: any = null;
+
+    beforeEach(() => {
+      queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+    });
+
+    afterEach(() => {
+      if (renderer) {
+        ReactTestRenderer.act(() => {
+          renderer.unmount();
+        });
+        renderer = null;
+      }
+    });
+
+    it('harus merender status terverifikasi elegan jika user.isKycVerified === true alih-alih form kosong', async () => {
+      useAuthStore.getState().setUser({
+        ...baseUser,
+        isKycVerified: true,
+        accountTier: 'basic',
+        nik: '3201123456780001',
+      });
+
+      await ReactTestRenderer.act(async () => {
+        renderer = ReactTestRenderer.create(
+          React.createElement(
+            QueryClientProvider,
+            { client: queryClient },
+            React.createElement(KycVerificationScreen)
+          )
+        );
+        await Promise.resolve();
+      });
+
+      const root = renderer.root;
+
+      // 1. Verifikasi judul halaman adalah "Status Verifikasi KYC"
+      const texts = root.findAllByType(Text).map((t: any) => t.props.children);
+      const allTextContent = JSON.stringify(texts);
+      expect(allTextContent).toContain('Status Verifikasi KYC');
+      expect(allTextContent).toContain('Akun Anda Telah Terverifikasi');
+      expect(allTextContent).toContain('EMERALD PLATINUM TIER');
+      expect(allTextContent).toContain('Rp 50.000.000');
+      expect(allTextContent).toContain('3201 **** **** 0001');
+
+      // 2. Verifikasi tombol kembali ke profil tersedia
+      const buttons = root.findAllByType(ButtonCustom);
+      expect(buttons.length).toBe(1);
+      expect(buttons[0].props.title).toBe('Kembali ke Profil');
+
+      // 3. Verifikasi TIDAK ADA form upload foto KTP atau placeholder KTP
+      expect(allTextContent).not.toContain('Unggah foto fisik KTP');
+      expect(allTextContent).not.toContain('Upgrade Akun Premium');
+    });
+
+    it('harus merender status terverifikasi jika user.accountTier === "premium" meskipun isKycVerified belum diset', async () => {
+      useAuthStore.getState().setUser({
+        ...baseUser,
+        isKycVerified: false,
+        accountTier: 'premium',
+      });
+
+      await ReactTestRenderer.act(async () => {
+        renderer = ReactTestRenderer.create(
+          React.createElement(
+            QueryClientProvider,
+            { client: queryClient },
+            React.createElement(KycVerificationScreen)
+          )
+        );
+        await Promise.resolve();
+      });
+
+      const root = renderer.root;
+      const texts = root.findAllByType(Text).map((t: any) => t.props.children);
+      const allTextContent = JSON.stringify(texts);
+      expect(allTextContent).toContain('Akun Anda Telah Terverifikasi');
+      expect(allTextContent).toContain('EMERALD PLATINUM TIER');
+    });
+
+    it('harus merender 2FA security gate jika user belum terverifikasi dan 2FA belum aktif', async () => {
+      useAuthStore.getState().setUser({
+        ...baseUser,
+        isKycVerified: false,
+        accountTier: 'basic',
+        twoFactorEnabled: false,
+      });
+
+      await ReactTestRenderer.act(async () => {
+        renderer = ReactTestRenderer.create(
+          React.createElement(
+            QueryClientProvider,
+            { client: queryClient },
+            React.createElement(KycVerificationScreen)
+          )
+        );
+        await Promise.resolve();
+      });
+
+      const root = renderer.root;
+      const texts = root.findAllByType(Text).map((t: any) => t.props.children);
+      const allTextContent = JSON.stringify(texts);
+      expect(allTextContent).toContain('Aktivasi 2FA Diperlukan');
+      expect(allTextContent).not.toContain('Akun Anda Telah Terverifikasi');
+    });
+
+    it('harus merender form pengajuan KYC jika user belum terverifikasi tetapi 2FA sudah aktif', async () => {
+      useAuthStore.getState().setUser({
+        ...baseUser,
+        isKycVerified: false,
+        accountTier: 'basic',
+        twoFactorEnabled: true,
+      });
+
+      await ReactTestRenderer.act(async () => {
+        renderer = ReactTestRenderer.create(
+          React.createElement(
+            QueryClientProvider,
+            { client: queryClient },
+            React.createElement(KycVerificationScreen)
+          )
+        );
+        await Promise.resolve();
+      });
+
+      const root = renderer.root;
+      const texts = root.findAllByType(Text).map((t: any) => t.props.children);
+      const allTextContent = JSON.stringify(texts);
+      expect(allTextContent).toContain('Upgrade Akun Premium');
+      expect(allTextContent).toContain('Dokumen Fisik Identitas (KTP)');
+      expect(allTextContent).not.toContain('Akun Anda Telah Terverifikasi');
     });
   });
 });

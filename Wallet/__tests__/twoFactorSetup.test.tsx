@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput } from 'react-native';
+import { TextInput } from 'react-native';
 import ReactTestRenderer, { act } from 'react-test-renderer';
 import * as z from 'zod';
 
@@ -8,7 +8,7 @@ import { useAuthStore } from '../src/core/storage/useAuthStore';
 import { User } from '../src/domain/entities/user';
 
 // Mock navigation
-let navigationListeners: { [event: string]: (e: any) => void } = {};
+let navigationListeners: Record<string, ((e: any) => void) | undefined> = {};
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockDispatch = jest.fn();
@@ -310,7 +310,7 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
       });
 
       expect(mockAddListener).toHaveBeenCalledWith('beforeRemove', expect.any(Function));
-      expect(typeof navigationListeners['beforeRemove']).toBe('function');
+      expect(typeof navigationListeners.beforeRemove).toBe('function');
       act(() => {
         renderer.unmount();
       });
@@ -322,11 +322,11 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
         renderer = ReactTestRenderer.create(<TwoFactorSetupScreen />);
       });
 
-      expect(navigationListeners['beforeRemove']).toBeDefined();
+      expect(navigationListeners.beforeRemove).toBeDefined();
       act(() => {
         renderer.unmount();
       });
-      expect(navigationListeners['beforeRemove']).toBeUndefined();
+      expect(navigationListeners.beforeRemove).toBeUndefined();
     });
 
     it('3. harus mencegah navigasi mundur (preventDefault) dan menampilkan dialog konfirmasi jika secret sudah ada tetapi belum diverifikasi', () => {
@@ -339,7 +339,7 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
       const mockAction = { type: 'GO_BACK' };
 
       act(() => {
-        navigationListeners['beforeRemove']({
+        navigationListeners.beforeRemove?.({
           preventDefault: mockPreventDefault,
           data: { action: mockAction },
         });
@@ -371,7 +371,7 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
       const mockAction = { type: 'POP' };
 
       act(() => {
-        navigationListeners['beforeRemove']({
+        navigationListeners.beforeRemove?.({
           preventDefault: mockPreventDefault,
           data: { action: mockAction },
         });
@@ -392,7 +392,7 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
       // Event kedua setelah confirmed tidak boleh di-prevent lagi
       const mockPreventDefault2 = jest.fn();
       act(() => {
-        navigationListeners['beforeRemove']({
+        navigationListeners.beforeRemove?.({
           preventDefault: mockPreventDefault2,
           data: { action: mockAction },
         });
@@ -416,7 +416,7 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
       const mockAction = { type: 'GO_BACK' };
 
       act(() => {
-        navigationListeners['beforeRemove']({
+        navigationListeners.beforeRemove?.({
           preventDefault: mockPreventDefault,
           data: { action: mockAction },
         });
@@ -477,7 +477,7 @@ describe('TASK-QA-03 & TASK-FE-13: Two-Factor Authentication Setup & Navigation 
       // Sekarang simulasi navigasi keluar (misal callback dialog memanggil goBack)
       const mockPreventDefault = jest.fn();
       act(() => {
-        navigationListeners['beforeRemove']({
+        navigationListeners.beforeRemove?.({
           preventDefault: mockPreventDefault,
           data: { action: { type: 'GO_BACK' } },
         });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, TextInput } from 'react-native';
+import { TouchableOpacity, TextInput } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 

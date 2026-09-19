@@ -71,6 +71,12 @@ export class UserRepositoryImpl implements IUserRepository {
       bio: payload.bio,
     });
     const updatedUser = UserMapper.toDomain(raw.data);
+    if (!updatedUser.idCardPhoto && payload.idCardPhoto) {
+      updatedUser.idCardPhoto = payload.idCardPhoto;
+    }
+    if (!updatedUser.nik && payload.nik) {
+      updatedUser.nik = payload.nik;
+    }
     await this.localDataSource.upsertProfile(updatedUser);
     return updatedUser;
   }
