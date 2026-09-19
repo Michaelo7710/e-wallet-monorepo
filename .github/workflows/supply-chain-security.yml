@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: 1. Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 2. Setup Node.js LTS
         uses: actions/setup-node@v4
