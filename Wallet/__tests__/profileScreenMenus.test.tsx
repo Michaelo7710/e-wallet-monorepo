@@ -1,9 +1,12 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, ScrollView, Switch } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
+import { QueryClientProvider } from '@tanstack/react-query';
 import ProfileScreen from '../src/features/user/screens/ProfileScreen';
 import { useFeedbackStore } from '../src/core/feedback/feedback.store';
 import { useAuthStore } from '../src/core/storage/useAuthStore';
+import { ButtonCustom } from '../src/shared/components';
+import { queryClient as defaultQueryClient } from '../src/core/network/queryClient';
 
 // Mocks
 const mockNavigate = jest.fn();
@@ -138,9 +141,16 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
     }
   });
 
+  const renderProfileScreen = () =>
+    ReactTestRenderer.create(
+      <QueryClientProvider client={defaultQueryClient}>
+        <ProfileScreen />
+      </QueryClientProvider>
+    );
+
   it('1. Harus menavigasikan ke ChangePin saat Menu id 1 (PIN Transaksi) diketuk', async () => {
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      renderer = renderProfileScreen();
       await Promise.resolve();
     });
 
@@ -159,7 +169,7 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
 
   it('2. Harus menavigasikan ke ChangePassword saat Menu id 2 (Ubah Kata Sandi) diketuk', async () => {
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      renderer = renderProfileScreen();
       await Promise.resolve();
     });
 
@@ -178,7 +188,7 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
 
   it('3. Harus menavigasikan ke ChangeEmail saat Menu id 3 (Ubah Alamat Email) diketuk', async () => {
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      renderer = renderProfileScreen();
       await Promise.resolve();
     });
 
@@ -197,7 +207,7 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
 
   it('4. [TASK-FE-09 DoD] Menu id 4 (Rekening Bank) harus memicu modal dialog alert informatif, tidak silent', async () => {
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      renderer = renderProfileScreen();
       await Promise.resolve();
     });
 
@@ -219,7 +229,7 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
 
   it('5. [TASK-FE-09 DoD] Menu id 5 (Pusat Bantuan) harus memicu dialog bantuan konfirmasi interaktif', async () => {
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      renderer = renderProfileScreen();
       await Promise.resolve();
     });
 
@@ -241,7 +251,7 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
 
   it('6. [TASK-FE-09 DoD] Menu id 6 (Syarat & Ketentuan) harus memicu dialog kepatuhan & regulasi UU PDP', async () => {
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      renderer = renderProfileScreen();
       await Promise.resolve();
     });
 
@@ -259,5 +269,60 @@ describe('TASK-FE-09: ProfileScreen Interactive Menus Unit & Navigation Tests', 
     expect(dialogState).not.toBeNull();
     expect(dialogState?.title).toBe('Syarat & Ketentuan Layanan');
     expect(dialogState?.message).toMatch(/UU PDP No\. 27\/2022/i);
+  });
+
+  it('7. [TASK-FE-19] Harus memicu dialog konfirmasi keluar akun saat tombol Keluar Akun ditekan', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = renderProfileScreen();
+      await Promise.resolve();
+    });
+
+    const logoutButton = renderer.root
+      .findAllByType(ButtonCustom)
+      .find((btn: any) => btn.props.title === 'Keluar Akun');
+    expect(logoutButton).toBeDefined();
+
+    ReactTestRenderer.act(() => {
+      logoutButton.props.onPress();
+    });
+
+    const dialogState = useFeedbackStore.getState().dialog;
+    expect(dialogState).not.toBeNull();
+    expect(dialogState?.title).toBe('Keluar dari Akun');
+    expect(dialogState?.confirmText).toBe('Keluar');
+    expect(dialogState?.isDestructive).toBe(true);
+  });
+
+  it('8. [TASK-FE-19 DoD] Mengeksekusi konfirmasi logout memanggil logoutSession() dan mengeksekusi queryClient.clear()', async () => {
+    const clearSpy = jest.spyOn(defaultQueryClient, 'clear');
+    const mockLogoutSession = jest.fn().mockResolvedValue(undefined);
+    useAuthStore.setState({ logoutSession: mockLogoutSession });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = renderProfileScreen();
+      await Promise.resolve();
+    });
+
+    const logoutButton = renderer.root
+      .findAllByType(ButtonCustom)
+      .find((btn: any) => btn.props.title === 'Keluar Akun');
+    expect(logoutButton).toBeDefined();
+
+    ReactTestRenderer.act(() => {
+      logoutButton.props.onPress();
+    });
+
+    const dialogState = useFeedbackStore.getState().dialog;
+    expect(dialogState).not.toBeNull();
+
+    await ReactTestRenderer.act(async () => {
+      await dialogState?.onConfirm?.();
+      await Promise.resolve();
+    });
+
+    expect(mockLogoutSession).toHaveBeenCalledTimes(1);
+    expect(clearSpy).toHaveBeenCalledTimes(1);
+
+    clearSpy.mockRestore();
   });
 });

@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { UserLayout } from '@shared/layouts';
 import { ButtonCustom, getWalletTierInfo } from '@shared/components';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { BiometricsService } from '@core/security/biometrics.service';
 import { colors, typography, spacing } from '@core/theme';
 import defaultAvatar from '@assets/images/avatar-default.png';
@@ -73,6 +74,8 @@ const PROFILE_MENUS: MenuType[] = [
 
 const ProfileScreen = () => {
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
+
   const { user, logoutSession, isBiometricsEnabled, setBiometricsEnabled } =
     useAuthStore();
 
@@ -171,6 +174,7 @@ const ProfileScreen = () => {
       isDestructive: true,
       onConfirm: async () => {
         await logoutSession();
+        queryClient?.clear();
       },
     });
   };

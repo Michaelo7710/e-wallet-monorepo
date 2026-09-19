@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { UserLayout } from '@shared/layouts';
 import { colors, typography, spacing } from '@core/theme';
 import { useAuthStore } from '@core/storage/useAuthStore';
+import { queryClient } from '@core/network/queryClient';
 import { useAdminStats } from '../hooks/useAdminData';
 
 const AdminDashboardScreen = () => {
@@ -27,7 +28,10 @@ const AdminDashboardScreen = () => {
       confirmText: 'Keluar',
       cancelText: 'Batal',
       isDestructive: true,
-      onConfirm: async () => await logoutSession(),
+      onConfirm: async () => {
+        await logoutSession();
+        queryClient.clear();
+      },
     });
   };
 
