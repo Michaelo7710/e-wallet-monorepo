@@ -280,6 +280,7 @@ exports.updatePinSecurely = async (userId, pinData) => {
   const confirmNewPinStr = String(confirm_new_pin).trim();
 
   if (newPinStr !== confirmNewPinStr) throw new AppError('Konfirmasi PIN baru tidak cocok.', StatusCodes.BAD_REQUEST);
+  if (newPinStr === oldPinStr) throw new AppError('PIN baru tidak boleh sama dengan PIN lama.', StatusCodes.BAD_REQUEST);
   if (!/^\d{6}$/.test(newPinStr)) throw new AppError('PIN baru wajib berupa 6 digit angka.', StatusCodes.BAD_REQUEST);
 
   const user = await User.findById(userId).select('+pin +two_factor_secret +two_factor_enabled');

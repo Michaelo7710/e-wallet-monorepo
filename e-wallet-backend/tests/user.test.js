@@ -641,4 +641,70 @@ describe('🧪 [USER ENGINE INTEGRATION TEST]', () => {
     const matchesOld = await updatedUser.correctPassword(originalPassword, updatedUser.password);
     expect(matchesOld).toBe(false);
   });
+
+  it('18. [TASK-FE-16 Backend DoD] Harus menolak update PIN jika PIN baru identik dengan PIN lama (400 Bad Request)', async () => {
+    const originalPin = '123456';
+    const { accessToken, user } = await createTestUser({ pin: originalPin, two_factor_enabled: false });
+
+    // Buat OTP valid untuk change_pin
+    const otpCode = '654321';
+    await VerificationCode.create({
+      user_id: user._id,
+      code: otpCode,
+      type: 'change_pin',
+      expires_at: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    // Sub-test A: Coba update PIN dengan PIN baru yang persis sama dengan PIN lama
+    const resSamePin = await request(app)
+      .patch('/api/v1/users/update-pin')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_pin: originalPin,
+        otp: otpCode,
+        new_pin: originalPin,
+        confirm_new_pin: originalPin,
+      });
+
+    expect(resSamePin.statusCode).toEqual(400);
+    expect(resSamePin.body.message).toMatch(/PIN baru tidak boleh sama dengan PIN lama/i);
+
+    // Sub-test B: Coba update PIN dengan konfirmasi tidak cocok
+    const resMismatch = await request(app)
+      .patch('/api/v1/users/update-pin')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_pin: originalPin,
+        otp: otpCode,
+        new_pin: '889900',
+        confirm_new_pin: '889901',
+      });
+
+    expect(resMismatch.statusCode).toEqual(400);
+    expect(resMismatch.body.message).toMatch(/Konfirmasi PIN baru tidak cocok/i);
+
+    // Sub-test C: Berhasil update PIN dengan PIN baru yang berbeda
+    const newValidPin = '889900';
+    const resSuccess = await request(app)
+      .patch('/api/v1/users/update-pin')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        old_pin: originalPin,
+        otp: otpCode,
+        new_pin: newValidPin,
+        confirm_new_pin: newValidPin,
+      });
+
+    expect(resSuccess.statusCode).toEqual(200);
+    expect(resSuccess.body.status).toBe('success');
+    expect(resSuccess.body.message).toMatch(/PIN transaksi Anda berhasil dimutasi/i);
+
+    // Verifikasi PIN baru tersimpan dengan benar di DB
+    const updatedUser = await User.findById(user._id).select('+pin');
+    const matchesNew = await updatedUser.correctPin(newValidPin, updatedUser.pin);
+    expect(matchesNew).toBe(true);
+
+    const matchesOld = await updatedUser.correctPin(originalPin, updatedUser.pin);
+    expect(matchesOld).toBe(false);
+  });
 });

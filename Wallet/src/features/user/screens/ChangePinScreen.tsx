@@ -18,7 +18,7 @@ import { ControlledInput, ButtonCustom } from '@shared/components';
 import { colors, typography, spacing } from '@core/theme';
 import { useUpdatePinMutation } from '../hooks/useUserData';
 
-const changePinSchema = z
+export const changePinSchema = z
   .object({
     oldPin: z
       .string()
@@ -37,12 +37,16 @@ const changePinSchema = z
       .length(6, { message: 'Konfirmasi PIN baru harus 6 digit angka' })
       .regex(/^\d+$/, { message: 'Hanya boleh berisi angka' }),
   })
+  .refine((data) => data.newPin !== data.oldPin, {
+    message: 'PIN baru tidak boleh sama dengan PIN lama',
+    path: ['newPin'],
+  })
   .refine((data) => data.newPin === data.confirmNewPin, {
     message: 'Konfirmasi PIN baru tidak cocok',
     path: ['confirmNewPin'],
   });
 
-type ChangePinFormValues = z.infer<typeof changePinSchema>;
+export type ChangePinFormValues = z.infer<typeof changePinSchema>;
 
 const ChangePinScreen = () => {
   const navigation = useNavigation<any>();
